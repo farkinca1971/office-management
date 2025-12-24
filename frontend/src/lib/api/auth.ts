@@ -1,0 +1,73 @@
+/**
+ * Authentication API
+ */
+
+import apiClient from './client';
+import type { LoginRequest, LoginResponse, SignupRequest, SignupResponse, AuthErrorResponse } from '@/types/api';
+import type { User } from '@/types/entities';
+
+export const authApi = {
+  /**
+   * Login user
+   */
+  login: async (credentials: LoginRequest): Promise<LoginResponse> => {
+    return apiClient.post('/auth/login', credentials);
+  },
+
+  /**
+   * Signup/Register new user
+   */
+  signup: async (credentials: SignupRequest): Promise<SignupResponse> => {
+    return apiClient.post('/auth/signup', credentials);
+  },
+
+  /**
+   * Logout user (client-side only, clears token)
+   */
+  logout: (): void => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+    }
+  },
+
+  /**
+   * Get current user (if token is valid)
+   * Calls /auth/me endpoint which validates token and returns user data
+   */
+  getCurrentUser: async (): Promise<{ success: true; data: User }> => {
+    const response = await apiClient.get('/auth/me');
+    // Ensure response has success property
+    if (response && response.success && response.data) {
+      return response as { success: true; data: User };
+    }
+    // If response doesn't have expected format, throw error
+    throw new Error('Invalid response format from /auth/me');
+  },
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated: (): boolean => {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem('auth_token');
+  },
+
+  /**
+   * Get stored auth token
+   */
+  getToken: (): string | null => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('auth_token');
+  },
+
+  /**
+   * Store auth token
+   */
+  setToken: (token: string): void => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_token', token);
+    }
+  },
+};
+

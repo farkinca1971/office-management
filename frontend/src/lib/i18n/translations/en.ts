@@ -1,0 +1,86 @@
+/**
+ * English translations
+ */
+
+export const en = {
+  // Common
+  common: {
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    edit: 'Edit',
+    create: 'Create',
+    update: 'Update',
+    search: 'Search',
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+    confirm: 'Confirm',
+    close: 'Close',
+    back: 'Back',
+    next: 'Next',
+    previous: 'Previous',
+    submit: 'Submit',
+    reset: 'Reset',
+    filter: 'Filter',
+    actions: 'Actions',
+    noData: 'No data available',
+  },
+
+  // Navigation
+  nav: {
+    dashboard: 'Dashboard',
+    persons: 'Persons',
+    companies: 'Companies',
+    invoices: 'Invoices',
+    transactions: 'Transactions',
+  },
+
+  // Auth
+  auth: {
+    login: 'Sign In',
+    signup: 'Sign Up',
+    logout: 'Logout',
+    username: 'Username',
+    password: 'Password',
+    confirmPassword: 'Confirm Password',
+    welcomeBack: 'Welcome Back',
+    createAccount: 'Create Account',
+    signInToAccount: 'Sign in to your account to continue',
+    signUpToGetStarted: 'Sign up to get started with your office management',
+    dontHaveAccount: "Don't have an account?",
+    alreadyHaveAccount: 'Already have an account?',
+    signUp: 'Sign up',
+    signIn: 'Sign in',
+    loginFailed: 'Login failed. Please try again.',
+    signupFailed: 'Signup failed. Please try again.',
+    enterUsernamePassword: 'Please enter both username and password',
+    fillAllFields: 'Please fill in all fields',
+    usernameMinLength: 'Username must be at least 3 characters long',
+    passwordMinLength: 'Password must be at least 6 characters long',
+    passwordsDoNotMatch: 'Passwords do not match',
+    accountCreated: 'Account created successfully! Redirecting...',
+  },
+
+  // Dashboard
+  dashboard: {
+    title: 'Dashboard',
+    welcome: "Welcome back! Here's what's happening with your office management system today.",
+    quickActions: 'Quick Actions',
+    recentActivity: 'Recent Activity',
+    addNewPerson: 'Add New Person',
+    addNewCompany: 'Add New Company',
+    createInvoice: 'Create Invoice',
+    noRecentActivity: 'No recent activity',
+    startByAdding: 'Start by adding your first person or company',
+  },
+
+  // Stats
+  stats: {
+    persons: 'Persons',
+    companies: 'Companies',
+    invoices: 'Invoices',
+    transactions: 'Transactions',
+  },
+};
+
