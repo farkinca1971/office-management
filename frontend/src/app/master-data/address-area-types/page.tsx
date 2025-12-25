@@ -7,18 +7,20 @@
 import React from 'react';
 import { LookupTable } from '@/components/ui/LookupTable';
 import { lookupApi } from '@/lib/api';
+import { useLanguageStore } from '@/store/languageStore';
 import type { LookupItem } from '@/types/common';
 
 export default function AddressAreaTypesPage() {
   const [data, setData] = React.useState<LookupItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const language = useLanguageStore((state) => state.language);
 
-  const loadData = async () => {
+  const loadData = React.useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await lookupApi.getAddressAreaTypes();
+      const response = await lookupApi.getAddressAreaTypes(language);
       if (response.success) {
         setData(response.data);
       } else {
@@ -29,7 +31,11 @@ export default function AddressAreaTypesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [language]);
+
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCreate = async (item: { code: string; is_active?: boolean }) => {
     const response = await lookupApi.createAddressAreaType(item);

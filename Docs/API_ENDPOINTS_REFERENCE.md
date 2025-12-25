@@ -21,13 +21,44 @@ This document provides a comprehensive list of all API endpoints, their explanat
 
 ## Lookup/Reference Data Endpoints
 
-### 1. Get Languages
+All lookup table endpoints use a unified endpoint pattern: `/api/v1/lookups/:lookup_type`
 
-**Endpoint**: `GET /api/v1/languages`
+### Unified Endpoint Pattern
 
-**Description**: Retrieve all available languages in the system.
+**Base Endpoint**: `/api/v1/lookups/:lookup_type`
 
-**Request**: No parameters
+Where `:lookup_type` can be one of:
+- `languages`
+- `object-types`
+- `object-statuses`
+- `sexes`
+- `salutations`
+- `product-categories`
+- `countries`
+- `address-types`
+- `address-area-types`
+- `contact-types`
+- `transaction-types`
+- `currencies`
+- `object-relation-types`
+- `translations` (special structure - see below)
+
+### CRUD Operations
+
+All lookup tables support the following operations:
+
+#### 1. List All Items
+
+**Endpoint**: `GET /api/v1/lookups/:lookup_type`
+
+**Description**: Retrieve all items for the specified lookup type.
+
+**Query Parameters** (optional):
+- `object_type_id` (for object-statuses only): Filter by object type
+- `code` (for translations only): Filter by translation code
+- `language_id` (for translations only): Filter by language ID
+
+**Example**: `GET /api/v1/lookups/languages`
 
 **Response**:
 ```json
@@ -43,7 +74,189 @@ This document provides a comprehensive list of all API endpoints, their explanat
 }
 ```
 
-**MySQL Query**:
+**n8n Webhook Path**: `/api/v1/lookups/:lookup_type`
+
+**n8n Implementation Notes**:
+- Extract `lookup_type` from path parameter: `{{ $json.params.lookup_type }}`
+- Use the `lookup_type` to determine which table to query
+- See `n8n_lookup_node_setup.md` for dynamic lookup handler implementation
+
+---
+
+#### 2. Get Single Item
+
+**Endpoint**: `GET /api/v1/lookups/:lookup_type/:id`
+
+**Description**: Retrieve a single item by ID.
+
+**Example**: `GET /api/v1/lookups/languages/1`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "code": "en",
+    "is_active": true
+  }
+}
+```
+
+**n8n Implementation**:
+- Extract `lookup_type` from `{{ $json.params.lookup_type }}`
+- Extract `id` from `{{ $json.params.id }}`
+- Query: `SELECT * FROM {{ lookup_type_table }} WHERE id = {{ $json.params.id }}`
+
+---
+
+#### 3. Create Item
+
+**Endpoint**: `POST /api/v1/lookups/:lookup_type`
+
+**Description**: Create a new item in the specified lookup table.
+
+**Request Body**:
+```json
+{
+  "code": "new_code",
+  "is_active": true
+}
+```
+
+**Example**: `POST /api/v1/lookups/languages`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "code": "new_code",
+    "is_active": true
+  }
+}
+```
+
+**n8n Implementation**:
+- Extract `lookup_type` from `{{ $json.params.lookup_type }}`
+- Insert into appropriate table based on `lookup_type`
+- Return created item
+
+---
+
+#### 4. Update Item
+
+**Endpoint**: `PUT /api/v1/lookups/:lookup_type/:id`
+
+**Description**: Update an existing item.
+
+**Request Body** (all fields optional):
+```json
+{
+  "code": "updated_code",
+  "is_active": false
+}
+```
+
+**Example**: `PUT /api/v1/lookups/languages/1`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "code": "updated_code",
+    "is_active": false
+  }
+}
+```
+
+**n8n Implementation**:
+- Extract `lookup_type` and `id` from path parameters
+- Update table based on `lookup_type`
+- Return updated item
+
+---
+
+#### 5. Delete Item
+
+**Endpoint**: `DELETE /api/v1/lookups/:lookup_type/:id`
+
+**Description**: Delete (soft delete by setting is_active=false) an item.
+
+**Example**: `DELETE /api/v1/lookups/languages/1`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "success": true
+  }
+}
+```
+
+**n8n Implementation**:
+- Extract `lookup_type` and `id` from path parameters
+- Update `is_active = 0` in the appropriate table
+- Return success confirmation
+
+---
+
+### Supported Lookup Types
+
+| Lookup Type | Table Name | Description |
+|------------|------------|-------------|
+| `languages` | `languages` | Supported language codes (ISO codes) |
+| `object-types` | `object_types` | Entity type classification (person, company, user, etc.) |
+| `object-statuses` | `object_statuses` | Status values for objects (supports `object_type_id` filter) |
+| `sexes` | `sexes` | Gender/sex options |
+| `salutations` | `salutations` | Title prefixes (Mr., Mrs., Dr., etc.) |
+| `product-categories` | `product_categories` | Product categorization |
+| `countries` | `countries` | Country codes (ISO codes) |
+| `address-types` | `address_types` | Address classification (home, work, etc.) |
+| `address-area-types` | `address_area_types` | Street/area type (street, avenue, etc.) |
+| `contact-types` | `contact_types` | Contact method types (phone, email, etc.) |
+| `transaction-types` | `transaction_types` | Transaction classification (SALE, PURCHASE, etc.) |
+| `currencies` | `currencies` | Currency codes (ISO codes) |
+| `object-relation-types` | `object_relation_types` | Relationship types between objects |
+| `translations` | `translations` | Multi-language text storage (special structure) |
+
+---
+
+### Special Case: Translations
+
+Translations use a composite key (code + language_id) instead of a single ID.
+
+**List Translations**: `GET /api/v1/lookups/translations?code={code}&language_id={id}`
+
+**Get Translation**: `GET /api/v1/lookups/translations/:code/:language_id`
+
+**Create Translation**: `POST /api/v1/lookups/translations`
+```json
+{
+  "code": "translation_code",
+  "language_id": 1,
+  "text": "Translated text"
+}
+```
+
+**Update Translation**: `PUT /api/v1/lookups/translations/:code/:language_id`
+```json
+{
+  "text": "Updated translated text"
+}
+```
+
+**Delete Translation**: `DELETE /api/v1/lookups/translations/:code/:language_id`
+
+---
+
+### Example MySQL Queries for n8n
+
+**Get All Languages**:
 ```sql
 SELECT 
     id,
@@ -54,31 +267,7 @@ WHERE is_active = 1
 ORDER BY code;
 ```
 
----
-
-### 2. Get Object Types
-
-**Endpoint**: `GET /api/v1/object-types`
-
-**Description**: Retrieve all object types (person, company, user, etc.).
-
-**Request**: No parameters
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "code": "person",
-      "is_active": true
-    }
-  ]
-}
-```
-
-**MySQL Query**:
+**Get Object Types with Translations**:
 ```sql
 SELECT 
     ot.id,
@@ -92,33 +281,7 @@ WHERE ot.is_active = 1
 ORDER BY ot.code;
 ```
 
----
-
-### 3. Get Object Statuses
-
-**Endpoint**: `GET /api/v1/object-statuses?object_type_id={id}`
-
-**Description**: Retrieve statuses for objects, optionally filtered by object type.
-
-**Request Parameters**:
-- `object_type_id` (optional): Filter by object type
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "code": "person_active",
-      "is_active": true,
-      "object_type_id": 1
-    }
-  ]
-}
-```
-
-**MySQL Query**:
+**Get Object Statuses (with optional filter)**:
 ```sql
 SELECT 
     os.id,
@@ -134,251 +297,32 @@ WHERE os.is_active = 1
 ORDER BY os.code;
 ```
 
----
-
-### 4. Get Sexes
-
-**Endpoint**: `GET /api/v1/sexes`
-
-**Description**: Retrieve all gender/sex options.
-
-**Request**: No parameters
-
-**MySQL Query**:
+**Create Language**:
 ```sql
-SELECT 
-    s.id,
-    s.code,
-    s.is_active,
-    t.text as name
-FROM sexes s
-LEFT JOIN translations t ON t.code = s.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE s.is_active = 1
-ORDER BY s.code;
+INSERT INTO languages (code, is_active)
+VALUES ({{ $json.body.code }}, COALESCE({{ $json.body.is_active }}, 1));
+
+SELECT * FROM languages WHERE id = LAST_INSERT_ID();
 ```
 
----
-
-### 5. Get Salutations
-
-**Endpoint**: `GET /api/v1/salutations`
-
-**Description**: Retrieve all salutation options (Mr., Mrs., Dr., etc.).
-
-**MySQL Query**:
+**Update Language**:
 ```sql
-SELECT 
-    sal.id,
-    sal.code,
-    sal.is_active,
-    t.text as name
-FROM salutations sal
-LEFT JOIN translations t ON t.code = sal.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE sal.is_active = 1
-ORDER BY sal.code;
+UPDATE languages
+SET 
+    code = COALESCE({{ $json.body.code }}, code),
+    is_active = COALESCE({{ $json.body.is_active }}, is_active)
+WHERE id = {{ $json.params.id }};
+
+SELECT * FROM languages WHERE id = {{ $json.params.id }};
 ```
 
----
-
-### 6. Get Product Categories
-
-**Endpoint**: `GET /api/v1/product-categories`
-
-**Description**: Retrieve all product categories.
-
-**MySQL Query**:
+**Delete Language (Soft Delete)**:
 ```sql
-SELECT 
-    pc.id,
-    pc.code,
-    pc.is_active,
-    t.text as name
-FROM product_categories pc
-LEFT JOIN translations t ON t.code = pc.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE pc.is_active = 1
-ORDER BY pc.code;
-```
+UPDATE languages
+SET is_active = 0
+WHERE id = {{ $json.params.id }};
 
----
-
-### 7. Get Countries
-
-**Endpoint**: `GET /api/v1/countries`
-
-**Description**: Retrieve all countries.
-
-**MySQL Query**:
-```sql
-SELECT 
-    c.id,
-    c.code,
-    c.name,
-    c.is_active
-FROM countries c
-WHERE c.is_active = 1
-ORDER BY c.name;
-```
-
----
-
-### 8. Get Address Types
-
-**Endpoint**: `GET /api/v1/address-types`
-
-**Description**: Retrieve all address types (home, work, temporary, etc.).
-
-**MySQL Query**:
-```sql
-SELECT 
-    at.id,
-    at.code,
-    at.is_active,
-    t.text as name
-FROM address_types at
-LEFT JOIN translations t ON t.code = at.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE at.is_active = 1
-ORDER BY at.code;
-```
-
----
-
-### 9. Get Address Area Types
-
-**Endpoint**: `GET /api/v1/address-area-types`
-
-**Description**: Retrieve address area types (street, avenue, district, etc.).
-
-**MySQL Query**:
-```sql
-SELECT 
-    aat.id,
-    aat.code,
-    aat.is_active,
-    t.text as name
-FROM address_area_types aat
-LEFT JOIN translations t ON t.code = aat.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE aat.is_active = 1
-ORDER BY aat.code;
-```
-
----
-
-### 10. Get Contact Types
-
-**Endpoint**: `GET /api/v1/contact-types`
-
-**Description**: Retrieve all contact types (phone, email, mobile, etc.).
-
-**MySQL Query**:
-```sql
-SELECT 
-    ct.id,
-    ct.code,
-    ct.is_active,
-    t.text as name
-FROM contact_types ct
-LEFT JOIN translations t ON t.code = ct.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE ct.is_active = 1
-ORDER BY ct.code;
-```
-
----
-
-### 11. Get Transaction Types
-
-**Endpoint**: `GET /api/v1/transaction-types`
-
-**Description**: Retrieve all transaction types (SALE, PURCHASE, etc.).
-
-**MySQL Query**:
-```sql
-SELECT 
-    tt.id,
-    tt.code,
-    tt.is_active,
-    t.text as name
-FROM transaction_types tt
-LEFT JOIN translations t ON t.code = tt.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE tt.is_active = 1
-ORDER BY tt.code;
-```
-
----
-
-### 12. Get Currencies
-
-**Endpoint**: `GET /api/v1/currencies`
-
-**Description**: Retrieve all currencies.
-
-**MySQL Query**:
-```sql
-SELECT 
-    c.id,
-    c.code,
-    c.is_active,
-    t.text as name
-FROM currencies c
-LEFT JOIN translations t ON t.code = c.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE c.is_active = 1
-ORDER BY c.code;
-```
-
----
-
-### 13. Get Object Relation Types
-
-**Endpoint**: `GET /api/v1/object-relation-types`
-
-**Description**: Retrieve all object relation types (employee, spouse, business_partner, etc.).
-
-**MySQL Query**:
-```sql
-SELECT 
-    ort.id,
-    ort.code,
-    ort.is_active,
-    t.text as name
-FROM object_relation_types ort
-LEFT JOIN translations t ON t.code = ort.code 
-    AND t.language_id = (SELECT id FROM languages WHERE code = 'en')
-WHERE ort.is_active = 1
-ORDER BY ort.code;
-```
-
----
-
-### 14. Get Translations
-
-**Endpoint**: `GET /api/v1/translations?code={code}&language_id={id}`
-
-**Description**: Retrieve translations, optionally filtered by code or language.
-
-**Request Parameters**:
-- `code` (optional): Filter by translation code
-- `language_id` (optional): Filter by language ID
-
-**MySQL Query**:
-```sql
-SELECT 
-    t.code,
-    t.language_id,
-    l.code as language_code,
-    t.text
-FROM translations t
-JOIN languages l ON l.id = t.language_id
-WHERE 1=1
-    AND ({{ $json.query.code }} IS NULL OR t.code = {{ $json.query.code }})
-    AND ({{ $json.query.language_id }} IS NULL OR t.language_id = {{ $json.query.language_id }})
-ORDER BY t.code, t.language_id;
+SELECT 1 as success;
 ```
 
 ---

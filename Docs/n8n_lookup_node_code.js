@@ -12,10 +12,12 @@
  * 
  * Input Parameters (from webhook or previous node):
  * - lookup_type: Type of lookup (required)
- *   Options: 'languages', 'object_types', 'object_statuses', 'sexes', 
- *            'salutations', 'product_categories', 'countries', 
- *            'address_types', 'address_area_types', 'contact_types',
- *            'transaction_types', 'currencies', 'object_relation_types', 'translations'
+ *   Options: 'languages', 'object_types' (or 'object-types'), 'object_statuses' (or 'object-statuses'), 
+ *            'sexes', 'salutations', 'product_categories' (or 'product-categories'), 'countries', 
+ *            'address_types' (or 'address-types'), 'address_area_types' (or 'address-area-types'), 
+ *            'contact_types' (or 'contact-types'), 'transaction_types' (or 'transaction-types'),
+ *            'currencies', 'object_relation_types' (or ä'object-relation-types'), 'translations'
+ *   Note: Hyphens are automatically converted to underscores (e.g., "object-types" -> "object_types")
  * 
  * - object_type_id: Filter for object_statuses (optional)
  * - code: Filter for translations (optional)
@@ -26,13 +28,27 @@
 // Get input data from previous node or webhook
 const inputData = $input.all()[0].json;
 
-// Extract parameters from query string or body
-const lookupType = inputData.lookup_type || inputData.query?.lookup_type || inputData.body?.lookup_type;
-const objectTypeId = inputData.object_type_id || inputData.query?.object_type_id || inputData.body?.object_type_id;
-const code = inputData.code || inputData.query?.code || inputData.body?.code;
-const languageId = inputData.language_id || inputData.query?.language_id || inputData.body?.language_id;
-const languageCode = inputData.language_code || inputData.query?.language_code || inputData.body?.language_code || 'en';
-const isActive = inputData.is_active !== undefined ? inputData.is_active : (inputData.query?.is_active !== undefined ? inputData.query.is_active : true);
+// Extract lookup_type from params object (n8n webhook v2.1 provides path params in params object)
+// The webhook path /api/v1/lookups/:lookup_type extracts lookup_type into params.lookup_type
+let lookupType = inputData.params?.lookup_type || 
+                 inputData.lookup_type || 
+                 inputData.query?.lookup_type || 
+                 inputData.body?.lookup_type;
+
+// Normalize lookup_type: convert hyphens to underscores (e.g., "object-types" -> "object_types")
+// This allows the frontend to use URL-friendly hyphens while n8n uses database-friendly underscores
+if (lookupType && typeof lookupType === 'string') {
+  lookupType = lookupType.replace(/-/g, '_');
+}
+
+// Extract all parameters - prioritize query parameters for GET requests
+const objectTypeId = inputData.query?.object_type_id || inputData.object_type_id || inputData.body?.object_type_id;
+const code = inputData.query?.code || inputData.code || inputData.body?.code;
+const languageId = inputData.query?.language_id || inputData.language_id || inputData.body?.language_id;
+// Extract language_code from query parameters (GET requests pass query params here)
+// This is the current user's language preference
+const languageCode = inputData.query?.language_code || inputData.language_code || inputData.body?.language_code || 'en';
+const isActive = inputData.query?.is_active !== undefined ? inputData.query.is_active : (inputData.is_active !== undefined ? inputData.is_active : true);
 
 // Determine which language to use for translations
 // Priority: language_id > language_code > default 'en'
@@ -43,7 +59,11 @@ if (languageId) {
   translationLanguageId = parseInt(languageId);
   // We'll use language_id directly in the query
 } else if (languageCode) {
+  // Use the provided language code (from user's language preference)
   translationLanguageCode = languageCode;
+} else {
+  // Default to 'en' if no language specified
+  translationLanguageCode = 'en';
 }
 
 // Validate lookup type
@@ -72,6 +92,7 @@ if (!lookupType || !validLookupTypes.includes(lookupType)) {
       message: `Invalid lookup_type. Must be one of: ${validLookupTypes.join(', ')}`,
       details: {
         provided: lookupType,
+        params_lookup_type: inputData.params?.lookup_type,
         valid_types: validLookupTypes
       }
     }
@@ -106,14 +127,19 @@ const buildTranslationJoin = (tableAlias, isActiveFilter = true) => {
 
 switch (lookupType) {
   case 'languages':
+    // Languages: join with translations to get translated language names
+    // The language code (e.g., 'ar') matches the translation code in the translations table
+    const langJoin = buildTranslationJoin('l');
     sqlQuery = `
 SELECT 
-    id,
-    code,
-    is_active
-FROM languages
-WHERE is_active = 1
-ORDER BY code;
+    l.id,
+    l.code,
+    l.is_active,
+    COALESCE(t.text, UPPER(l.code)) as name
+FROM languages l
+${langJoin.join}
+WHERE l.is_active = 1
+ORDER BY COALESCE(t.text, l.code);
     `;
     break;
 
@@ -200,19 +226,20 @@ ORDER BY pc.code;
     break;
 
   case 'countries':
-    // Countries table only has: id, code, is_active
-    // Name comes from translations table using country code
-    const countryJoin = buildTranslationJoin('c');
+    // Countries table: id, code, is_active
+    // Country codes are 3-letter ISO codes (USA, DEU, FRA, HUN, etc.)
+    // Translations use the same codes
+    const countriesJoin = buildTranslationJoin('c');
     sqlQuery = `
 SELECT 
     c.id,
     c.code,
     c.is_active,
-    t.text as name
+    COALESCE(t.text, c.code) as name
 FROM countries c
-${countryJoin.join}
+${countriesJoin.join}
 WHERE c.is_active = 1
-ORDER BY t.text;
+ORDER BY COALESCE(t.text, c.code);
     `;
     break;
 
@@ -348,7 +375,18 @@ return {
       code: code || null,
       language_id: languageId || null,
       language_code: translationLanguageCode,
-      is_active: isActive
+      translation_language_id: translationLanguageId,
+      is_active: isActive,
+      // Debug info for countries specifically
+      debug: lookupType === 'countries' ? {
+        generated_sql: sqlQuery.trim(),
+        input_language_code: languageCode,
+        translation_language_code: translationLanguageCode,
+        translation_language_id: translationLanguageId,
+        input_data_keys: Object.keys(inputData),
+        has_query: !!inputData.query,
+        query_keys: inputData.query ? Object.keys(inputData.query) : []
+      } : null
     }
   }
 };

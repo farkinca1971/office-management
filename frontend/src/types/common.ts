@@ -55,6 +55,7 @@ export interface LookupItem {
   id: number;
   code: string;
   is_active: boolean;
+  name?: string; // Translation text for the current language (from translations table)
 }
 
 // Translation
