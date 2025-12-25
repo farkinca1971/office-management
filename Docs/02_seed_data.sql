@@ -1080,6 +1080,8 @@ INSERT INTO audit_actions (code, is_active, object_type_id) VALUES
 ('DELETE_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
 ('LOCK_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
 ('UNLOCK_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('LOGIN', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('LOGOUT', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
 
 ('CREATE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
 ('UPDATE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
@@ -1151,6 +1153,12 @@ INSERT INTO translations (code, language_id, text) VALUES
 ('UNLOCK_USER', (SELECT id FROM languages WHERE code = 'en'), 'Unlock User'),
 ('UNLOCK_USER', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer entsperren'),
 ('UNLOCK_USER', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó feloldása'),
+('LOGIN', (SELECT id FROM languages WHERE code = 'en'), 'Login'),
+('LOGIN', (SELECT id FROM languages WHERE code = 'de'), 'Anmeldung'),
+('LOGIN', (SELECT id FROM languages WHERE code = 'hu'), 'Bejelentkezés'),
+('LOGOUT', (SELECT id FROM languages WHERE code = 'en'), 'Logout'),
+('LOGOUT', (SELECT id FROM languages WHERE code = 'de'), 'Abmeldung'),
+('LOGOUT', (SELECT id FROM languages WHERE code = 'hu'), 'Kijelentkezés'),
 
 -- Document actions
 ('CREATE_DOCUMENT', (SELECT id FROM languages WHERE code = 'en'), 'Create Document'),

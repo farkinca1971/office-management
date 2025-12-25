@@ -64,6 +64,9 @@ export const WEBHOOK_ENDPOINTS = {
   INVOICES: '/invoices',
   TRANSACTIONS: '/transactions',
   
+  // Audit
+  OBJECT_AUDITS: '/object-audits',
+  
   // Authentication
   AUTH: '/auth',
   LOGIN: '/auth/login',

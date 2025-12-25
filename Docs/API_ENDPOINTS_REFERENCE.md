@@ -14,7 +14,8 @@ This document provides a comprehensive list of all API endpoints, their explanat
 8. [Invoice Endpoints](#invoice-endpoints)
 9. [Transaction Endpoints](#transaction-endpoints)
 10. [Object Relation Endpoints](#object-relation-endpoints)
-11. [Authentication Endpoints](#authentication-endpoints)
+11. [Object Audit Endpoints](#object-audit-endpoints)
+12. [Authentication Endpoints](#authentication-endpoints)
 
 ---
 
@@ -1932,9 +1933,270 @@ SELECT 1 as success;
 
 ---
 
+## Object Audit Endpoints
+
+### 60. List Object Audits
+
+**Endpoint**: `GET /api/v1/object-audits?page=1&per_page=20&object_id={id}&audit_action_id={id}&created_by={id}&date_from={date}&date_to={date}`
+
+**Description**: Retrieve all audit records with pagination and filtering options.
+
+**Request Parameters**:
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20)
+- `object_id` (optional): Filter by object ID
+- `audit_action_id` (optional): Filter by audit action ID
+- `created_by` (optional): Filter by user/object who created the audit
+- `date_from` (optional): Filter audits from this date (ISO format)
+- `date_to` (optional): Filter audits until this date (ISO format)
+- `sort` (optional): Sort field (default: created_at)
+- `order` (optional): Sort order - 'asc' or 'desc' (default: desc)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "object_id": 10,
+      "audit_action_id": 5,
+      "created_by": 2,
+      "created_at": "2024-01-15T10:30:00Z",
+      "old_values": {
+        "first_name": "John",
+        "last_name": "Doe"
+      },
+      "new_values": {
+        "first_name": "Jane",
+        "last_name": "Doe"
+      },
+      "ip_address": "192.168.1.1",
+      "user_agent": "Mozilla/5.0...",
+      "notes": "user_name_update"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 150,
+    "total_pages": 8
+  }
+}
+```
+
+**MySQL Query**:
+```sql
+-- Count total
+SELECT COUNT(*) as total
+FROM object_audits oa
+WHERE 1=1
+    AND ({{ $json.query.object_id }} IS NULL OR oa.object_id = {{ $json.query.object_id }})
+    AND ({{ $json.query.audit_action_id }} IS NULL OR oa.audit_action_id = {{ $json.query.audit_action_id }})
+    AND ({{ $json.query.created_by }} IS NULL OR oa.created_by = {{ $json.query.created_by }})
+    AND ({{ $json.query.date_from }} IS NULL OR oa.created_at >= {{ $json.query.date_from }})
+    AND ({{ $json.query.date_to }} IS NULL OR oa.created_at <= {{ $json.query.date_to }});
+
+-- Get paginated results
+SELECT 
+    oa.id,
+    oa.object_id,
+    oa.audit_action_id,
+    oa.created_by,
+    oa.created_at,
+    oa.old_values,
+    oa.new_values,
+    oa.ip_address,
+    oa.user_agent,
+    oa.notes
+FROM object_audits oa
+WHERE 1=1
+    AND ({{ $json.query.object_id }} IS NULL OR oa.object_id = {{ $json.query.object_id }})
+    AND ({{ $json.query.audit_action_id }} IS NULL OR oa.audit_action_id = {{ $json.query.audit_action_id }})
+    AND ({{ $json.query.created_by }} IS NULL OR oa.created_by = {{ $json.query.created_by }})
+    AND ({{ $json.query.date_from }} IS NULL OR oa.created_at >= {{ $json.query.date_from }})
+    AND ({{ $json.query.date_to }} IS NULL OR oa.created_at <= {{ $json.query.date_to }})
+ORDER BY oa.created_at DESC
+LIMIT {{ $json.query.per_page }}
+OFFSET {{ ($json.query.page - 1) * $json.query.per_page }};
+```
+
+---
+
+### 61. Get Object Audit by ID
+
+**Endpoint**: `GET /api/v1/object-audits/{id}`
+
+**Description**: Retrieve a single audit record by ID.
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "object_id": 10,
+    "audit_action_id": 5,
+    "created_by": 2,
+    "created_at": "2024-01-15T10:30:00Z",
+    "old_values": {
+      "first_name": "John",
+      "last_name": "Doe"
+    },
+    "new_values": {
+      "first_name": "Jane",
+      "last_name": "Doe"
+    },
+    "ip_address": "192.168.1.1",
+    "user_agent": "Mozilla/5.0...",
+    "notes": "user_name_update"
+  }
+}
+```
+
+**MySQL Query**:
+```sql
+SELECT 
+    oa.id,
+    oa.object_id,
+    oa.audit_action_id,
+    oa.created_by,
+    oa.created_at,
+    oa.old_values,
+    oa.new_values,
+    oa.ip_address,
+    oa.user_agent,
+    oa.notes
+FROM object_audits oa
+WHERE oa.id = {{ $json.params.id }};
+```
+
+---
+
+### 62. Get Object Audits by Object ID
+
+**Endpoint**: `GET /api/v1/object-audits/object/{object_id}?page=1&per_page=20`
+
+**Description**: Retrieve all audit records for a specific object.
+
+**Request Parameters**:
+- `object_id` (path): The object ID to get audits for
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20)
+- `audit_action_id` (optional): Filter by audit action ID
+- `date_from` (optional): Filter audits from this date (ISO format)
+- `date_to` (optional): Filter audits until this date (ISO format)
+- `sort` (optional): Sort field (default: created_at)
+- `order` (optional): Sort order - 'asc' or 'desc' (default: desc)
+
+**Response**: Same format as List Object Audits
+
+**MySQL Query**:
+```sql
+-- Count total
+SELECT COUNT(*) as total
+FROM object_audits oa
+WHERE oa.object_id = {{ $json.params.object_id }}
+    AND ({{ $json.query.audit_action_id }} IS NULL OR oa.audit_action_id = {{ $json.query.audit_action_id }})
+    AND ({{ $json.query.date_from }} IS NULL OR oa.created_at >= {{ $json.query.date_from }})
+    AND ({{ $json.query.date_to }} IS NULL OR oa.created_at <= {{ $json.query.date_to }});
+
+-- Get paginated results
+SELECT 
+    oa.id,
+    oa.object_id,
+    oa.audit_action_id,
+    oa.created_by,
+    oa.created_at,
+    oa.old_values,
+    oa.new_values,
+    oa.ip_address,
+    oa.user_agent,
+    oa.notes
+FROM object_audits oa
+WHERE oa.object_id = {{ $json.params.object_id }}
+    AND ({{ $json.query.audit_action_id }} IS NULL OR oa.audit_action_id = {{ $json.query.audit_action_id }})
+    AND ({{ $json.query.date_from }} IS NULL OR oa.created_at >= {{ $json.query.date_from }})
+    AND ({{ $json.query.date_to }} IS NULL OR oa.created_at <= {{ $json.query.date_to }})
+ORDER BY oa.created_at DESC
+LIMIT {{ $json.query.per_page }}
+OFFSET {{ ($json.query.page - 1) * $json.query.per_page }};
+```
+
+---
+
+### 63. Create Object Audit
+
+**Endpoint**: `POST /api/v1/object-audits`
+
+**Description**: Create a new audit record. Typically called automatically by the system when actions are performed, but can be created manually if needed.
+
+**Request Body**:
+```json
+{
+  "object_id": 10,
+  "audit_action_id": 5,
+  "created_by": 2,
+  "old_values": {
+    "first_name": "John",
+    "last_name": "Doe"
+  },
+  "new_values": {
+    "first_name": "Jane",
+    "last_name": "Doe"
+  },
+  "ip_address": "192.168.1.1",
+  "user_agent": "Mozilla/5.0...",
+  "notes": "user_name_update"
+}
+```
+
+**MySQL Query**:
+```sql
+INSERT INTO object_audits (
+    object_id,
+    audit_action_id,
+    created_by,
+    old_values,
+    new_values,
+    ip_address,
+    user_agent,
+    notes,
+    created_at
+) VALUES (
+    {{ $json.body.object_id }},
+    {{ $json.body.audit_action_id }},
+    {{ $json.body.created_by }},
+    {{ $json.body.old_values }},
+    {{ $json.body.new_values }},
+    {{ $json.body.ip_address }},
+    {{ $json.body.user_agent }},
+    {{ $json.body.notes }},
+    NOW()
+);
+
+SET @audit_id = LAST_INSERT_ID();
+
+SELECT 
+    oa.id,
+    oa.object_id,
+    oa.audit_action_id,
+    oa.created_by,
+    oa.created_at,
+    oa.old_values,
+    oa.new_values,
+    oa.ip_address,
+    oa.user_agent,
+    oa.notes
+FROM object_audits oa
+WHERE oa.id = @audit_id;
+```
+
+---
+
 ## Authentication Endpoints
 
-### 60. Signup / Register
+### 64. Signup / Register
 
 **Endpoint**: `POST /api/v1/auth/signup`
 
@@ -2023,7 +2285,7 @@ WHERE u.id = @object_id;
 
 ---
 
-### 61. Login
+### 65. Login
 
 **Endpoint**: `POST /api/v1/auth/login`
 
@@ -2074,7 +2336,7 @@ WHERE u.username = {{ $json.body.username }}
 
 ---
 
-### 62. Get Current User
+### 66. Get Current User
 
 **Endpoint**: `GET /api/v1/auth/me`
 
@@ -2356,7 +2618,7 @@ Webhook (GET /auth/me)
 
 ---
 
-### 63. Logout
+### 67. Logout
 
 **Endpoint**: `POST /api/v1/auth/logout`
 
@@ -2371,7 +2633,7 @@ SELECT 1 as success;
 
 ---
 
-### 64. Refresh Token
+### 68. Refresh Token
 
 **Endpoint**: `POST /api/v1/auth/refresh`
 

@@ -87,6 +87,25 @@ export interface ChangePasswordRequest {
   new_password: string;
 }
 
+// Employee
+export interface Employee extends BaseEntity {
+  id: number; // References objects.id
+  person_id: number; // References persons.id
+  // Extended fields (from objects table)
+  object_type_id?: number;
+  object_status_id?: number;
+  // Extended fields (from persons table via person_id)
+  person?: Person;
+}
+
+export interface CreateEmployeeRequest {
+  object_type_id: number;
+  object_status_id: number;
+  person_id: number;
+}
+
+export interface UpdateEmployeeRequest extends Partial<CreateEmployeeRequest> {}
+
 // Address
 export interface Address extends BaseEntity {
   id: number;
@@ -242,4 +261,36 @@ export interface CreateObjectRelationRequest {
 }
 
 export interface UpdateObjectRelationRequest extends Partial<CreateObjectRelationRequest> {}
+
+// Audit Action
+export interface AuditAction extends BaseEntity {
+  code: string;
+  is_active: boolean;
+  object_type_id: number;
+}
+
+// Object Audit
+export interface ObjectAudit extends BaseEntity {
+  id: number;
+  object_id: number;
+  audit_action_id: number;
+  created_by?: number;
+  created_at: string;
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  notes?: string;
+}
+
+export interface CreateObjectAuditRequest {
+  object_id: number;
+  audit_action_id: number;
+  created_by?: number;
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  notes?: string;
+}
 

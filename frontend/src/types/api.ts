@@ -12,6 +12,9 @@ import {
   User,
   CreateUserRequest,
   UpdateUserRequest,
+  Employee,
+  CreateEmployeeRequest,
+  UpdateEmployeeRequest,
   Address,
   CreateAddressRequest,
   UpdateAddressRequest,
@@ -29,6 +32,8 @@ import {
   UpdateTransactionRequest,
   ObjectRelation,
   CreateObjectRelationRequest,
+  ObjectAudit,
+  CreateObjectAuditRequest,
 } from './entities';
 import { ApiResponse, ApiListResponse, SearchParams } from './common';
 
@@ -48,6 +53,14 @@ export type CompanyListParams = SearchParams;
 export type UserListResponse = ApiListResponse<User>;
 export type UserResponse = ApiResponse<User>;
 export type UserListParams = SearchParams;
+
+// Employee API Types
+export type EmployeeListResponse = ApiListResponse<Employee>;
+export type EmployeeResponse = ApiResponse<Employee>;
+export type EmployeeListParams = SearchParams & {
+  object_status_id?: number;
+  person_id?: number;
+};
 
 // Address API Types
 export type AddressListResponse = ApiListResponse<Address>;
@@ -87,6 +100,17 @@ export type TransactionListResponse = ApiListResponse<Transaction>;
 export type TransactionResponse = ApiResponse<Transaction>;
 export type TransactionListParams = SearchParams & {
   transaction_type_id?: number;
+  date_from?: string;
+  date_to?: string;
+};
+
+// Audit API Types
+export type ObjectAuditListResponse = ApiListResponse<ObjectAudit>;
+export type ObjectAuditResponse = ApiResponse<ObjectAudit>;
+export type ObjectAuditListParams = SearchParams & {
+  object_id?: number;
+  audit_action_id?: number;
+  created_by?: number;
   date_from?: string;
   date_to?: string;
 };

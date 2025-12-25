@@ -574,6 +574,40 @@ CREATE TABLE IF NOT EXISTS invoices (
     INDEX idx_partner_paid_due (partner_id_to, is_paid, due_date)
 );
 
+-- ============================================================================
+-- SECTION 7: AUDIT TABLES
+-- ============================================================================
+-- Tables for tracking changes and actions on objects.
+
+-- ----------------------------------------------------------------------------
+-- Object Audits: Audit trail for all object changes and actions
+-- ----------------------------------------------------------------------------
+-- Stores comprehensive audit records for all objects in the system.
+-- Each record represents a single action (create, update, delete, status change, etc.)
+-- performed on an object.
+CREATE TABLE IF NOT EXISTS object_audits (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'Unique audit record identifier',
+    object_id BIGINT NOT NULL COMMENT 'The object being audited (references objects.id)',
+    audit_action_id INT NOT NULL COMMENT 'The action performed (references audit_actions.id)',
+    created_by BIGINT COMMENT 'User/object who performed the action (references objects.id)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When the action was performed',
+    old_values JSON COMMENT 'Previous state/values (stored as JSON for flexibility)',
+    new_values JSON COMMENT 'New state/values (stored as JSON for flexibility)',
+    ip_address VARCHAR(45) COMMENT 'IP address of the user who performed the action (supports IPv6)',
+    user_agent VARCHAR(500) COMMENT 'User agent string (browser/client information)',
+    notes VARCHAR(100) COMMENT 'Additional audit notes or description (references translations.code)',
+    FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (audit_action_id) REFERENCES audit_actions(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL,
+    FOREIGN KEY (notes) REFERENCES translations(code) ON DELETE SET NULL,
+    INDEX idx_object_id (object_id),
+    INDEX idx_audit_action_id (audit_action_id),
+    INDEX idx_created_by (created_by),
+    INDEX idx_created_at (created_at),
+    INDEX idx_object_created_at (object_id, created_at),
+    INDEX idx_created_by_created_at (created_by, created_at)
+);
+
 -- Re-enable foreign key checks
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -1688,6 +1722,12 @@ INSERT INTO translations (code, language_id, text) VALUES
 ('UNLOCK_USER', (SELECT id FROM languages WHERE code = 'en'), 'Unlock User'),
 ('UNLOCK_USER', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer entsperren'),
 ('UNLOCK_USER', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó feloldása'),
+('LOGIN', (SELECT id FROM languages WHERE code = 'en'), 'Login'),
+('LOGIN', (SELECT id FROM languages WHERE code = 'de'), 'Anmeldung'),
+('LOGIN', (SELECT id FROM languages WHERE code = 'hu'), 'Bejelentkezés'),
+('LOGOUT', (SELECT id FROM languages WHERE code = 'en'), 'Logout'),
+('LOGOUT', (SELECT id FROM languages WHERE code = 'de'), 'Abmeldung'),
+('LOGOUT', (SELECT id FROM languages WHERE code = 'hu'), 'Kijelentkezés'),
 
 -- Document actions
 ('CREATE_DOCUMENT', (SELECT id FROM languages WHERE code = 'en'), 'Create Document'),
@@ -1759,6 +1799,8 @@ INSERT INTO audit_actions (code, is_active, object_type_id) VALUES
 ('DELETE_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
 ('LOCK_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
 ('UNLOCK_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('LOGIN', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('LOGOUT', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
 
 ('CREATE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
 ('UPDATE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),

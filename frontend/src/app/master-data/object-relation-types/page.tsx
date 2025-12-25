@@ -1,0 +1,74 @@
+/**
+ * Object Relation Types Lookup Page
+ */
+
+'use client';
+
+import React from 'react';
+import { LookupTable } from '@/components/ui/LookupTable';
+import { lookupApi } from '@/lib/api';
+import type { LookupItem } from '@/types/common';
+
+export default function ObjectRelationTypesPage() {
+  const [data, setData] = React.useState<LookupItem[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await lookupApi.getObjectRelationTypes();
+      if (response.success) {
+        setData(response.data);
+      } else {
+        setError('Failed to load object relation types');
+      }
+    } catch (err: any) {
+      setError(err?.error?.message || 'Failed to load object relation types');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreate = async (item: { code: string; is_active?: boolean }) => {
+    const response = await lookupApi.createObjectRelationType(item);
+    if (response.success) {
+      await loadData();
+    } else {
+      throw new Error('Failed to create object relation type');
+    }
+  };
+
+  const handleUpdate = async (id: number, item: { code?: string; is_active?: boolean }) => {
+    const response = await lookupApi.updateObjectRelationType(id, item);
+    if (response.success) {
+      await loadData();
+    } else {
+      throw new Error('Failed to update object relation type');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    const response = await lookupApi.deleteObjectRelationType(id);
+    if (response.success) {
+      await loadData();
+    } else {
+      throw new Error('Failed to delete object relation type');
+    }
+  };
+
+  return (
+    <LookupTable
+      title="Object Relation Types"
+      data={data}
+      isLoading={isLoading}
+      error={error}
+      onLoad={loadData}
+      onCreate={handleCreate}
+      onUpdate={handleUpdate}
+      onDelete={handleDelete}
+    />
+  );
+}
+
