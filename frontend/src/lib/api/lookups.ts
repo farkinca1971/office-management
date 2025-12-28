@@ -10,11 +10,15 @@ import type { LookupListResponse, ApiResponse } from '@/types/api';
 export interface CreateLookupRequest {
   code: string;
   is_active?: boolean;
+  text?: string;
+  language_id?: number;
 }
 
 export interface UpdateLookupRequest {
   code?: string;
   is_active?: boolean;
+  text?: string;
+  language_id?: number;
 }
 
 // Helper function to build lookup endpoint paths

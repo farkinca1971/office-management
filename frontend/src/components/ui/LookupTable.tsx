@@ -15,6 +15,7 @@ import { Plus, Save, X, Trash2, Edit2, ArrowUp, ArrowDown, ArrowUpDown, Filter, 
 import type { LookupItem } from '@/types/common';
 import { lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
+import { Pagination } from './Pagination';
 
 export interface LookupTableProps {
   title: string;
@@ -22,10 +23,18 @@ export interface LookupTableProps {
   isLoading?: boolean;
   error?: string | null;
   onLoad: () => Promise<void>;
-  onCreate: (data: { code: string; is_active?: boolean }) => Promise<void>;
-  onUpdate: (id: number, data: { code?: string; is_active?: boolean }) => Promise<void>;
+  onCreate: (data: { code: string; is_active?: boolean; text?: string; language_id?: number }) => Promise<void>;
+  onUpdate: (id: number, data: { code?: string; is_active?: boolean; text?: string; language_id?: number }) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onUpdateTranslation?: (code: string, text: string) => Promise<void>;
+  pagination?: {
+    page: number;
+    perPage: number;
+    total: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    onPerPageChange?: (perPage: number) => void;
+  };
 }
 
 type SortField = 'id' | 'code' | 'name' | 'is_active';
@@ -53,6 +62,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
   onUpdate,
   onDelete,
   onUpdateTranslation,
+  pagination,
 }) => {
   const language = useLanguageStore((state) => state.language);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -62,7 +72,11 @@ export const LookupTable: React.FC<LookupTableProps> = ({
     name: ''
   });
   const [originalName, setOriginalName] = useState<string>('');
-  const [newItem, setNewItem] = useState<{ code: string; is_active: boolean }>({ code: '', is_active: true });
+  const [newItem, setNewItem] = useState<{ code: string; is_active: boolean; name: string }>({ 
+    code: '', 
+    is_active: true,
+    name: ''
+  });
   const [showNewForm, setShowNewForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -112,8 +126,8 @@ export const LookupTable: React.FC<LookupTableProps> = ({
     return <ArrowDown className="h-3.5 w-3.5 text-primary-500" />;
   };
 
-  // Filter and sort data
-  const processedData = useMemo(() => {
+  // Filter and sort data (without pagination for total count)
+  const filteredAndSortedData = useMemo(() => {
     let result = [...data];
 
     // Apply filters
@@ -173,6 +187,16 @@ export const LookupTable: React.FC<LookupTableProps> = ({
     return result;
   }, [data, filters, sort]);
 
+  // Apply pagination to filtered/sorted data
+  const processedData = useMemo(() => {
+    if (pagination) {
+      const startIndex = (pagination.page - 1) * pagination.perPage;
+      const endIndex = startIndex + pagination.perPage;
+      return filteredAndSortedData.slice(startIndex, endIndex);
+    }
+    return filteredAndSortedData;
+  }, [filteredAndSortedData, pagination]);
+
   // Check if any filters are active
   const hasActiveFilters = filters.id || filters.code || filters.name || filters.is_active !== 'all';
 
@@ -201,24 +225,44 @@ export const LookupTable: React.FC<LookupTableProps> = ({
     setEditingData({ code: '', is_active: true, name: '' });
     setOriginalName('');
     setShowNewForm(false);
-    setNewItem({ code: '', is_active: true });
+    setNewItem({ code: '', is_active: true, name: '' });
   };
 
   const handleSave = async () => {
     if (editingId) {
       setSaving(true);
       try {
-        // Update the lookup item (code, is_active)
+        // Get current language ID if translation changed
+        let currentLanguageId: number | undefined = undefined;
+        if (editingData.name !== originalName && editingData.name.trim()) {
+          try {
+            const languagesResponse = await lookupApi.getLanguages();
+            if (languagesResponse.success) {
+              const currentLanguage = languagesResponse.data.find(
+                l => l.code.toLowerCase() === language.toLowerCase()
+              );
+              if (currentLanguage) {
+                currentLanguageId = currentLanguage.id;
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to get language ID, translation will use language_code:', err);
+          }
+        }
+
+        // Update the lookup item with translation data (sends to n8n)
         await onUpdate(editingId, { 
           code: editingData.code, 
-          is_active: editingData.is_active 
+          is_active: editingData.is_active,
+          text: editingData.name !== originalName && editingData.name.trim() ? editingData.name : undefined,
+          language_id: currentLanguageId
         });
 
-        // If translation changed and onUpdateTranslation is provided, update translations for all languages
-        if (onUpdateTranslation && editingData.name !== originalName) {
+        // If onUpdateTranslation is provided and translation changed, use it for backward compatibility
+        if (onUpdateTranslation && editingData.name !== originalName && editingData.name.trim()) {
           await onUpdateTranslation(editingData.code, editingData.name);
-        } else if (editingData.name !== originalName) {
-          // Default behavior: update translation for current language and create/update for all other languages
+        } else if (editingData.name !== originalName && editingData.name.trim() && !currentLanguageId) {
+          // Fallback: if language_id wasn't found, use the old method
           await updateTranslationsForAllLanguages(editingData.code, editingData.name);
         }
 
@@ -295,9 +339,36 @@ export const LookupTable: React.FC<LookupTableProps> = ({
     if (!newItem.code.trim()) return;
     setSaving(true);
     try {
-      await onCreate(newItem);
+      // Get current language ID if translation is provided
+      let currentLanguageId: number | undefined = undefined;
+      if (newItem.name.trim()) {
+        try {
+          const languagesResponse = await lookupApi.getLanguages();
+          if (languagesResponse.success) {
+            const currentLanguage = languagesResponse.data.find(
+              l => l.code.toLowerCase() === language.toLowerCase()
+            );
+            if (currentLanguage) {
+              currentLanguageId = currentLanguage.id;
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to get language ID, translation will use language_code:', err);
+        }
+      }
+
+      // Create the lookup item with translation data (sends to n8n)
+      await onCreate({
+        code: newItem.code,
+        is_active: newItem.is_active,
+        text: newItem.name.trim() || undefined,
+        language_id: currentLanguageId
+      });
+
       setShowNewForm(false);
-      setNewItem({ code: '', is_active: true });
+      setNewItem({ code: '', is_active: true, name: '' });
+      // Reload data to reflect changes
+      await onLoad();
     } catch (err) {
       console.error('Failed to create:', err);
     } finally {
@@ -371,12 +442,12 @@ export const LookupTable: React.FC<LookupTableProps> = ({
             <Button
               variant="primary"
               className="flex items-center gap-2"
-              onClick={() => setShowNewForm(true)}
-            >
-              <Plus className="h-4 w-4" />
-              Add New
-            </Button>
-          )}
+            onClick={() => setShowNewForm(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Add New
+          </Button>
+        )}
         </div>
       </div>
 
@@ -388,8 +459,8 @@ export const LookupTable: React.FC<LookupTableProps> = ({
 
       {showNewForm && (
         <Card className="mb-4 p-4">
-          <div className="flex items-end gap-4">
-            <div className="flex-1">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <Input
                 label="Code"
                 value={newItem.code}
@@ -397,7 +468,14 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                 placeholder="Enter code"
                 required
               />
+              <Input
+                label={`Translation (${language.toUpperCase()})`}
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                placeholder="Enter translation"
+              />
             </div>
+            <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -410,6 +488,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                 Active
               </label>
             </div>
+              <div className="flex gap-2">
             <Button
               variant="primary"
               onClick={handleCreate}
@@ -423,6 +502,8 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
+              </div>
+            </div>
           </div>
         </Card>
       )}
@@ -514,39 +595,45 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                     <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       <div className="flex flex-col items-center gap-2">
                         <Filter className="h-8 w-8 opacity-40" />
-                        <p>No results match your filters</p>
-                        {hasActiveFilters && (
-                          <button
-                            onClick={clearFilters}
-                            className="text-primary-600 dark:text-primary-400 hover:underline text-sm"
-                          >
-                            Clear all filters
-                          </button>
+                        {hasActiveFilters ? (
+                          <>
+                            <p>No results match your filters</p>
+                            <button
+                              onClick={clearFilters}
+                              className="text-primary-600 dark:text-primary-400 hover:underline text-sm"
+                            >
+                              Clear all filters
+                            </button>
+                          </>
+                        ) : pagination && filteredAndSortedData.length === 0 && data.length > 0 ? (
+                          <p>No data available on this page</p>
+                        ) : (
+                          <p>No data available</p>
                         )}
                       </div>
                     </td>
                   </tr>
                 ) : (
                   processedData.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                    >
+                  <tr
+                    key={item.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
                       <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-mono">
-                        {item.id}
-                      </td>
-                      <td className="px-4 py-3">
-                        {editingId === item.id ? (
-                          <Input
-                            value={editingData.code}
-                            onChange={(e) => setEditingData({ ...editingData, code: e.target.value })}
-                            className="w-full"
-                          />
-                        ) : (
+                      {item.id}
+                    </td>
+                    <td className="px-4 py-3">
+                      {editingId === item.id ? (
+                        <Input
+                          value={editingData.code}
+                          onChange={(e) => setEditingData({ ...editingData, code: e.target.value })}
+                          className="w-full"
+                        />
+                      ) : (
                           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.code}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                         {editingId === item.id ? (
                           <Input
                             value={editingData.name}
@@ -555,82 +642,94 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                             className="w-full"
                           />
                         ) : item.name ? (
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
-                        ) : (
-                          <span className="text-sm italic text-gray-400 dark:text-gray-500">No translation</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {editingId === item.id ? (
-                          <input
-                            type="checkbox"
-                            checked={editingData.is_active}
-                            onChange={(e) => setEditingData({ ...editingData, is_active: e.target.checked })}
-                            className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                          />
-                        ) : (
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              item.is_active
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                            }`}
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
+                      ) : (
+                        <span className="text-sm italic text-gray-400 dark:text-gray-500">No translation</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {editingId === item.id ? (
+                        <input
+                          type="checkbox"
+                          checked={editingData.is_active}
+                          onChange={(e) => setEditingData({ ...editingData, is_active: e.target.checked })}
+                          className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                        />
+                      ) : (
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            item.is_active
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}
+                        >
+                          {item.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {editingId === item.id ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={handleSave}
+                            disabled={!editingData.code.trim() || saving}
+                            isLoading={saving}
                           >
-                            {item.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {editingId === item.id ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={handleSave}
-                              disabled={!editingData.code.trim() || saving}
-                              isLoading={saving}
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={handleCancel}
-                              disabled={saving}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(item)}
-                              disabled={deleting === item.id}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleDelete(item.id)}
-                              disabled={deleting === item.id}
-                              isLoading={deleting === item.id}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleCancel}
+                            disabled={saving}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                            disabled={deleting === item.id}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={deleting === item.id}
+                            isLoading={deleting === item.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
                   ))
                 )}
               </tbody>
             </table>
             
-            {/* Results summary */}
-            {data.length > 0 && (
+            {/* Pagination */}
+            {pagination && filteredAndSortedData.length > 0 && (
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={Math.ceil(filteredAndSortedData.length / pagination.perPage)}
+                perPage={pagination.perPage}
+                total={filteredAndSortedData.length}
+                onPageChange={pagination.onPageChange}
+                onPerPageChange={pagination.onPerPageChange}
+              />
+            )}
+
+            {/* Results summary (only show if no pagination) */}
+            {!pagination && data.length > 0 && (
               <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-sm text-gray-600 dark:text-gray-400">
                 <div className="flex items-center justify-between">
                   <span>

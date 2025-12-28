@@ -51,16 +51,25 @@ All lookup tables support the following operations:
 
 **Endpoint**: `GET /api/v1/lookups/:lookup_type`
 
-**Description**: Retrieve all items for the specified lookup type.
+**Description**: Retrieve all items for the specified lookup type with optional language-specific translations.
 
 **Query Parameters** (optional):
+- `language_code`: Language code for translations (e.g., `en`, `hu`, `de`) - Returns translations in specified language
+- `language_id`: Language ID for translations (e.g., `1`, `2`, `3`) - Alternative to language_code
 - `object_type_id` (for object-statuses only): Filter by object type
 - `code` (for translations only): Filter by translation code
-- `language_id` (for translations only): Filter by language ID
+- `is_active`: Filter by active status (default: `true`)
+
+**Language Selection Priority**:
+1. `language_id` (if provided) - Takes precedence
+2. `language_code` (if provided) - Used if language_id not provided
+3. Default: `'en'` (English) - Used if neither is provided
 
 **Example**: `GET /api/v1/lookups/languages`
 
-**Response**:
+**Example with Language**: `GET /api/v1/lookups/object-types?language_code=hu`
+
+**Response** (without language parameter - defaults to English):
 ```json
 {
   "success": true,
@@ -68,7 +77,23 @@ All lookup tables support the following operations:
     {
       "id": 1,
       "code": "en",
-      "is_active": true
+      "is_active": true,
+      "name": "English"
+    }
+  ]
+}
+```
+
+**Response** (with `language_code=hu` - Hungarian translations):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "en",
+      "is_active": true,
+      "name": "Angol"
     }
   ]
 }
@@ -114,15 +139,23 @@ All lookup tables support the following operations:
 
 **Endpoint**: `POST /api/v1/lookups/:lookup_type`
 
-**Description**: Create a new item in the specified lookup table.
+**Description**: Create a new item in the specified lookup table. Optionally includes translation data for the current language.
 
 **Request Body**:
 ```json
 {
   "code": "new_code",
-  "is_active": true
+  "is_active": true,
+  "text": "Translation text in current language",
+  "language_id": 1
 }
 ```
+
+**Fields**:
+- `code` (required): Unique code for the lookup item
+- `is_active` (optional, default: `true`): Active status
+- `text` (optional): Translation text for the current language
+- `language_id` (optional): Language ID for the translation. If provided with `text`, creates/updates the translation for this language. If `text` is provided without `language_id`, uses the current request language context.
 
 **Example**: `POST /api/v1/lookups/languages`
 
@@ -138,9 +171,12 @@ All lookup tables support the following operations:
 }
 ```
 
+**Note**: If `text` and `language_id` are provided, the API will automatically create or update the translation entry in the `translations` table for the specified language. If `text` is provided without `language_id`, the system will use the current language context from the request headers or session.
+
 **n8n Implementation**:
 - Extract `lookup_type` from `{{ $json.params.lookup_type }}`
 - Insert into appropriate table based on `lookup_type`
+- If `text` and `language_id` are provided, insert/update corresponding entry in `translations` table
 - Return created item
 
 ---
@@ -149,15 +185,23 @@ All lookup tables support the following operations:
 
 **Endpoint**: `PUT /api/v1/lookups/:lookup_type/:id`
 
-**Description**: Update an existing item.
+**Description**: Update an existing item. Optionally includes translation data for the current language.
 
 **Request Body** (all fields optional):
 ```json
 {
   "code": "updated_code",
-  "is_active": false
+  "is_active": false,
+  "text": "Updated translation text in current language",
+  "language_id": 1
 }
 ```
+
+**Fields**:
+- `code` (optional): Updated code for the lookup item
+- `is_active` (optional): Updated active status
+- `text` (optional): Translation text for the current language. If provided, updates the translation for the specified or current language.
+- `language_id` (optional): Language ID for the translation. If provided with `text`, updates the translation for this language. If `text` is provided without `language_id`, uses the current request language context.
 
 **Example**: `PUT /api/v1/lookups/languages/1`
 
@@ -173,9 +217,12 @@ All lookup tables support the following operations:
 }
 ```
 
+**Note**: If `text` and `language_id` are provided, the API will automatically update the translation entry in the `translations` table for the specified language. If the translation doesn't exist, it will be created. If `text` is provided without `language_id`, the system will use the current language context from the request headers or session.
+
 **n8n Implementation**:
 - Extract `lookup_type` and `id` from path parameters
 - Update table based on `lookup_type`
+- If `text` and `language_id` are provided, update/create corresponding entry in `translations` table
 - Return updated item
 
 ---

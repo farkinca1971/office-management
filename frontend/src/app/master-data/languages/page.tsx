@@ -14,6 +14,8 @@ export default function LanguagesPage() {
   const [data, setData] = React.useState<LookupItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [page, setPage] = React.useState(1);
+  const [perPage, setPerPage] = React.useState(20);
   const language = useLanguageStore((state) => state.language);
 
   const loadData = React.useCallback(async () => {
@@ -37,7 +39,7 @@ export default function LanguagesPage() {
     loadData();
   }, [loadData]);
 
-  const handleCreate = async (item: { code: string; is_active?: boolean }) => {
+  const handleCreate = async (item: { code: string; is_active?: boolean; text?: string; language_id?: number }) => {
     const response = await lookupApi.createLanguage(item);
     if (response.success) {
       await loadData();
@@ -46,7 +48,7 @@ export default function LanguagesPage() {
     }
   };
 
-  const handleUpdate = async (id: number, item: { code?: string; is_active?: boolean }) => {
+  const handleUpdate = async (id: number, item: { code?: string; is_active?: boolean; text?: string; language_id?: number }) => {
     const response = await lookupApi.updateLanguage(id, item);
     if (response.success) {
       await loadData();
@@ -64,6 +66,16 @@ export default function LanguagesPage() {
     }
   };
 
+  // Reset to page 1 when data changes
+  React.useEffect(() => {
+    if (data.length > 0) {
+      const maxPage = Math.ceil(data.length / perPage) || 1;
+      if (page > maxPage || page < 1) {
+        setPage(1);
+      }
+    }
+  }, [data.length, perPage]);
+
   return (
     <LookupTable
       title="Languages"
@@ -74,6 +86,17 @@ export default function LanguagesPage() {
       onCreate={handleCreate}
       onUpdate={handleUpdate}
       onDelete={handleDelete}
+      pagination={data.length > 0 ? {
+        page,
+        perPage,
+        total: data.length,
+        totalPages: Math.ceil(data.length / perPage),
+        onPageChange: setPage,
+        onPerPageChange: (newPerPage) => {
+          setPerPage(newPerPage);
+          setPage(1); // Reset to first page when changing per page
+        },
+      } : undefined}
     />
   );
 }

@@ -1171,7 +1171,73 @@ INSERT INTO translations (code, language_id, text) VALUES
 ('TRANSFER_EMPLOYEE', (SELECT id FROM languages WHERE code = 'hu'), 'Dolgozó áthelyezése'),
 ('REINSTATE_EMPLOYEE', (SELECT id FROM languages WHERE code = 'en'), 'Reinstate Employee'),
 ('REINSTATE_EMPLOYEE', (SELECT id FROM languages WHERE code = 'de'), 'Mitarbeiter wieder einstellen'),
-('REINSTATE_EMPLOYEE', (SELECT id FROM languages WHERE code = 'hu'), 'Dolgozó visszahelyezése');
+('REINSTATE_EMPLOYEE', (SELECT id FROM languages WHERE code = 'hu'), 'Dolgozó visszahelyezése'),
+
+-- Lookup table creation actions (USER_CREATE_{LOOKUP_TYPE})
+-- Languages
+('USER_CREATE_LANGUAGES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Language'),
+('USER_CREATE_LANGUAGES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Sprache'),
+('USER_CREATE_LANGUAGES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó nyelv létrehozása'),
+
+-- Object Types
+('USER_CREATE_OBJECT_TYPES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Object Type'),
+('USER_CREATE_OBJECT_TYPES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Objekttyp'),
+('USER_CREATE_OBJECT_TYPES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó objektumtípus létrehozása'),
+
+-- Object Statuses
+('USER_CREATE_OBJECT_STATUSES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Object Status'),
+('USER_CREATE_OBJECT_STATUSES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Objektstatus'),
+('USER_CREATE_OBJECT_STATUSES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó objektumstátusz létrehozása'),
+
+-- Sexes
+('USER_CREATE_SEXES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Sex'),
+('USER_CREATE_SEXES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Geschlecht'),
+('USER_CREATE_SEXES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó nem létrehozása'),
+
+-- Salutations
+('USER_CREATE_SALUTATIONS', (SELECT id FROM languages WHERE code = 'en'), 'User Create Salutation'),
+('USER_CREATE_SALUTATIONS', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Anrede'),
+('USER_CREATE_SALUTATIONS', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó megszólítás létrehozása'),
+
+-- Product Categories
+('USER_CREATE_PRODUCT_CATEGORIES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Product Category'),
+('USER_CREATE_PRODUCT_CATEGORIES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Produktkategorie'),
+('USER_CREATE_PRODUCT_CATEGORIES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó termékkategória létrehozása'),
+
+-- Countries
+('USER_CREATE_COUNTRIES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Country'),
+('USER_CREATE_COUNTRIES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Land'),
+('USER_CREATE_COUNTRIES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó ország létrehozása'),
+
+-- Address Types
+('USER_CREATE_ADDRESS_TYPES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Address Type'),
+('USER_CREATE_ADDRESS_TYPES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Adresstyp'),
+('USER_CREATE_ADDRESS_TYPES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó címtípus létrehozása'),
+
+-- Address Area Types
+('USER_CREATE_ADDRESS_AREA_TYPES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Address Area Type'),
+('USER_CREATE_ADDRESS_AREA_TYPES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Adressbereichstyp'),
+('USER_CREATE_ADDRESS_AREA_TYPES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó címterülettípus létrehozása'),
+
+-- Contact Types
+('USER_CREATE_CONTACT_TYPES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Contact Type'),
+('USER_CREATE_CONTACT_TYPES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Kontakttyp'),
+('USER_CREATE_CONTACT_TYPES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó kapcsolattípus létrehozása'),
+
+-- Transaction Types
+('USER_CREATE_TRANSACTION_TYPES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Transaction Type'),
+('USER_CREATE_TRANSACTION_TYPES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Transaktionstyp'),
+('USER_CREATE_TRANSACTION_TYPES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó tranzakciótípus létrehozása'),
+
+-- Currencies
+('USER_CREATE_CURRENCIES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Currency'),
+('USER_CREATE_CURRENCIES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Währung'),
+('USER_CREATE_CURRENCIES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó pénznem létrehozása'),
+
+-- Object Relation Types
+('USER_CREATE_OBJECT_RELATION_TYPES', (SELECT id FROM languages WHERE code = 'en'), 'User Create Object Relation Type'),
+('USER_CREATE_OBJECT_RELATION_TYPES', (SELECT id FROM languages WHERE code = 'de'), 'Benutzer erstellt Objektbeziehungstyp'),
+('USER_CREATE_OBJECT_RELATION_TYPES', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó objektumkapcsolat-típus létrehozása');
 
 INSERT INTO audit_actions (code, is_active, object_type_id) VALUES 
 ('CREATE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
@@ -1210,7 +1276,23 @@ INSERT INTO audit_actions (code, is_active, object_type_id) VALUES
 ('UPDATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
 ('DELETE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
 ('TRANSFER_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
-('REINSTATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee'));
+('REINSTATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
+
+-- Lookup table creation actions (scoped to 'user' object type)
+-- These actions track when users create items in lookup/reference data tables
+('USER_CREATE_LANGUAGES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_OBJECT_TYPES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_OBJECT_STATUSES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_SEXES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_SALUTATIONS', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_PRODUCT_CATEGORIES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_COUNTRIES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_ADDRESS_TYPES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_ADDRESS_AREA_TYPES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_CONTACT_TYPES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_TRANSACTION_TYPES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_CURRENCIES', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('USER_CREATE_OBJECT_RELATION_TYPES', TRUE, (SELECT id FROM object_types WHERE code = 'user'));
 
 -- ============================================================================
 -- SECTION 11: IDENTIFICATION TYPES

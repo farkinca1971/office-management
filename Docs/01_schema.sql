@@ -179,7 +179,7 @@ CREATE TABLE translations (
 -- ----------------------------------------------------------------------------
 CREATE TABLE audit_actions (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    code VARCHAR(30) UNIQUE NOT NULL COMMENT 'Action code (e.g., CREATE_PERSON, UPDATE_COMPANY)',
+    code VARCHAR(50) UNIQUE NOT NULL COMMENT 'Action code (e.g., CREATE_PERSON, UPDATE_COMPANY, USER_CREATE_OBJECT_TYPES)',
     is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this action is currently active',
     object_type_id INT NOT NULL COMMENT 'Object type this action applies to',
     FOREIGN KEY (object_type_id) REFERENCES object_types(id) ON DELETE RESTRICT,
