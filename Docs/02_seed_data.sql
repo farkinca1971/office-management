@@ -1062,46 +1062,8 @@ INSERT INTO translations (code, language_id, text) VALUES
 -- SECTION 10: AUDIT ACTIONS
 -- ============================================================================
 
-INSERT INTO audit_actions (code, is_active, object_type_id) VALUES 
-('CREATE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
-('UPDATE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
-('DELETE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
-('ARCHIVE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
-('RESTORE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
-
-('CREATE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
-('UPDATE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
-('DELETE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
-('DEACTIVATE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
-('REACTIVATE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
-
-('CREATE_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
-('UPDATE_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
-('DELETE_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
-('LOCK_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
-('UNLOCK_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
-('LOGIN', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
-('LOGOUT', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
-
-('CREATE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
-('UPDATE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
-('DELETE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
-('PUBLISH_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
-('DRAFT_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
-
-('CREATE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
-('UPDATE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
-('DELETE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
-('VERSION_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
-('RESTORE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
-
-('CREATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
-('UPDATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
-('DELETE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
-('TRANSFER_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
-('REINSTATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee'));
-
 -- Insert translations for audit actions (English, German, Hungarian)
+-- NOTE: Translations must be inserted BEFORE audit_actions due to foreign key constraint
 INSERT INTO translations (code, language_id, text) VALUES
 -- Person actions
 ('CREATE_PERSON', (SELECT id FROM languages WHERE code = 'en'), 'Create Person'),
@@ -1210,6 +1172,45 @@ INSERT INTO translations (code, language_id, text) VALUES
 ('REINSTATE_EMPLOYEE', (SELECT id FROM languages WHERE code = 'en'), 'Reinstate Employee'),
 ('REINSTATE_EMPLOYEE', (SELECT id FROM languages WHERE code = 'de'), 'Mitarbeiter wieder einstellen'),
 ('REINSTATE_EMPLOYEE', (SELECT id FROM languages WHERE code = 'hu'), 'Dolgozó visszahelyezése');
+
+INSERT INTO audit_actions (code, is_active, object_type_id) VALUES 
+('CREATE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
+('UPDATE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
+('DELETE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
+('ARCHIVE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
+('RESTORE_PERSON', TRUE, (SELECT id FROM object_types WHERE code = 'person')),
+
+('CREATE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
+('UPDATE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
+('DELETE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
+('DEACTIVATE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
+('REACTIVATE_COMPANY', TRUE, (SELECT id FROM object_types WHERE code = 'company')),
+
+('CREATE_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('UPDATE_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('DELETE_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('LOCK_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('UNLOCK_USER', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('LOGIN', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+('LOGOUT', TRUE, (SELECT id FROM object_types WHERE code = 'user')),
+
+('CREATE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
+('UPDATE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
+('DELETE_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
+('PUBLISH_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
+('DRAFT_DOCUMENT', TRUE, (SELECT id FROM object_types WHERE code = 'document')),
+
+('CREATE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
+('UPDATE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
+('DELETE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
+('VERSION_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
+('RESTORE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
+
+('CREATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
+('UPDATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
+('DELETE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
+('TRANSFER_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
+('REINSTATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee'));
 
 -- ============================================================================
 -- SECTION 11: IDENTIFICATION TYPES
