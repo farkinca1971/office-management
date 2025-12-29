@@ -8,6 +8,7 @@ import React from 'react';
 import { LookupTable } from '@/components/ui/LookupTable';
 import { lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
+import { useTranslation } from '@/lib/i18n';
 import type { LookupItem } from '@/types/common';
 
 export default function AddressAreaTypesPage() {
@@ -17,6 +18,7 @@ export default function AddressAreaTypesPage() {
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(20);
   const language = useLanguageStore((state) => state.language);
+  const { t } = useTranslation();
 
   const loadData = React.useCallback(async () => {
     setIsLoading(true);
@@ -132,7 +134,7 @@ export default function AddressAreaTypesPage() {
 
   return (
     <LookupTable
-      title="Address Area Types"
+      title={t('nav.addressAreaTypes')}
       data={data}
       isLoading={isLoading}
       error={error}

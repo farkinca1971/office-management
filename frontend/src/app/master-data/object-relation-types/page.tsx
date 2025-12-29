@@ -8,7 +8,15 @@ import React from 'react';
 import { LookupTable } from '@/components/ui/LookupTable';
 import { lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
+import { useTranslation } from '@/lib/i18n';
 import type { LookupItem } from '@/types/common';
+
+interface ObjectRelationTypeItem extends LookupItem {
+  parent_object_type_id?: number;
+  child_object_type_id?: number;
+  mirrored_type_id?: number;
+  mirrored_type_code?: string;
+}
 
 export default function ObjectRelationTypesPage() {
   const [data, setData] = React.useState<LookupItem[]>([]);
@@ -18,6 +26,7 @@ export default function ObjectRelationTypesPage() {
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(20);
   const language = useLanguageStore((state) => state.language);
+  const { t } = useTranslation();
 
   const loadData = React.useCallback(async () => {
     setIsLoading(true);
@@ -29,12 +38,17 @@ export default function ObjectRelationTypesPage() {
       ]);
       
       if (relationTypesResponse.success) {
-        // Debug: Log first item to check if object_type_id is present
-        if (relationTypesResponse.data.length > 0) {
-          console.log('First object relation type:', relationTypesResponse.data[0]);
-          console.log('Has object_type_id:', (relationTypesResponse.data[0] as any).object_type_id);
-        }
-        setData(relationTypesResponse.data);
+        // Enrich data with mirrored type codes for display
+        const enrichedData = relationTypesResponse.data.map((item: any) => {
+          if (item.mirrored_type_id) {
+            const mirroredType = relationTypesResponse.data.find((rt: any) => rt.id === item.mirrored_type_id);
+            if (mirroredType) {
+              item.mirrored_type_code = mirroredType.code;
+            }
+          }
+          return item;
+        });
+        setData(enrichedData);
       } else {
         setError('Failed to load object relation types');
       }
@@ -53,11 +67,21 @@ export default function ObjectRelationTypesPage() {
     loadData();
   }, [loadData]);
 
-  const handleCreate = async (item: { code: string; is_active?: boolean; text?: string; language_id?: number; object_type_id?: number }) => {
-    // Ensure object_type_id is always included (0 if not present)
+  const handleCreate = async (item: { 
+    code: string; 
+    is_active?: boolean; 
+    text?: string; 
+    language_id?: number; 
+    parent_object_type_id?: number;
+    child_object_type_id?: number;
+  }) => {
     const createPayload = {
-      ...item,
-      object_type_id: item.object_type_id !== undefined ? item.object_type_id : 0
+      code: item.code,
+      is_active: item.is_active !== undefined ? item.is_active : true,
+      text: item.text,
+      language_id: item.language_id,
+      parent_object_type_id: item.parent_object_type_id !== undefined ? item.parent_object_type_id : null,
+      child_object_type_id: item.child_object_type_id !== undefined ? item.child_object_type_id : null,
     };
     const response = await lookupApi.createObjectRelationType(createPayload);
     if (response.success) {
@@ -72,26 +96,27 @@ export default function ObjectRelationTypesPage() {
     is_active?: boolean; 
     text?: string; 
     language_id?: number; 
-    object_type_id?: number; 
+    parent_object_type_id?: number;
+    child_object_type_id?: number;
     update_all_languages?: boolean | number; 
     old_code?: string;
     new_code?: string;
     old_is_active?: boolean;
     new_is_active?: boolean;
-    old_object_type_id?: number;
-    new_object_type_id?: number;
+    old_parent_object_type_id?: number;
+    new_parent_object_type_id?: number;
+    old_child_object_type_id?: number;
+    new_child_object_type_id?: number;
     old_text?: string; 
     new_text?: string;
   }) => {
-    // Handle update_all_languages if needed (check for both boolean and number)
+    // Handle update_all_languages if needed
     const shouldUpdateAll = item.update_all_languages === true || item.update_all_languages === 1;
     if (shouldUpdateAll && item.new_text && item.new_code) {
-      // Update translations for all languages
       try {
         const languagesResponse = await lookupApi.getLanguages();
         if (languagesResponse.success) {
           const languages = languagesResponse.data;
-          // Update translation for all languages
           const updatePromises = languages.map(lang => 
             lookupApi.updateTranslation(item.new_code!, lang.id, { text: item.new_text! })
           );
@@ -99,23 +124,30 @@ export default function ObjectRelationTypesPage() {
         }
       } catch (err) {
         console.error('Failed to update translations for all languages:', err);
-        // Continue with the update even if all languages update fails
       }
     }
     
-    // Request body only includes old/new value pairs, update_all_languages, and language_id
-    const updatePayload = {
+    // Request body with old/new value pairs
+    const updatePayload: any = {
       update_all_languages: shouldUpdateAll ? 1 : 0,
       language_id: item.language_id,
       old_code: item.old_code !== undefined ? item.old_code : '',
       new_code: item.new_code !== undefined ? item.new_code : '',
       old_is_active: item.old_is_active !== undefined ? item.old_is_active : true,
       new_is_active: item.new_is_active !== undefined ? item.new_is_active : true,
-      old_object_type_id: item.old_object_type_id !== undefined ? item.old_object_type_id : 0,
-      new_object_type_id: item.new_object_type_id !== undefined ? item.new_object_type_id : 0,
       old_text: item.old_text !== undefined ? item.old_text : '',
       new_text: item.new_text !== undefined ? item.new_text : ''
     };
+
+    // Add parent and child object type fields if they exist
+    if (item.old_parent_object_type_id !== undefined || item.new_parent_object_type_id !== undefined) {
+      updatePayload.old_parent_object_type_id = item.old_parent_object_type_id !== undefined ? item.old_parent_object_type_id : null;
+      updatePayload.new_parent_object_type_id = item.new_parent_object_type_id !== undefined ? item.new_parent_object_type_id : null;
+    }
+    if (item.old_child_object_type_id !== undefined || item.new_child_object_type_id !== undefined) {
+      updatePayload.old_child_object_type_id = item.old_child_object_type_id !== undefined ? item.old_child_object_type_id : null;
+      updatePayload.new_child_object_type_id = item.new_child_object_type_id !== undefined ? item.new_child_object_type_id : null;
+    }
     
     const response = await lookupApi.updateObjectRelationType(id, updatePayload);
     if (response.success) {
@@ -125,19 +157,29 @@ export default function ObjectRelationTypesPage() {
     }
   };
   
-  // Helper function to get object category name from object_type_id
-  const getObjectCategoryName = (item: LookupItem): string | undefined => {
-    const objectTypeId = (item as any).object_type_id;
-    // Debug: Log to see what we're getting
+  // Helper function to get object type name from ID
+  const getObjectTypeName = (objectTypeId?: number): string | undefined => {
     if (objectTypeId === null || objectTypeId === undefined) {
       return undefined;
     }
     const objectType = objectTypes.find(ot => ot.id === objectTypeId);
-    if (!objectType) {
-      console.warn(`Object type with id ${objectTypeId} not found in objectTypes array`);
-      return undefined;
-    }
     return objectType?.name || objectType?.code || undefined;
+  };
+
+  // Helper function to format object category display (Parent → Child)
+  const getObjectCategoryName = (item: LookupItem): string | undefined => {
+    const relationItem = item as ObjectRelationTypeItem;
+    const parentType = getObjectTypeName(relationItem.parent_object_type_id);
+    const childType = getObjectTypeName(relationItem.child_object_type_id);
+    
+    if (parentType && childType) {
+      return `${parentType} → ${childType}`;
+    } else if (parentType) {
+      return parentType;
+    } else if (childType) {
+      return childType;
+    }
+    return undefined;
   };
 
   const handleDelete = async (id: number) => {
@@ -160,7 +202,7 @@ export default function ObjectRelationTypesPage() {
 
   return (
     <LookupTable
-      title="Object Relation Types"
+      title={t('nav.objectRelationTypes')}
       data={data}
       isLoading={isLoading}
       error={error}

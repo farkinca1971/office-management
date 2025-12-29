@@ -47,19 +47,6 @@ CREATE TABLE object_statuses (
 );
 
 -- ----------------------------------------------------------------------------
--- Object Relation Types: Types of relationships between objects
--- ----------------------------------------------------------------------------
--- Defines types of relationships that can exist between objects
--- Examples: employee (Company-Person), family_member (Person-Person), 
--- business_partner (Company-Company), etc.
-CREATE TABLE object_relation_types (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    code VARCHAR(30) UNIQUE NOT NULL COMMENT 'Relation type code (e.g., employee, family_member, business_partner)',
-    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this relation type is currently active',
-    FOREIGN KEY (code) REFERENCES translations(code) ON DELETE RESTRICT
-);
-
--- ----------------------------------------------------------------------------
 -- Sexes: Gender/sex options for persons
 -- ----------------------------------------------------------------------------
 CREATE TABLE sexes (
@@ -218,6 +205,29 @@ CREATE TABLE objects (
     FOREIGN KEY (object_status_id) REFERENCES object_statuses(id) ON DELETE RESTRICT,
     INDEX idx_object_type_id (object_type_id),
     INDEX idx_object_status_id (object_status_id)
+);
+
+-- ----------------------------------------------------------------------------
+-- Object Relation Types: Types of relationships between objects
+-- ----------------------------------------------------------------------------
+-- Defines types of relationships that can exist between objects
+-- Examples: employee (Company-Person), family_member (Person-Person), 
+-- business_partner (Company-Company), etc.
+-- NOTE: This table references object_types.id, so it must be created after object_types
+CREATE TABLE object_relation_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(30) UNIQUE NOT NULL COMMENT 'Relation type code (e.g., employee, family_member, business_partner)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this relation type is currently active',
+    parent_object_type_id INT COMMENT 'Parent object type ID this relation applies to (references object_types.id)',
+    child_object_type_id INT COMMENT 'Child object type ID this relation applies to (references object_types.id)',
+    mirrored_type_id INT COMMENT 'Mirrored relation type ID (references object_relation_types.id)',
+    FOREIGN KEY (code) REFERENCES translations(code) ON DELETE RESTRICT,
+    FOREIGN KEY (parent_object_type_id) REFERENCES object_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (child_object_type_id) REFERENCES object_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (mirrored_type_id) REFERENCES object_relation_types(id) ON DELETE RESTRICT,
+    INDEX idx_parent_object_type_id (parent_object_type_id),
+    INDEX idx_child_object_type_id (child_object_type_id),
+    INDEX idx_mirrored_type_id (mirrored_type_id)
 );
 
 -- ----------------------------------------------------------------------------

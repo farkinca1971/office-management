@@ -1584,57 +1584,135 @@ INSERT INTO translations (code, language_id, text) VALUES
 
 -- Insert translations for object_relation_types (English, German, Hungarian)
 INSERT INTO translations (code, language_id, text) VALUES
--- Company-Person relationship translations
-('employee', (SELECT id FROM languages WHERE code = 'en'), 'Employee'),
-('employee', (SELECT id FROM languages WHERE code = 'de'), 'Mitarbeiter'),
-('employee', (SELECT id FROM languages WHERE code = 'hu'), 'Alkalmazott'),
-('contractor', (SELECT id FROM languages WHERE code = 'en'), 'Contractor'),
-('contractor', (SELECT id FROM languages WHERE code = 'de'), 'Auftragnehmer'),
-('contractor', (SELECT id FROM languages WHERE code = 'hu'), 'Szerződő'),
-('consultant', (SELECT id FROM languages WHERE code = 'en'), 'Consultant'),
-('consultant', (SELECT id FROM languages WHERE code = 'de'), 'Berater'),
-('consultant', (SELECT id FROM languages WHERE code = 'hu'), 'Tanácsadó'),
-('board_member', (SELECT id FROM languages WHERE code = 'en'), 'Board Member'),
-('board_member', (SELECT id FROM languages WHERE code = 'de'), 'Vorstandsmitglied'),
-('board_member', (SELECT id FROM languages WHERE code = 'hu'), 'Igazgatótanácsi tag'),
-('shareholder', (SELECT id FROM languages WHERE code = 'en'), 'Shareholder'),
-('shareholder', (SELECT id FROM languages WHERE code = 'de'), 'Aktionär'),
-('shareholder', (SELECT id FROM languages WHERE code = 'hu'), 'Részvényes'),
-('customer', (SELECT id FROM languages WHERE code = 'en'), 'Customer'),
-('customer', (SELECT id FROM languages WHERE code = 'de'), 'Kunde'),
-('customer', (SELECT id FROM languages WHERE code = 'hu'), 'Ügyfél'),
-('supplier', (SELECT id FROM languages WHERE code = 'en'), 'Supplier'),
-('supplier', (SELECT id FROM languages WHERE code = 'de'), 'Lieferant'),
-('supplier', (SELECT id FROM languages WHERE code = 'hu'), 'Beszállító'),
-
--- Person-Person relationship translations
-('spouse', (SELECT id FROM languages WHERE code = 'en'), 'Spouse'),
-('spouse', (SELECT id FROM languages WHERE code = 'de'), 'Ehepartner'),
-('spouse', (SELECT id FROM languages WHERE code = 'hu'), 'Házastárs'),
+-- Family relationship translations (Person-Person)
+('mother', (SELECT id FROM languages WHERE code = 'en'), 'Mother'),
+('mother', (SELECT id FROM languages WHERE code = 'de'), 'Mutter'),
+('mother', (SELECT id FROM languages WHERE code = 'hu'), 'Anya'),
+('father', (SELECT id FROM languages WHERE code = 'en'), 'Father'),
+('father', (SELECT id FROM languages WHERE code = 'de'), 'Vater'),
+('father', (SELECT id FROM languages WHERE code = 'hu'), 'Apa'),
+('son', (SELECT id FROM languages WHERE code = 'en'), 'Son'),
+('son', (SELECT id FROM languages WHERE code = 'de'), 'Sohn'),
+('son', (SELECT id FROM languages WHERE code = 'hu'), 'Fiú'),
+('daughter', (SELECT id FROM languages WHERE code = 'en'), 'Daughter'),
+('daughter', (SELECT id FROM languages WHERE code = 'de'), 'Tochter'),
+('daughter', (SELECT id FROM languages WHERE code = 'hu'), 'Lány'),
 ('parent', (SELECT id FROM languages WHERE code = 'en'), 'Parent'),
 ('parent', (SELECT id FROM languages WHERE code = 'de'), 'Elternteil'),
 ('parent', (SELECT id FROM languages WHERE code = 'hu'), 'Szülő'),
 ('child', (SELECT id FROM languages WHERE code = 'en'), 'Child'),
 ('child', (SELECT id FROM languages WHERE code = 'de'), 'Kind'),
 ('child', (SELECT id FROM languages WHERE code = 'hu'), 'Gyermek'),
+('spouse', (SELECT id FROM languages WHERE code = 'en'), 'Spouse'),
+('spouse', (SELECT id FROM languages WHERE code = 'de'), 'Ehepartner'),
+('spouse', (SELECT id FROM languages WHERE code = 'hu'), 'Házastárs'),
 ('sibling', (SELECT id FROM languages WHERE code = 'en'), 'Sibling'),
 ('sibling', (SELECT id FROM languages WHERE code = 'de'), 'Geschwister'),
 ('sibling', (SELECT id FROM languages WHERE code = 'hu'), 'Testvér'),
-('guardian', (SELECT id FROM languages WHERE code = 'en'), 'Guardian'),
-('guardian', (SELECT id FROM languages WHERE code = 'de'), 'Vormund'),
-('guardian', (SELECT id FROM languages WHERE code = 'hu'), 'Gondnok'),
-('emergency_contact', (SELECT id FROM languages WHERE code = 'en'), 'Emergency Contact'),
-('emergency_contact', (SELECT id FROM languages WHERE code = 'de'), 'Notfallkontakt'),
-('emergency_contact', (SELECT id FROM languages WHERE code = 'hu'), 'Vészhelyzeti kapcsolattartó'),
-('family_member', (SELECT id FROM languages WHERE code = 'en'), 'Family Member'),
-('family_member', (SELECT id FROM languages WHERE code = 'de'), 'Familienmitglied'),
-('family_member', (SELECT id FROM languages WHERE code = 'hu'), 'Családtag'),
 ('friend', (SELECT id FROM languages WHERE code = 'en'), 'Friend'),
 ('friend', (SELECT id FROM languages WHERE code = 'de'), 'Freund'),
 ('friend', (SELECT id FROM languages WHERE code = 'hu'), 'Barát'),
 ('colleague', (SELECT id FROM languages WHERE code = 'en'), 'Colleague'),
 ('colleague', (SELECT id FROM languages WHERE code = 'de'), 'Kollege'),
 ('colleague', (SELECT id FROM languages WHERE code = 'hu'), 'Kolléga'),
+
+-- Business relationship translations (Company-Person)
+('employer', (SELECT id FROM languages WHERE code = 'en'), 'Employer'),
+('employer', (SELECT id FROM languages WHERE code = 'de'), 'Arbeitgeber'),
+('employer', (SELECT id FROM languages WHERE code = 'hu'), 'Munkáltató'),
+('worker', (SELECT id FROM languages WHERE code = 'en'), 'Worker'),
+('worker', (SELECT id FROM languages WHERE code = 'de'), 'Arbeitnehmer'),
+('worker', (SELECT id FROM languages WHERE code = 'hu'), 'Munkavállaló'),
+
+-- Extended family relationship translations (Person-Person)
+('grandparent', (SELECT id FROM languages WHERE code = 'en'), 'Grandparent'),
+('grandparent', (SELECT id FROM languages WHERE code = 'de'), 'Großelternteil'),
+('grandparent', (SELECT id FROM languages WHERE code = 'hu'), 'Nagyszülő'),
+('grandchild', (SELECT id FROM languages WHERE code = 'en'), 'Grandchild'),
+('grandchild', (SELECT id FROM languages WHERE code = 'de'), 'Enkelkind'),
+('grandchild', (SELECT id FROM languages WHERE code = 'hu'), 'Unoka'),
+('uncle', (SELECT id FROM languages WHERE code = 'en'), 'Uncle'),
+('uncle', (SELECT id FROM languages WHERE code = 'de'), 'Onkel'),
+('uncle', (SELECT id FROM languages WHERE code = 'hu'), 'Nagybácsi'),
+('aunt', (SELECT id FROM languages WHERE code = 'en'), 'Aunt'),
+('aunt', (SELECT id FROM languages WHERE code = 'de'), 'Tante'),
+('aunt', (SELECT id FROM languages WHERE code = 'hu'), 'Nagynéni'),
+('nephew', (SELECT id FROM languages WHERE code = 'en'), 'Nephew'),
+('nephew', (SELECT id FROM languages WHERE code = 'de'), 'Neffe'),
+('nephew', (SELECT id FROM languages WHERE code = 'hu'), 'Unokaöcs'),
+('niece', (SELECT id FROM languages WHERE code = 'en'), 'Niece'),
+('niece', (SELECT id FROM languages WHERE code = 'de'), 'Nichte'),
+('niece', (SELECT id FROM languages WHERE code = 'hu'), 'Unokahúg'),
+('cousin', (SELECT id FROM languages WHERE code = 'en'), 'Cousin'),
+('cousin', (SELECT id FROM languages WHERE code = 'de'), 'Cousin'),
+('cousin', (SELECT id FROM languages WHERE code = 'hu'), 'Unokatestvér'),
+('mother_in_law', (SELECT id FROM languages WHERE code = 'en'), 'Mother-in-Law'),
+('mother_in_law', (SELECT id FROM languages WHERE code = 'de'), 'Schwiegermutter'),
+('mother_in_law', (SELECT id FROM languages WHERE code = 'hu'), 'Anyós'),
+('father_in_law', (SELECT id FROM languages WHERE code = 'en'), 'Father-in-Law'),
+('father_in_law', (SELECT id FROM languages WHERE code = 'de'), 'Schwiegerfather'),
+('father_in_law', (SELECT id FROM languages WHERE code = 'hu'), 'Após'),
+('son_in_law', (SELECT id FROM languages WHERE code = 'en'), 'Son-in-Law'),
+('son_in_law', (SELECT id FROM languages WHERE code = 'de'), 'Schwiegersohn'),
+('son_in_law', (SELECT id FROM languages WHERE code = 'hu'), 'Vő'),
+('daughter_in_law', (SELECT id FROM languages WHERE code = 'en'), 'Daughter-in-Law'),
+('daughter_in_law', (SELECT id FROM languages WHERE code = 'de'), 'Schwiegertochter'),
+('daughter_in_law', (SELECT id FROM languages WHERE code = 'hu'), 'Menye'),
+
+-- Professional relationship translations (Person-Person)
+('manager', (SELECT id FROM languages WHERE code = 'en'), 'Manager'),
+('manager', (SELECT id FROM languages WHERE code = 'de'), 'Vorgesetzter'),
+('manager', (SELECT id FROM languages WHERE code = 'hu'), 'Menedzser'),
+('subordinate', (SELECT id FROM languages WHERE code = 'en'), 'Subordinate'),
+('subordinate', (SELECT id FROM languages WHERE code = 'de'), 'Untergebener'),
+('subordinate', (SELECT id FROM languages WHERE code = 'hu'), 'Beosztott'),
+('mentor', (SELECT id FROM languages WHERE code = 'en'), 'Mentor'),
+('mentor', (SELECT id FROM languages WHERE code = 'de'), 'Mentor'),
+('mentor', (SELECT id FROM languages WHERE code = 'hu'), 'Mentor'),
+('mentee', (SELECT id FROM languages WHERE code = 'en'), 'Mentee'),
+('mentee', (SELECT id FROM languages WHERE code = 'de'), 'Mentee'),
+('mentee', (SELECT id FROM languages WHERE code = 'hu'), 'Mentorált'),
+('teacher', (SELECT id FROM languages WHERE code = 'en'), 'Teacher'),
+('teacher', (SELECT id FROM languages WHERE code = 'de'), 'Lehrer'),
+('teacher', (SELECT id FROM languages WHERE code = 'hu'), 'Tanár'),
+('student', (SELECT id FROM languages WHERE code = 'en'), 'Student'),
+('student', (SELECT id FROM languages WHERE code = 'de'), 'Schüler'),
+('student', (SELECT id FROM languages WHERE code = 'hu'), 'Tanuló'),
+('neighbor', (SELECT id FROM languages WHERE code = 'en'), 'Neighbor'),
+('neighbor', (SELECT id FROM languages WHERE code = 'de'), 'Nachbar'),
+('neighbor', (SELECT id FROM languages WHERE code = 'hu'), 'Szomszéd'),
+('acquaintance', (SELECT id FROM languages WHERE code = 'en'), 'Acquaintance'),
+('acquaintance', (SELECT id FROM languages WHERE code = 'de'), 'Bekannter'),
+('acquaintance', (SELECT id FROM languages WHERE code = 'hu'), 'Ismerős'),
+
+-- Business relationship translations (Company-Person)
+('client', (SELECT id FROM languages WHERE code = 'en'), 'Client'),
+('client', (SELECT id FROM languages WHERE code = 'de'), 'Kunde'),
+('client', (SELECT id FROM languages WHERE code = 'hu'), 'Ügyfél'),
+('client_of', (SELECT id FROM languages WHERE code = 'en'), 'Client Of'),
+('client_of', (SELECT id FROM languages WHERE code = 'de'), 'Kunde von'),
+('client_of', (SELECT id FROM languages WHERE code = 'hu'), 'Ügyfél'),
+('vendor', (SELECT id FROM languages WHERE code = 'en'), 'Vendor'),
+('vendor', (SELECT id FROM languages WHERE code = 'de'), 'Lieferant'),
+('vendor', (SELECT id FROM languages WHERE code = 'hu'), 'Beszállító'),
+('vendor_to', (SELECT id FROM languages WHERE code = 'en'), 'Vendor To'),
+('vendor_to', (SELECT id FROM languages WHERE code = 'de'), 'Lieferant für'),
+('vendor_to', (SELECT id FROM languages WHERE code = 'hu'), 'Beszállító'),
+('consultant', (SELECT id FROM languages WHERE code = 'en'), 'Consultant'),
+('consultant', (SELECT id FROM languages WHERE code = 'de'), 'Berater'),
+('consultant', (SELECT id FROM languages WHERE code = 'hu'), 'Tanácsadó'),
+('consultant_to', (SELECT id FROM languages WHERE code = 'en'), 'Consultant To'),
+('consultant_to', (SELECT id FROM languages WHERE code = 'de'), 'Berater für'),
+('consultant_to', (SELECT id FROM languages WHERE code = 'hu'), 'Tanácsadó'),
+('advisor', (SELECT id FROM languages WHERE code = 'en'), 'Advisor'),
+('advisor', (SELECT id FROM languages WHERE code = 'de'), 'Berater'),
+('advisor', (SELECT id FROM languages WHERE code = 'hu'), 'Tanácsadó'),
+('advisor_to', (SELECT id FROM languages WHERE code = 'en'), 'Advisor To'),
+('advisor_to', (SELECT id FROM languages WHERE code = 'de'), 'Berater für'),
+('advisor_to', (SELECT id FROM languages WHERE code = 'hu'), 'Tanácsadó'),
+('board_member', (SELECT id FROM languages WHERE code = 'en'), 'Board Member'),
+('board_member', (SELECT id FROM languages WHERE code = 'de'), 'Vorstandsmitglied'),
+('board_member', (SELECT id FROM languages WHERE code = 'hu'), 'Igazgatótanácsi tag'),
 
 -- Company-Company relationship translations
 ('business_partner', (SELECT id FROM languages WHERE code = 'en'), 'Business Partner'),
@@ -1654,177 +1732,288 @@ INSERT INTO translations (code, language_id, text) VALUES
 ('customer_company', (SELECT id FROM languages WHERE code = 'hu'), 'Ügyfél cég'),
 ('competitor', (SELECT id FROM languages WHERE code = 'en'), 'Competitor'),
 ('competitor', (SELECT id FROM languages WHERE code = 'de'), 'Wettbewerber'),
-('competitor', (SELECT id FROM languages WHERE code = 'hu'), 'Versenytárs'),
-('affiliate', (SELECT id FROM languages WHERE code = 'en'), 'Affiliate'),
-('affiliate', (SELECT id FROM languages WHERE code = 'de'), 'Tochtergesellschaft'),
-('affiliate', (SELECT id FROM languages WHERE code = 'hu'), 'Társvállalat'),
-('merger_partner', (SELECT id FROM languages WHERE code = 'en'), 'Merger Partner'),
-('merger_partner', (SELECT id FROM languages WHERE code = 'de'), 'Fusionspartner'),
-('merger_partner', (SELECT id FROM languages WHERE code = 'hu'), 'Összeolvadási partner'),
-
--- User-Object relationship translations
-('user_assigned', (SELECT id FROM languages WHERE code = 'en'), 'Assigned User'),
-('user_assigned', (SELECT id FROM languages WHERE code = 'de'), 'Zugewiesener Benutzer'),
-('user_assigned', (SELECT id FROM languages WHERE code = 'hu'), 'Hozzárendelt felhasználó'),
-('user_owner', (SELECT id FROM languages WHERE code = 'en'), 'Owner'),
-('user_owner', (SELECT id FROM languages WHERE code = 'de'), 'Eigentümer'),
-('user_owner', (SELECT id FROM languages WHERE code = 'hu'), 'Tulajdonos'),
-('user_manager', (SELECT id FROM languages WHERE code = 'en'), 'Manager'),
-('user_manager', (SELECT id FROM languages WHERE code = 'de'), 'Manager'),
-('user_manager', (SELECT id FROM languages WHERE code = 'hu'), 'Menedzser'),
-
--- Document-Object relationship translations
-('document_author', (SELECT id FROM languages WHERE code = 'en'), 'Author'),
-('document_author', (SELECT id FROM languages WHERE code = 'de'), 'Autor'),
-('document_author', (SELECT id FROM languages WHERE code = 'hu'), 'Szerző'),
-('document_reviewer', (SELECT id FROM languages WHERE code = 'en'), 'Reviewer'),
-('document_reviewer', (SELECT id FROM languages WHERE code = 'de'), 'Prüfer'),
-('document_reviewer', (SELECT id FROM languages WHERE code = 'hu'), 'Lektor'),
-('document_owner', (SELECT id FROM languages WHERE code = 'en'), 'Document Owner'),
-('document_owner', (SELECT id FROM languages WHERE code = 'de'), 'Dokumentenbesitzer'),
-('document_owner', (SELECT id FROM languages WHERE code = 'hu'), 'Dokumentum tulajdonos'),
-('document_shared_with_person', (SELECT id FROM languages WHERE code = 'en'), 'Shared with Person'),
-('document_shared_with_person', (SELECT id FROM languages WHERE code = 'de'), 'Mit Person geteilt'),
-('document_shared_with_person', (SELECT id FROM languages WHERE code = 'hu'), 'Megosztva személlyel'),
-('document_shared_with_company', (SELECT id FROM languages WHERE code = 'en'), 'Shared with Company'),
-('document_shared_with_company', (SELECT id FROM languages WHERE code = 'de'), 'Mit Unternehmen geteilt'),
-('document_shared_with_company', (SELECT id FROM languages WHERE code = 'hu'), 'Megosztva céggel'),
-('document_shared_with_user', (SELECT id FROM languages WHERE code = 'en'), 'Shared with User'),
-('document_shared_with_user', (SELECT id FROM languages WHERE code = 'de'), 'Mit Benutzer geteilt'),
-('document_shared_with_user', (SELECT id FROM languages WHERE code = 'hu'), 'Megosztva felhasználóval'),
-('document_created_by_user', (SELECT id FROM languages WHERE code = 'en'), 'Created by User'),
-('document_created_by_user', (SELECT id FROM languages WHERE code = 'de'), 'Erstellt von Benutzer'),
-('document_created_by_user', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó által létrehozva'),
-('document_assigned_to_user', (SELECT id FROM languages WHERE code = 'en'), 'Assigned to User'),
-('document_assigned_to_user', (SELECT id FROM languages WHERE code = 'de'), 'Zugewiesen an Benutzer'),
-('document_assigned_to_user', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználóhoz rendelve'),
-('document_company', (SELECT id FROM languages WHERE code = 'en'), 'Company Document'),
-('document_company', (SELECT id FROM languages WHERE code = 'de'), 'Unternehmensdokument'),
-('document_company', (SELECT id FROM languages WHERE code = 'hu'), 'Cég dokumentum'),
-('document_related', (SELECT id FROM languages WHERE code = 'en'), 'Related Document'),
-('document_related', (SELECT id FROM languages WHERE code = 'de'), 'Verwandtes Dokument'),
-('document_related', (SELECT id FROM languages WHERE code = 'hu'), 'Kapcsolódó dokumentum'),
-('document_version_of', (SELECT id FROM languages WHERE code = 'en'), 'Version of Document'),
-('document_version_of', (SELECT id FROM languages WHERE code = 'de'), 'Version des Dokuments'),
-('document_version_of', (SELECT id FROM languages WHERE code = 'hu'), 'Dokumentum verziója'),
-('document_replaces', (SELECT id FROM languages WHERE code = 'en'), 'Replaces Document'),
-('document_replaces', (SELECT id FROM languages WHERE code = 'de'), 'Ersetzt Dokument'),
-('document_replaces', (SELECT id FROM languages WHERE code = 'hu'), 'Helyettesíti a dokumentumot'),
-('document_supersedes', (SELECT id FROM languages WHERE code = 'en'), 'Supersedes Document'),
-('document_supersedes', (SELECT id FROM languages WHERE code = 'de'), 'Ersetzt Dokument'),
-('document_supersedes', (SELECT id FROM languages WHERE code = 'hu'), 'Felváltja a dokumentumot'),
-
--- File-Object relationship translations
-('file_owner_person', (SELECT id FROM languages WHERE code = 'en'), 'File Owner'),
-('file_owner_person', (SELECT id FROM languages WHERE code = 'de'), 'Dateibesitzer'),
-('file_owner_person', (SELECT id FROM languages WHERE code = 'hu'), 'Fájl tulajdonos'),
-('file_shared_with_person', (SELECT id FROM languages WHERE code = 'en'), 'Shared with Person'),
-('file_shared_with_person', (SELECT id FROM languages WHERE code = 'de'), 'Mit Person geteilt'),
-('file_shared_with_person', (SELECT id FROM languages WHERE code = 'hu'), 'Megosztva személlyel'),
-('file_shared_with_company', (SELECT id FROM languages WHERE code = 'en'), 'Shared with Company'),
-('file_shared_with_company', (SELECT id FROM languages WHERE code = 'de'), 'Mit Unternehmen geteilt'),
-('file_shared_with_company', (SELECT id FROM languages WHERE code = 'hu'), 'Megosztva céggel'),
-('file_shared_with_user', (SELECT id FROM languages WHERE code = 'en'), 'Shared with User'),
-('file_shared_with_user', (SELECT id FROM languages WHERE code = 'de'), 'Mit Benutzer geteilt'),
-('file_shared_with_user', (SELECT id FROM languages WHERE code = 'hu'), 'Megosztva felhasználóval'),
-('file_uploaded_by', (SELECT id FROM languages WHERE code = 'en'), 'Uploaded by'),
-('file_uploaded_by', (SELECT id FROM languages WHERE code = 'de'), 'Hochgeladen von'),
-('file_uploaded_by', (SELECT id FROM languages WHERE code = 'hu'), 'Feltöltötte'),
-('file_created_by_user', (SELECT id FROM languages WHERE code = 'en'), 'Created by User'),
-('file_created_by_user', (SELECT id FROM languages WHERE code = 'de'), 'Erstellt von Benutzer'),
-('file_created_by_user', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználó által létrehozva'),
-('file_assigned_to_user', (SELECT id FROM languages WHERE code = 'en'), 'Assigned to User'),
-('file_assigned_to_user', (SELECT id FROM languages WHERE code = 'de'), 'Zugewiesen an Benutzer'),
-('file_assigned_to_user', (SELECT id FROM languages WHERE code = 'hu'), 'Felhasználóhoz rendelve'),
-('file_company', (SELECT id FROM languages WHERE code = 'en'), 'Company File'),
-('file_company', (SELECT id FROM languages WHERE code = 'de'), 'Unternehmensdatei'),
-('file_company', (SELECT id FROM languages WHERE code = 'hu'), 'Cég fájl'),
-('file_related', (SELECT id FROM languages WHERE code = 'en'), 'Related File'),
-('file_related', (SELECT id FROM languages WHERE code = 'de'), 'Verwandte Datei'),
-('file_related', (SELECT id FROM languages WHERE code = 'hu'), 'Kapcsolódó fájl'),
-('file_version_of', (SELECT id FROM languages WHERE code = 'en'), 'Version of File'),
-('file_version_of', (SELECT id FROM languages WHERE code = 'de'), 'Version der Datei'),
-('file_version_of', (SELECT id FROM languages WHERE code = 'hu'), 'Fájl verziója'),
-('file_replaces', (SELECT id FROM languages WHERE code = 'en'), 'Replaces File'),
-('file_replaces', (SELECT id FROM languages WHERE code = 'de'), 'Ersetzt Datei'),
-('file_replaces', (SELECT id FROM languages WHERE code = 'hu'), 'Helyettesíti a fájlt'),
-('file_supersedes', (SELECT id FROM languages WHERE code = 'en'), 'Supersedes File'),
-('file_supersedes', (SELECT id FROM languages WHERE code = 'de'), 'Ersetzt Datei'),
-('file_supersedes', (SELECT id FROM languages WHERE code = 'hu'), 'Felváltja a fájlt'),
-('file_attached_to_document', (SELECT id FROM languages WHERE code = 'en'), 'Attached to Document'),
-('file_attached_to_document', (SELECT id FROM languages WHERE code = 'de'), 'An Dokument angehängt'),
-('file_attached_to_document', (SELECT id FROM languages WHERE code = 'hu'), 'Dokumentumhoz csatolva'),
-('document_has_file', (SELECT id FROM languages WHERE code = 'en'), 'Has File'),
-('document_has_file', (SELECT id FROM languages WHERE code = 'de'), 'Hat Datei'),
-('document_has_file', (SELECT id FROM languages WHERE code = 'hu'), 'Tartalmaz fájlt');
+('competitor', (SELECT id FROM languages WHERE code = 'hu'), 'Versenytárs');
 
 -- Now insert object_relation_types (after translations exist)
-INSERT INTO object_relation_types (code, is_active) VALUES 
--- Company-Person relationships
-('employee', TRUE),              -- Company employs Person
-('contractor', TRUE),            -- Company contracts with Person
-('consultant', TRUE),            -- Company consults with Person
-('board_member', TRUE),           -- Person is on Company board
-('shareholder', TRUE),           -- Person owns shares in Company
-('customer', TRUE),              -- Person is customer of Company
-('supplier', TRUE),              -- Person supplies to Company
+-- Insert directional relationships (will update mirrored_type_id after all inserts)
+-- Family relationships (Person → Person)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('mother', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('father', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('son', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('daughter', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('parent', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('child', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL);
 
--- Person-Person relationships
-('spouse', TRUE),                -- Person is married to Person
-('parent', TRUE),                -- Person is parent of Person
-('child', TRUE),                 -- Person is child of Person
-('sibling', TRUE),               -- Person is sibling of Person
-('guardian', TRUE),              -- Person is guardian of Person
-('emergency_contact', TRUE),     -- Person is emergency contact for Person
-('family_member', TRUE),         -- Person is family member of Person
-('friend', TRUE),                -- Person is friend of Person
-('colleague', TRUE),             -- Person is colleague of Person
+-- Business relationships (Company → Person and Person → Company)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('employer', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('worker', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'company'), NULL);
 
--- Company-Company relationships
-('business_partner', TRUE),      -- Company partners with Company
-('subsidiary', TRUE),            -- Company is subsidiary of Company
-('parent_company', TRUE),        -- Company is parent of Company
-('supplier_company', TRUE),      -- Company supplies to Company
-('customer_company', TRUE),      -- Company is customer of Company
-('competitor', TRUE),            -- Company competes with Company
-('affiliate', TRUE),             -- Company is affiliate of Company
-('merger_partner', TRUE),       -- Company merged with Company
+-- Symmetric relationships (self-mirrored, Person → Person)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('spouse', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('sibling', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('friend', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('colleague', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL);
 
--- User-Object relationships
-('user_assigned', TRUE),         -- User is assigned to Object
-('user_owner', TRUE),            -- User owns Object
-('user_manager', TRUE),          -- User manages Object
+-- Extended family relationships (Person → Person)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('grandparent', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('grandchild', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('uncle', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('aunt', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('nephew', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('niece', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('mother_in_law', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('father_in_law', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('son_in_law', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('daughter_in_law', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL);
 
--- Document-Object relationships
-('document_author', TRUE),       -- Person is author of Document
-('document_reviewer', TRUE),      -- Person/User reviews Document
-('document_owner', TRUE),         -- Person/User/Company owns Document
-('document_shared_with_person', TRUE), -- Document shared with Person
-('document_shared_with_company', TRUE), -- Document shared with Company
-('document_shared_with_user', TRUE),   -- Document shared with User
-('document_created_by_user', TRUE),     -- User created Document
-('document_assigned_to_user', TRUE),    -- Document assigned to User
-('document_company', TRUE),      -- Document belongs to Company
-('document_related', TRUE),      -- Document is related to Document
-('document_version_of', TRUE),   -- Document is version of Document
-('document_replaces', TRUE),     -- Document replaces Document
-('document_supersedes', TRUE),   -- Document supersedes Document
+-- Professional relationships (Person → Person)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('manager', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('subordinate', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('mentor', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('mentee', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('teacher', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('student', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL);
 
--- File-Object relationships
-('file_owner_person', TRUE),     -- Person owns File
-('file_shared_with_person', TRUE), -- File shared with Person
-('file_shared_with_company', TRUE), -- File shared with Company
-('file_shared_with_user', TRUE),   -- File shared with User
-('file_uploaded_by', TRUE),      -- Person/User uploaded File
-('file_created_by_user', TRUE),  -- User created File
-('file_assigned_to_user', TRUE), -- File assigned to User
-('file_company', TRUE),          -- File belongs to Company
-('file_related', TRUE),          -- File is related to File
-('file_version_of', TRUE),       -- File is version of File
-('file_replaces', TRUE),         -- File replaces File
-('file_supersedes', TRUE),       -- File supersedes File
-('file_attached_to_document', TRUE), -- File attached to Document
-('document_has_file', TRUE);     -- Document has File
+-- Additional person-to-person relationships (symmetric)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('neighbor', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('acquaintance', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('cousin', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'person'), NULL);
+
+-- Additional business relationships (Company → Person, with mirrors)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('client', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('client_of', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'company'), NULL),
+('vendor', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('vendor_to', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'company'), NULL),
+('consultant', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('consultant_to', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'company'), NULL),
+('advisor', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'person'), NULL),
+('advisor_to', TRUE, (SELECT id FROM object_types WHERE code = 'person'), (SELECT id FROM object_types WHERE code = 'company'), NULL),
+('board_member', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'person'), NULL);
+
+-- Company-Company relationships (directional)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('subsidiary', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'company'), NULL),
+('parent_company', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'company'), NULL),
+('supplier_company', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'company'), NULL),
+('customer_company', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'company'), NULL);
+
+-- Symmetric relationships (self-mirrored, Company → Company)
+INSERT INTO object_relation_types (code, is_active, parent_object_type_id, child_object_type_id, mirrored_type_id) VALUES
+('business_partner', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'company'), NULL),
+('competitor', TRUE, (SELECT id FROM object_types WHERE code = 'company'), (SELECT id FROM object_types WHERE code = 'company'), NULL);
+
+-- Update mirrored relationships for directional pairs
+-- Mother ↔ Son
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'son') 
+WHERE code = 'mother';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'mother') 
+WHERE code = 'son';
+
+-- Father ↔ Daughter
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'daughter') 
+WHERE code = 'father';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'father') 
+WHERE code = 'daughter';
+
+-- Parent ↔ Child
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'child') 
+WHERE code = 'parent';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'parent') 
+WHERE code = 'child';
+
+-- Employer ↔ Worker
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'worker') 
+WHERE code = 'employer';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'employer') 
+WHERE code = 'worker';
+
+-- Update self-mirrored symmetric relationships
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'spouse') 
+WHERE code = 'spouse';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'sibling') 
+WHERE code = 'sibling';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'friend') 
+WHERE code = 'friend';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'colleague') 
+WHERE code = 'colleague';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'business_partner') 
+WHERE code = 'business_partner';
+
+-- Update mirrored relationships for extended family pairs
+-- Grandparent ↔ Grandchild
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'grandchild') 
+WHERE code = 'grandparent';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'grandparent') 
+WHERE code = 'grandchild';
+
+-- Uncle ↔ Nephew
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'nephew') 
+WHERE code = 'uncle';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'uncle') 
+WHERE code = 'nephew';
+
+-- Aunt ↔ Niece
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'niece') 
+WHERE code = 'aunt';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'aunt') 
+WHERE code = 'niece';
+
+-- Mother-in-Law ↔ Son-in-Law
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'son_in_law') 
+WHERE code = 'mother_in_law';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'mother_in_law') 
+WHERE code = 'son_in_law';
+
+-- Father-in-Law ↔ Daughter-in-Law
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'daughter_in_law') 
+WHERE code = 'father_in_law';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'father_in_law') 
+WHERE code = 'daughter_in_law';
+
+-- Update mirrored relationships for professional pairs
+-- Manager ↔ Subordinate
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'subordinate') 
+WHERE code = 'manager';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'manager') 
+WHERE code = 'subordinate';
+
+-- Mentor ↔ Mentee
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'mentee') 
+WHERE code = 'mentor';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'mentor') 
+WHERE code = 'mentee';
+
+-- Teacher ↔ Student
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'student') 
+WHERE code = 'teacher';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'teacher') 
+WHERE code = 'student';
+
+-- Update self-mirrored symmetric relationships
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'neighbor') 
+WHERE code = 'neighbor';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'acquaintance') 
+WHERE code = 'acquaintance';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'cousin') 
+WHERE code = 'cousin';
+
+-- Update mirrored relationships for company-company pairs
+-- Subsidiary ↔ Parent Company
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'parent_company') 
+WHERE code = 'subsidiary';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'subsidiary') 
+WHERE code = 'parent_company';
+
+-- Supplier Company ↔ Customer Company
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'customer_company') 
+WHERE code = 'supplier_company';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'supplier_company') 
+WHERE code = 'customer_company';
+
+-- Update mirrored relationships for business pairs (Company ↔ Person)
+-- Client ↔ Client Of
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'client_of') 
+WHERE code = 'client';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'client') 
+WHERE code = 'client_of';
+
+-- Vendor ↔ Vendor To
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'vendor_to') 
+WHERE code = 'vendor';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'vendor') 
+WHERE code = 'vendor_to';
+
+-- Consultant ↔ Consultant To
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'consultant_to') 
+WHERE code = 'consultant';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'consultant') 
+WHERE code = 'consultant_to';
+
+-- Advisor ↔ Advisor To
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'advisor_to') 
+WHERE code = 'advisor';
+
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'advisor') 
+WHERE code = 'advisor_to';
+
+-- Update self-mirrored symmetric company relationships
+UPDATE object_relation_types 
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'competitor') 
+WHERE code = 'competitor';
 
 -- ============================================================================
 -- SECTION 15: OBJECT RELATIONS (Example Data)
@@ -1836,8 +2025,54 @@ INSERT INTO object_relation_types (code, is_active) VALUES
 -- INSERT INTO object_relations (object_from_id, object_to_id, object_relation_type_id, note, is_active) VALUES
 -- ((SELECT id FROM companies WHERE company_id = 'REG-12345'), 
 --  (SELECT id FROM persons WHERE first_name = 'John' AND last_name = 'Doe'),
---  (SELECT id FROM object_relation_types WHERE code = 'employee'),
---  'Full-time employee since 2020', TRUE);
+--  (SELECT id FROM object_relation_types WHERE code = 'worker'),
+--  'Full-time worker since 2020', TRUE);
+
+-- ============================================================================
+-- VERIFICATION QUERIES FOR OBJECT RELATION TYPES
+-- ============================================================================
+-- Uncomment these queries to verify the seed data was inserted correctly:
+
+-- Show all object relation types with their object type references
+-- SELECT 
+--     ort.id,
+--     ort.code,
+--     ort.is_active,
+--     pt.code as parent_object_type,
+--     ct.code as child_object_type,
+--     mrt.code as mirrored_relation_type
+-- FROM object_relation_types ort
+-- LEFT JOIN object_types pt ON ort.parent_object_type_id = pt.id
+-- LEFT JOIN object_types ct ON ort.child_object_type_id = ct.id
+-- LEFT JOIN object_relation_types mrt ON ort.mirrored_type_id = mrt.id
+-- ORDER BY ort.code;
+
+-- Show directional relationships with their mirrors
+-- SELECT 
+--     ort1.code as relation_type,
+--     ort1.mirrored_type_id,
+--     ort2.code as mirrored_type
+-- FROM object_relation_types ort1
+-- LEFT JOIN object_relation_types ort2 ON ort1.mirrored_type_id = ort2.id
+-- WHERE ort1.mirrored_type_id IS NOT NULL
+-- ORDER BY ort1.code;
+
+-- Count relationships by type
+-- SELECT 
+--     pt.code as parent_type,
+--     ct.code as child_type,
+--     COUNT(*) as count
+-- FROM object_relation_types ort
+-- LEFT JOIN object_types pt ON ort.parent_object_type_id = pt.id
+-- LEFT JOIN object_types ct ON ort.child_object_type_id = ct.id
+-- GROUP BY pt.code, ct.code
+-- ORDER BY pt.code, ct.code;
+
+-- Verify no employee relationships exist
+-- SELECT COUNT(*) as employee_relationship_count
+-- FROM object_relation_types
+-- WHERE code LIKE '%employee%' OR code = 'employee';
+-- Should return 0
 
 -- ============================================================================
 -- END OF SEED DATA

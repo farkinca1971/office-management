@@ -8,6 +8,7 @@ import React from 'react';
 import { LookupTable } from '@/components/ui/LookupTable';
 import { lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
+import { useTranslation } from '@/lib/i18n';
 import type { LookupItem } from '@/types/common';
 
 export default function ObjectStatusesPage() {
@@ -18,6 +19,7 @@ export default function ObjectStatusesPage() {
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(20);
   const language = useLanguageStore((state) => state.language);
+  const { t } = useTranslation();
 
   const loadData = React.useCallback(async () => {
     setIsLoading(true);
@@ -29,7 +31,8 @@ export default function ObjectStatusesPage() {
       ]);
       
       if (statusesResponse.success) {
-        setData(statusesResponse.data);
+        // Create a new array reference to ensure React detects the change
+        setData([...statusesResponse.data]);
       } else {
         setError('Failed to load object statuses');
       }
@@ -49,6 +52,9 @@ export default function ObjectStatusesPage() {
   }, [loadData]);
 
   const handleCreate = async (item: { code: string; is_active?: boolean; text?: string; language_id?: number; object_type_id?: number }) => {
+    // Clear any previous errors
+    setError(null);
+    
     // Ensure object_type_id is always included (0 if not present)
     const createPayload = {
       ...item,
@@ -56,9 +62,13 @@ export default function ObjectStatusesPage() {
     };
     const response = await lookupApi.createObjectStatus(createPayload);
     if (response.success) {
+      // Clear error state on success
+      setError(null);
       await loadData();
     } else {
-      throw new Error('Failed to create object status');
+      const errorMessage = response.error?.message || 'Failed to create object status';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
@@ -78,6 +88,9 @@ export default function ObjectStatusesPage() {
     old_text?: string; 
     new_text?: string;
   }) => {
+    // Clear any previous errors
+    setError(null);
+    
     // Handle update_all_languages if needed (check for both boolean and number)
     const shouldUpdateAll = item.update_all_languages === true || item.update_all_languages === 1;
     if (shouldUpdateAll && item.new_text && item.new_code) {
@@ -86,11 +99,17 @@ export default function ObjectStatusesPage() {
         const languagesResponse = await lookupApi.getLanguages();
         if (languagesResponse.success) {
           const languages = languagesResponse.data;
-          // Update translation for all languages
+          // Update translation for all languages - use Promise.allSettled to handle partial failures
           const updatePromises = languages.map(lang => 
             lookupApi.updateTranslation(item.new_code!, lang.id, { text: item.new_text! })
           );
-          await Promise.all(updatePromises);
+          const results = await Promise.allSettled(updatePromises);
+          // Log any failures but don't throw
+          results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+              console.warn(`Failed to update translation for language ${languages[index]?.code}:`, result.reason);
+            }
+          });
         }
       } catch (err) {
         console.error('Failed to update translations for all languages:', err);
@@ -114,9 +133,13 @@ export default function ObjectStatusesPage() {
     
     const response = await lookupApi.updateObjectStatus(id, updatePayload);
     if (response.success) {
+      // Clear error state on success
+      setError(null);
       await loadData();
     } else {
-      throw new Error('Failed to update object status');
+      const errorMessage = response.error?.message || 'Failed to update object status';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
   
@@ -129,11 +152,18 @@ export default function ObjectStatusesPage() {
   };
 
   const handleDelete = async (id: number) => {
+    // Clear any previous errors
+    setError(null);
+    
     const response = await lookupApi.deleteObjectStatus(id);
     if (response.success) {
+      // Clear error state on success
+      setError(null);
       await loadData();
     } else {
-      throw new Error('Failed to delete object status');
+      const errorMessage = response.error?.message || 'Failed to delete object status';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
@@ -148,7 +178,7 @@ export default function ObjectStatusesPage() {
 
   return (
     <LookupTable
-      title="Object Statuses"
+      title={t('nav.objectStatuses')}
       data={data}
       isLoading={isLoading}
       error={error}

@@ -15,6 +15,7 @@ import { Plus, Save, X, Trash2, Edit2, ArrowUp, ArrowDown, ArrowUpDown, Filter, 
 import type { LookupItem } from '@/types/common';
 import { lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
+import { useTranslation } from '@/lib/i18n';
 import { Pagination } from './Pagination';
 import { Select } from './Select';
 
@@ -91,6 +92,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
   objectCategoryRequired = false,
 }) => {
   const language = useLanguageStore((state) => state.language);
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingData, setEditingData] = useState<{ code: string; is_active: boolean; name: string; object_type_id?: number }>({ 
     code: '', 
@@ -367,12 +369,12 @@ export const LookupTable: React.FC<LookupTableProps> = ({
           new_text: editingData.name || ''
         });
 
+        // onUpdate should handle reloading data on success
+        // Reset editing state
         setEditingId(null);
         setEditingData({ code: '', is_active: true, name: '', object_type_id: undefined });
         setOriginalValues({ code: '', is_active: true, name: '', object_type_id: undefined });
         setUpdateAllLanguages(false);
-        // Reload data to reflect changes
-        await onLoad();
       } catch (err) {
         console.error('Failed to update:', err);
         throw err; // Re-throw to show error to user
@@ -470,19 +472,21 @@ export const LookupTable: React.FC<LookupTableProps> = ({
         object_type_id: newItem.object_type_id !== undefined ? newItem.object_type_id : 0
       });
 
+      // onCreate should handle reloading data on success
+      // Reset form state
       setShowNewForm(false);
       setNewItem({ code: '', is_active: true, name: '', object_type_id: undefined });
-      // Reload data to reflect changes
-      await onLoad();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create:', err);
+      // Re-throw to allow parent to handle error display
+      throw err;
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+    if (!confirm(t('lookup.deleteConfirm'))) return;
     setDeleting(id);
     try {
       await onDelete(id);
@@ -515,7 +519,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">Manage {title.toLowerCase()} data</p>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('lookup.manageData').replace('{title}', title)}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Clear filters button - visible when filters are active */}
@@ -526,7 +530,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               onClick={clearFilters}
             >
               <XCircle className="h-4 w-4" />
-              Clear Filters
+              {t('lookup.clearFilters')}
             </Button>
           )}
           {/* Filter toggle button */}
@@ -536,10 +540,10 @@ export const LookupTable: React.FC<LookupTableProps> = ({
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter className="h-4 w-4" />
-            {showFilters ? 'Hide Filters' : 'Filters'}
+            {showFilters ? t('lookup.hideFilters') : t('lookup.filters')}
             {hasActiveFilters && !showFilters && (
               <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-full">
-                Active
+                {t('lookup.activeFilters')}
               </span>
             )}
           </Button>
@@ -550,7 +554,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
             onClick={() => setShowNewForm(true)}
           >
             <Plus className="h-4 w-4" />
-            Add New
+            {t('lookup.addNew')}
           </Button>
         )}
         </div>
@@ -567,25 +571,25 @@ export const LookupTable: React.FC<LookupTableProps> = ({
           <div className="grid grid-cols-1 gap-4">
             <div className={`grid ${showObjectCategory ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
               <Input
-                label="Code"
+                label={t('lookup.code')}
                 value={newItem.code}
                 onChange={(e) => setNewItem({ ...newItem, code: e.target.value })}
-                placeholder="Enter code"
+                placeholder={t('lookup.enterCode')}
                 required
               />
               <Input
-                label={`Translation (${language.toUpperCase()})`}
+                label={`${t('lookup.translation')} (${language.toUpperCase()})`}
                 value={newItem.name}
                 onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                placeholder="Enter translation"
+                placeholder={t('lookup.enterTranslation')}
               />
               {showObjectCategory && (
                 <Select
-                  label="Object Category"
+                  label={t('lookup.objectCategory')}
                   value={newItem.object_type_id ? String(newItem.object_type_id) : ''}
                   onChange={(e) => setNewItem({ ...newItem, object_type_id: e.target.value ? parseInt(e.target.value) : undefined })}
                   options={objectTypes.map(ot => ({ value: ot.id, label: ot.name || ot.code }))}
-                  placeholder="Select object category (optional)"
+                  placeholder={t('lookup.selectObjectCategoryOptional')}
                   required={objectCategoryRequired}
                 />
               )}
@@ -600,22 +604,30 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
               <label htmlFor="new-active" className="text-sm text-gray-700 dark:text-gray-300">
-                Active
+                {t('lookup.active')}
               </label>
             </div>
               <div className="flex gap-2">
             <Button
               variant="primary"
-              onClick={handleCreate}
+              onClick={async () => {
+                try {
+                  await handleCreate();
+                } catch (err: any) {
+                  // Error is already logged in handleCreate
+                  // The error will be displayed via the error prop from parent
+                  console.error('Error creating item:', err);
+                }
+              }}
               disabled={!newItem.code.trim() || saving}
               isLoading={saving}
             >
               <Save className="h-4 w-4 mr-2" />
-              Save
+              {t('lookup.save')}
             </Button>
             <Button variant="secondary" onClick={handleCancel} disabled={saving}>
               <X className="h-4 w-4 mr-2" />
-              Cancel
+              {t('lookup.cancel')}
             </Button>
               </div>
             </div>
@@ -630,8 +642,8 @@ export const LookupTable: React.FC<LookupTableProps> = ({
           </div>
         ) : data.length === 0 ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-            <p>No data available</p>
-            <p className="text-sm mt-2">Click "Add New" to create your first item</p>
+            <p>{t('lookup.noDataAvailable')}</p>
+            <p className="text-sm mt-2">{t('lookup.clickAddNew')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -639,17 +651,17 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               <thead>
                 {/* Sorting headers row */}
                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                  <SortableHeader field="id" className="w-20">ID</SortableHeader>
-                  <SortableHeader field="code">Code</SortableHeader>
-                  <SortableHeader field="name">Translation</SortableHeader>
+                  <SortableHeader field="id" className="w-20">{t('lookup.id')}</SortableHeader>
+                  <SortableHeader field="code">{t('lookup.code')}</SortableHeader>
+                  <SortableHeader field="name">{t('lookup.translation')}</SortableHeader>
                   {showObjectCategory && (
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Object Category
+                      {t('lookup.objectCategory')}
                     </th>
                   )}
-                  <SortableHeader field="is_active" className="w-28">Active</SortableHeader>
+                  <SortableHeader field="is_active" className="w-28">{t('lookup.active')}</SortableHeader>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-28">
-                    Actions
+                    {t('lookup.actions')}
                   </th>
                 </tr>
                 
@@ -661,7 +673,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         type="text"
                         value={filters.id}
                         onChange={(e) => setFilters({ ...filters, id: e.target.value })}
-                        placeholder="Filter..."
+                        placeholder={t('lookup.filter')}
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </td>
@@ -670,7 +682,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         type="text"
                         value={filters.code}
                         onChange={(e) => setFilters({ ...filters, code: e.target.value })}
-                        placeholder="Filter by code..."
+                        placeholder={t('lookup.filterByCode')}
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </td>
@@ -679,7 +691,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         type="text"
                         value={filters.name}
                         onChange={(e) => setFilters({ ...filters, name: e.target.value })}
-                        placeholder="Filter by translation..."
+                        placeholder={t('lookup.filterByTranslation')}
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </td>
@@ -689,7 +701,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                           type="text"
                           value={filters.object_category}
                           onChange={(e) => setFilters({ ...filters, object_category: e.target.value })}
-                          placeholder="Filter by category..."
+                          placeholder={t('lookup.filterByCategory')}
                           className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         />
                       </td>
@@ -700,9 +712,9 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         onChange={(e) => setFilters({ ...filters, is_active: e.target.value as 'all' | 'active' | 'inactive' })}
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       >
-                        <option value="all">All</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="all">{t('lookup.all')}</option>
+                        <option value="active">{t('lookup.active')}</option>
+                        <option value="inactive">{t('lookup.inactive')}</option>
                       </select>
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -710,10 +722,10 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         <button
                           onClick={clearFilters}
                           className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                          title="Clear all filters"
+                          title={t('lookup.clearAllFilters')}
                         >
                           <XCircle className="h-3.5 w-3.5" />
-                          Clear
+                          {t('lookup.clearFilters')}
                         </button>
                       )}
                     </td>
@@ -728,18 +740,18 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         <Filter className="h-8 w-8 opacity-40" />
                         {hasActiveFilters ? (
                           <>
-                            <p>No results match your filters</p>
+                            <p>{t('lookup.noResultsMatch')}</p>
                             <button
                               onClick={clearFilters}
                               className="text-primary-600 dark:text-primary-400 hover:underline text-sm"
                             >
-                              Clear all filters
+                              {t('lookup.clearAllFilters')}
                             </button>
                           </>
                         ) : pagination && filteredAndSortedData.length === 0 && data.length > 0 ? (
-                          <p>No data available on this page</p>
+                          <p>{t('lookup.noDataOnPage')}</p>
                         ) : (
-                          <p>No data available</p>
+                          <p>{t('lookup.noDataAvailable')}</p>
                         )}
                       </div>
                     </td>
@@ -769,13 +781,13 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                           <Input
                             value={editingData.name}
                             onChange={(e) => setEditingData({ ...editingData, name: e.target.value })}
-                            placeholder="Enter translation..."
+                            placeholder={t('lookup.enterTranslation')}
                             className="w-full"
                           />
                         ) : item.name ? (
                         <span className="text-sm text-gray-700 dark:text-gray-300">{item.name}</span>
                       ) : (
-                        <span className="text-sm italic text-gray-400 dark:text-gray-500">No translation</span>
+                        <span className="text-sm italic text-gray-400 dark:text-gray-500">{t('lookup.noTranslation')}</span>
                       )}
                     </td>
                     {showObjectCategory && (
@@ -790,7 +802,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                           />
                         ) : (
                           <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {getObjectCategoryName ? (getObjectCategoryName(item) || <span className="italic text-gray-400 dark:text-gray-500">N/A</span>) : <span className="italic text-gray-400 dark:text-gray-500">N/A</span>}
+                            {getObjectCategoryName ? (getObjectCategoryName(item) || <span className="italic text-gray-400 dark:text-gray-500">{t('lookup.notAvailable')}</span>) : <span className="italic text-gray-400 dark:text-gray-500">{t('lookup.notAvailable')}</span>}
                           </span>
                         )}
                       </td>
@@ -811,7 +823,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                               : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                           }`}
                         >
-                          {item.is_active ? 'Active' : 'Inactive'}
+                          {item.is_active ? t('lookup.active') : t('lookup.inactive')}
                         </span>
                       )}
                     </td>
@@ -830,15 +842,23 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                             <label 
                               htmlFor={`update-all-languages-${item.id}`}
                               className="text-xs text-gray-600 dark:text-gray-400 cursor-pointer select-none"
-                              title="Update translation for all languages"
+                              title={t('lookup.translations')}
                             >
-                              Translations
+                              {t('lookup.translations')}
                             </label>
                           </div>
                           <Button
                             variant="primary"
                             size="sm"
-                            onClick={handleSave}
+                            onClick={async () => {
+                              try {
+                                await handleSave();
+                              } catch (err: any) {
+                                // Error is already logged in handleSave
+                                // The error will be displayed via the error prop from parent
+                                console.error('Error saving item:', err);
+                              }
+                            }}
                             disabled={!editingData.code.trim() || saving}
                             isLoading={saving}
                           >
@@ -898,15 +918,15 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-sm text-gray-600 dark:text-gray-400">
                 <div className="flex items-center justify-between">
                   <span>
-                    Showing <span className="font-medium text-gray-900 dark:text-gray-100">{processedData.length}</span>
+                    {t('lookup.showing')} <span className="font-medium text-gray-900 dark:text-gray-100">{processedData.length}</span>
                     {hasActiveFilters && (
-                      <> of <span className="font-medium text-gray-900 dark:text-gray-100">{data.length}</span></>
+                      <> {t('lookup.of')} <span className="font-medium text-gray-900 dark:text-gray-100">{data.length}</span></>
                     )}
-                    {' '}item{data.length !== 1 ? 's' : ''}
+                    {' '}{data.length !== 1 ? t('lookup.itemsPlural') : t('lookup.items')}
                   </span>
                   {sort.field && (
                     <span className="text-xs">
-                      Sorted by <span className="font-medium">{sort.field}</span> ({sort.direction})
+                      {t('lookup.sortedBy')} <span className="font-medium">{sort.field}</span> ({sort.direction})
                     </span>
                   )}
                 </div>

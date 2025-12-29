@@ -12,6 +12,9 @@ export interface CreateLookupRequest {
   is_active?: boolean;
   text?: string;
   language_id?: number;
+  object_type_id?: number;
+  parent_object_type_id?: number;
+  child_object_type_id?: number;
 }
 
 export interface UpdateLookupRequest {
@@ -20,6 +23,8 @@ export interface UpdateLookupRequest {
   text?: string;
   language_id?: number;
   object_type_id?: number;
+  parent_object_type_id?: number;
+  child_object_type_id?: number;
   update_all_languages?: number; // 0 or 1 (always included)
   // Old and new values for all editable columns (always included)
   old_code?: string;
@@ -28,6 +33,10 @@ export interface UpdateLookupRequest {
   new_is_active?: boolean;
   old_object_type_id?: number;
   new_object_type_id?: number;
+  old_parent_object_type_id?: number;
+  new_parent_object_type_id?: number;
+  old_child_object_type_id?: number;
+  new_child_object_type_id?: number;
   old_text?: string;
   new_text?: string;
 }
@@ -265,10 +274,10 @@ export const lookupApi = {
   getObjectRelationType: async (id: number): Promise<ApiResponse<LookupItem>> => {
     return apiClient.get(lookupPath('object-relation-types', id));
   },
-  createObjectRelationType: async (data: CreateLookupRequest & { object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
+  createObjectRelationType: async (data: CreateLookupRequest & { parent_object_type_id?: number; child_object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
     return apiClient.post(lookupPath('object-relation-types'), data);
   },
-  updateObjectRelationType: async (id: number, data: UpdateLookupRequest & { object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
+  updateObjectRelationType: async (id: number, data: UpdateLookupRequest & { parent_object_type_id?: number; child_object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
     return apiClient.put(lookupPath('object-relation-types', id), data);
   },
   deleteObjectRelationType: async (id: number): Promise<ApiResponse<{ success: true }>> => {
