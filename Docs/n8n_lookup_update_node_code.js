@@ -58,7 +58,11 @@ if (lookupType && typeof lookupType === 'string') {
 const updateCode = inputData.body?.code;
 const updateIsActive = inputData.body?.is_active;
 const updateText = inputData.body?.text;
-const updateLanguageId = inputData.body?.language_id;
+// language_id is now always included in request body from frontend
+// If not provided, default to English (1) for backward compatibility
+const updateLanguageId = inputData.body?.language_id !== undefined && inputData.body?.language_id !== null 
+  ? inputData.body.language_id 
+  : 1; // Default to English (1) if not provided
 
 // Extract language_code from query parameters or headers (for translation context)
 const languageCode = inputData.query?.language_code || 

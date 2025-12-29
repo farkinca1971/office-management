@@ -325,6 +325,7 @@ SELECT
     ort.id,
     ort.code,
     ort.is_active,
+    ort.object_type_id,
     t.text as name
 FROM object_relation_types ort
 ${ortJoin.join}

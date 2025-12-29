@@ -43,6 +43,13 @@ let itemId = inputData.params?.id ||
              inputData.query?.id || 
              inputData.body?.id;
 
+// Extract language_id from request body (for consistency and audit purposes)
+// language_id is now always included in request body from frontend
+// If not provided, default to English (1) for backward compatibility
+const languageId = inputData.body?.language_id !== undefined && inputData.body?.language_id !== null 
+  ? inputData.body.language_id 
+  : 1; // Default to English (1) if not provided
+
 // Normalize lookup_type: convert hyphens to underscores
 if (lookupType && typeof lookupType === 'string') {
   lookupType = lookupType.replace(/-/g, '_');
@@ -139,6 +146,8 @@ return {
     item_id: parsedId,
     operation: 'soft_delete',
     description: `Soft delete ${tableName} record with id ${parsedId} (set is_active = false)`,
+    // Always include current language_id (now always provided from frontend)
+    language_id: typeof languageId === 'number' ? languageId : (parseInt(languageId) || 1),
     metadata: {
       note: 'This is a soft delete. The record is not physically removed from the database.',
       translations_note: 'Related translations remain in the database and are not deleted.'

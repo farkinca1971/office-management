@@ -19,6 +19,17 @@ export interface UpdateLookupRequest {
   is_active?: boolean;
   text?: string;
   language_id?: number;
+  object_type_id?: number;
+  update_all_languages?: number; // 0 or 1 (always included)
+  // Old and new values for all editable columns (always included)
+  old_code?: string;
+  new_code?: string;
+  old_is_active?: boolean;
+  new_is_active?: boolean;
+  old_object_type_id?: number;
+  new_object_type_id?: number;
+  old_text?: string;
+  new_text?: string;
 }
 
 // Helper function to build lookup endpoint paths
@@ -77,7 +88,7 @@ export const lookupApi = {
   createObjectStatus: async (data: CreateLookupRequest & { object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
     return apiClient.post(lookupPath('object-statuses'), data);
   },
-  updateObjectStatus: async (id: number, data: UpdateLookupRequest): Promise<ApiResponse<LookupItem>> => {
+  updateObjectStatus: async (id: number, data: UpdateLookupRequest & { object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
     return apiClient.put(lookupPath('object-statuses', id), data);
   },
   deleteObjectStatus: async (id: number): Promise<ApiResponse<{ success: true }>> => {
@@ -254,10 +265,10 @@ export const lookupApi = {
   getObjectRelationType: async (id: number): Promise<ApiResponse<LookupItem>> => {
     return apiClient.get(lookupPath('object-relation-types', id));
   },
-  createObjectRelationType: async (data: CreateLookupRequest): Promise<ApiResponse<LookupItem>> => {
+  createObjectRelationType: async (data: CreateLookupRequest & { object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
     return apiClient.post(lookupPath('object-relation-types'), data);
   },
-  updateObjectRelationType: async (id: number, data: UpdateLookupRequest): Promise<ApiResponse<LookupItem>> => {
+  updateObjectRelationType: async (id: number, data: UpdateLookupRequest & { object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
     return apiClient.put(lookupPath('object-relation-types', id), data);
   },
   deleteObjectRelationType: async (id: number): Promise<ApiResponse<{ success: true }>> => {

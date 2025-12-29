@@ -16,6 +16,7 @@ import type { LookupItem } from '@/types/common';
 import { lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { Pagination } from './Pagination';
+import { Select } from './Select';
 
 export interface LookupTableProps {
   title: string;
@@ -23,8 +24,23 @@ export interface LookupTableProps {
   isLoading?: boolean;
   error?: string | null;
   onLoad: () => Promise<void>;
-  onCreate: (data: { code: string; is_active?: boolean; text?: string; language_id?: number }) => Promise<void>;
-  onUpdate: (id: number, data: { code?: string; is_active?: boolean; text?: string; language_id?: number }) => Promise<void>;
+  onCreate: (data: { code: string; is_active?: boolean; text?: string; language_id?: number; object_type_id?: number }) => Promise<void>;
+  onUpdate: (id: number, data: { 
+    code?: string; 
+    is_active?: boolean; 
+    text?: string; 
+    language_id?: number; 
+    object_type_id?: number; 
+    update_all_languages?: boolean | number; 
+    old_code?: string;
+    new_code?: string;
+    old_is_active?: boolean;
+    new_is_active?: boolean;
+    old_object_type_id?: number;
+    new_object_type_id?: number;
+    old_text?: string; 
+    new_text?: string;
+  }) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onUpdateTranslation?: (code: string, text: string) => Promise<void>;
   pagination?: {
@@ -35,6 +51,11 @@ export interface LookupTableProps {
     onPageChange: (page: number) => void;
     onPerPageChange?: (perPage: number) => void;
   };
+  // Optional: Support for object category column (for object-statuses, object-relation-types)
+  showObjectCategory?: boolean;
+  objectTypes?: LookupItem[];
+  getObjectCategoryName?: (item: LookupItem) => string | undefined;
+  objectCategoryRequired?: boolean; // Whether object category is required (default: false)
 }
 
 type SortField = 'id' | 'code' | 'name' | 'is_active';
@@ -50,6 +71,7 @@ interface FilterState {
   code: string;
   name: string;
   is_active: 'all' | 'active' | 'inactive';
+  object_category: string;
 }
 
 export const LookupTable: React.FC<LookupTableProps> = ({
@@ -63,19 +85,37 @@ export const LookupTable: React.FC<LookupTableProps> = ({
   onDelete,
   onUpdateTranslation,
   pagination,
+  showObjectCategory = false,
+  objectTypes = [],
+  getObjectCategoryName,
+  objectCategoryRequired = false,
 }) => {
   const language = useLanguageStore((state) => state.language);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingData, setEditingData] = useState<{ code: string; is_active: boolean; name: string }>({ 
+  const [editingData, setEditingData] = useState<{ code: string; is_active: boolean; name: string; object_type_id?: number }>({ 
     code: '', 
-    is_active: true,
-    name: ''
+    is_active: true, 
+    name: '',
+    object_type_id: undefined
   });
-  const [originalName, setOriginalName] = useState<string>('');
-  const [newItem, setNewItem] = useState<{ code: string; is_active: boolean; name: string }>({ 
+  // Track original values for all editable fields
+  const [originalValues, setOriginalValues] = useState<{ 
+    code: string; 
+    is_active: boolean; 
+    name: string; 
+    object_type_id?: number 
+  }>({ 
+    code: '', 
+    is_active: true, 
+    name: '',
+    object_type_id: undefined
+  });
+  const [updateAllLanguages, setUpdateAllLanguages] = useState<boolean>(false);
+  const [newItem, setNewItem] = useState<{ code: string; is_active: boolean; name: string; object_type_id?: number }>({ 
     code: '', 
     is_active: true,
-    name: ''
+    name: '',
+    object_type_id: undefined
   });
   const [showNewForm, setShowNewForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -90,6 +130,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
     code: '',
     name: '',
     is_active: 'all',
+    object_category: '',
   });
   
   // Show/hide filter row
@@ -150,6 +191,13 @@ export const LookupTable: React.FC<LookupTableProps> = ({
       const isActive = filters.is_active === 'active';
       result = result.filter((item) => item.is_active === isActive);
     }
+    if (showObjectCategory && filters.object_category && getObjectCategoryName) {
+      const filterLower = filters.object_category.toLowerCase();
+      result = result.filter((item) => {
+        const categoryName = getObjectCategoryName(item);
+        return categoryName?.toLowerCase().includes(filterLower);
+      });
+    }
 
     // Apply sorting
     if (sort.field && sort.direction) {
@@ -185,7 +233,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
     }
 
     return result;
-  }, [data, filters, sort]);
+  }, [data, filters, sort, showObjectCategory, getObjectCategoryName]);
 
   // Apply pagination to filtered/sorted data
   const processedData = useMemo(() => {
@@ -198,7 +246,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
   }, [filteredAndSortedData, pagination]);
 
   // Check if any filters are active
-  const hasActiveFilters = filters.id || filters.code || filters.name || filters.is_active !== 'all';
+  const hasActiveFilters = filters.id || filters.code || filters.name || filters.is_active !== 'all' || (showObjectCategory && filters.object_category);
 
   // Clear all filters
   const clearFilters = () => {
@@ -207,34 +255,43 @@ export const LookupTable: React.FC<LookupTableProps> = ({
       code: '',
       name: '',
       is_active: 'all',
+      object_category: '',
     });
   };
 
   const handleEdit = (item: LookupItem) => {
     setEditingId(item.id);
-    setEditingData({ 
+    const objectTypeId = (item as any).object_type_id;
+    const currentData = { 
       code: item.code, 
       is_active: item.is_active,
-      name: item.name || ''
-    });
-    setOriginalName(item.name || '');
+      name: item.name || '',
+      object_type_id: objectTypeId
+    };
+    setEditingData(currentData);
+    // Store original values for all editable fields
+    setOriginalValues({ ...currentData });
+    setUpdateAllLanguages(false); // Reset checkbox when starting to edit
   };
 
   const handleCancel = () => {
     setEditingId(null);
-    setEditingData({ code: '', is_active: true, name: '' });
-    setOriginalName('');
+    setEditingData({ code: '', is_active: true, name: '', object_type_id: undefined });
+    setOriginalValues({ code: '', is_active: true, name: '', object_type_id: undefined });
+    setUpdateAllLanguages(false);
     setShowNewForm(false);
-    setNewItem({ code: '', is_active: true, name: '' });
+    setNewItem({ code: '', is_active: true, name: '', object_type_id: undefined });
   };
 
   const handleSave = async () => {
     if (editingId) {
       setSaving(true);
       try {
-        // Get current language ID if translation changed
+        // Get current language ID for the current language translation
         let currentLanguageId: number | undefined = undefined;
-        if (editingData.name !== originalName && editingData.name.trim()) {
+        const hasTranslationChanged = editingData.name !== originalValues.name && editingData.name.trim();
+        
+        if (hasTranslationChanged) {
           try {
             const languagesResponse = await lookupApi.getLanguages();
             if (languagesResponse.success) {
@@ -250,29 +307,75 @@ export const LookupTable: React.FC<LookupTableProps> = ({
           }
         }
 
-        // Update the lookup item with translation data (sends to n8n)
-        await onUpdate(editingId, { 
-          code: editingData.code, 
-          is_active: editingData.is_active,
-          text: editingData.name !== originalName && editingData.name.trim() ? editingData.name : undefined,
-          language_id: currentLanguageId
-        });
-
-        // If onUpdateTranslation is provided and translation changed, use it for backward compatibility
-        if (onUpdateTranslation && editingData.name !== originalName && editingData.name.trim()) {
-          await onUpdateTranslation(editingData.code, editingData.name);
-        } else if (editingData.name !== originalName && editingData.name.trim() && !currentLanguageId) {
-          // Fallback: if language_id wasn't found, use the old method
-          await updateTranslationsForAllLanguages(editingData.code, editingData.name);
+        // If "Translations" checkbox is checked, update translations for all languages (en, de, hu)
+        if (updateAllLanguages && hasTranslationChanged && editingData.name.trim()) {
+          try {
+            const languagesResponse = await lookupApi.getLanguages();
+            if (languagesResponse.success) {
+              // Get only en, de, hu languages
+              const targetLanguages = languagesResponse.data.filter(
+                l => ['en', 'de', 'hu'].includes(l.code.toLowerCase())
+              );
+              
+              // Update translations for all target languages
+              const translationPromises = targetLanguages.map(async (lang) => {
+                try {
+                  // Try to update existing translation
+                  await lookupApi.updateTranslation(editingData.code, lang.id, { text: editingData.name });
+                } catch (updateErr: any) {
+                  // If update fails (translation doesn't exist), create it
+                  if (updateErr?.error?.code === 'NOT_FOUND' || updateErr?.status === 404) {
+                    try {
+                      await lookupApi.createTranslation({
+                        code: editingData.code,
+                        language_id: lang.id,
+                        text: editingData.name
+                      });
+                    } catch (createErr) {
+                      console.error(`Failed to create translation for ${lang.code}:`, createErr);
+                      throw createErr;
+                    }
+                  } else {
+                    console.error(`Failed to update translation for ${lang.code}:`, updateErr);
+                    throw updateErr;
+                  }
+                }
+              });
+              
+              await Promise.all(translationPromises);
+            }
+          } catch (err) {
+            console.error('Failed to update translations for all languages:', err);
+            // Continue with the main update even if translation updates fail
+          }
         }
 
+        // Update the lookup item itself
+        // This sends to n8n PUT /api/v1/lookups/:lookup_type/:id
+        // Request body only includes old/new value pairs, update_all_languages, and language_id
+        await onUpdate(editingId, { 
+          update_all_languages: updateAllLanguages && hasTranslationChanged ? 1 : 0,
+          language_id: currentLanguageId,
+          // Always include old and new values for all editable columns
+          old_code: originalValues.code || '',
+          new_code: editingData.code || '',
+          old_is_active: originalValues.is_active,
+          new_is_active: editingData.is_active,
+          old_object_type_id: originalValues.object_type_id !== undefined ? originalValues.object_type_id : 0,
+          new_object_type_id: editingData.object_type_id !== undefined ? editingData.object_type_id : 0,
+          old_text: originalValues.name || '',
+          new_text: editingData.name || ''
+        });
+
         setEditingId(null);
-        setEditingData({ code: '', is_active: true, name: '' });
-        setOriginalName('');
+        setEditingData({ code: '', is_active: true, name: '', object_type_id: undefined });
+        setOriginalValues({ code: '', is_active: true, name: '', object_type_id: undefined });
+        setUpdateAllLanguages(false);
         // Reload data to reflect changes
         await onLoad();
       } catch (err) {
         console.error('Failed to update:', err);
+        throw err; // Re-throw to show error to user
       } finally {
         setSaving(false);
       }
@@ -358,15 +461,17 @@ export const LookupTable: React.FC<LookupTableProps> = ({
       }
 
       // Create the lookup item with translation data (sends to n8n)
+      // Always include object_type_id (0 if not present)
       await onCreate({
         code: newItem.code,
         is_active: newItem.is_active,
         text: newItem.name.trim() || undefined,
-        language_id: currentLanguageId
+        language_id: currentLanguageId,
+        object_type_id: newItem.object_type_id !== undefined ? newItem.object_type_id : 0
       });
 
       setShowNewForm(false);
-      setNewItem({ code: '', is_active: true, name: '' });
+      setNewItem({ code: '', is_active: true, name: '', object_type_id: undefined });
       // Reload data to reflect changes
       await onLoad();
     } catch (err) {
@@ -460,7 +565,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
       {showNewForm && (
         <Card className="mb-4 p-4">
           <div className="grid grid-cols-1 gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid ${showObjectCategory ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
               <Input
                 label="Code"
                 value={newItem.code}
@@ -474,6 +579,16 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                 onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
                 placeholder="Enter translation"
               />
+              {showObjectCategory && (
+                <Select
+                  label="Object Category"
+                  value={newItem.object_type_id ? String(newItem.object_type_id) : ''}
+                  onChange={(e) => setNewItem({ ...newItem, object_type_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                  options={objectTypes.map(ot => ({ value: ot.id, label: ot.name || ot.code }))}
+                  placeholder="Select object category (optional)"
+                  required={objectCategoryRequired}
+                />
+              )}
             </div>
             <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -527,6 +642,11 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                   <SortableHeader field="id" className="w-20">ID</SortableHeader>
                   <SortableHeader field="code">Code</SortableHeader>
                   <SortableHeader field="name">Translation</SortableHeader>
+                  {showObjectCategory && (
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Object Category
+                    </th>
+                  )}
                   <SortableHeader field="is_active" className="w-28">Active</SortableHeader>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-28">
                     Actions
@@ -563,6 +683,17 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </td>
+                    {showObjectCategory && (
+                      <td className="px-3 py-2">
+                        <input
+                          type="text"
+                          value={filters.object_category}
+                          onChange={(e) => setFilters({ ...filters, object_category: e.target.value })}
+                          placeholder="Filter by category..."
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-2">
                       <select
                         value={filters.is_active}
@@ -592,7 +723,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {processedData.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={showObjectCategory ? 6 : 5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       <div className="flex flex-col items-center gap-2">
                         <Filter className="h-8 w-8 opacity-40" />
                         {hasActiveFilters ? (
@@ -647,6 +778,23 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         <span className="text-sm italic text-gray-400 dark:text-gray-500">No translation</span>
                       )}
                     </td>
+                    {showObjectCategory && (
+                      <td className="px-4 py-3">
+                        {editingId === item.id ? (
+                          <Select
+                            value={editingData.object_type_id ? String(editingData.object_type_id) : ''}
+                            onChange={(e) => setEditingData({ ...editingData, object_type_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                            options={objectTypes.map(ot => ({ value: ot.id, label: ot.name || ot.code }))}
+                            placeholder="Select object category"
+                            className="w-full"
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {getObjectCategoryName ? (getObjectCategoryName(item) || <span className="italic text-gray-400 dark:text-gray-500">N/A</span>) : <span className="italic text-gray-400 dark:text-gray-500">N/A</span>}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       {editingId === item.id ? (
                         <input
@@ -670,6 +818,23 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                     <td className="px-4 py-3 text-right">
                       {editingId === item.id ? (
                         <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center gap-1.5 mr-2">
+                            <input
+                              type="checkbox"
+                              id={`update-all-languages-${item.id}`}
+                              checked={updateAllLanguages}
+                              onChange={(e) => setUpdateAllLanguages(e.target.checked)}
+                              disabled={saving}
+                              className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                            />
+                            <label 
+                              htmlFor={`update-all-languages-${item.id}`}
+                              className="text-xs text-gray-600 dark:text-gray-400 cursor-pointer select-none"
+                              title="Update translation for all languages"
+                            >
+                              Translations
+                            </label>
+                          </div>
                           <Button
                             variant="primary"
                             size="sm"

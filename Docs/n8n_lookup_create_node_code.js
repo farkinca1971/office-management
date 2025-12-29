@@ -67,7 +67,11 @@ if (lookupType && typeof lookupType === 'string') {
 const createCode = inputData.body?.code;
 const createIsActive = inputData.body?.is_active !== undefined ? inputData.body.is_active : true;
 const createText = inputData.body?.text;
-const createLanguageId = inputData.body?.language_id;
+// language_id is now always included in request body from frontend
+// If not provided, default to English (1) for backward compatibility
+const createLanguageId = inputData.body?.language_id !== undefined && inputData.body?.language_id !== null 
+  ? inputData.body.language_id 
+  : 1; // Default to English (1) if not provided
 const objectTypeId = inputData.body?.object_type_id || inputData.query?.object_type_id;
 
 // Extract language_code from query parameters or headers (for translation context)
@@ -219,23 +223,20 @@ let translationQueries = [];
 const hasTranslation = createText !== undefined && createText !== null && createText.trim() !== '';
 
 if (hasTranslation) {
-  // Determine language_id for translation
-  let translationLangId = null;
-  
-  if (createLanguageId !== undefined && createLanguageId !== null) {
-    translationLangId = parseInt(createLanguageId);
-    if (isNaN(translationLangId)) {
-      return {
-        success: false,
-        error: {
-          code: 'INVALID_LANGUAGE_ID',
-          message: 'language_id must be a valid integer',
-          details: {
-            provided: createLanguageId
-          }
+  // language_id is now always provided from frontend (defaults to 1 if not set)
+  // Validate and use the provided language_id
+  let translationLangId = parseInt(createLanguageId);
+  if (isNaN(translationLangId)) {
+    return {
+      success: false,
+      error: {
+        code: 'INVALID_LANGUAGE_ID',
+        message: 'language_id must be a valid integer',
+        details: {
+          provided: createLanguageId
         }
-      };
-    }
+      }
+    };
   }
   
   // Trim and escape single quotes in text
@@ -244,32 +245,16 @@ if (hasTranslation) {
   
   // Build INSERT ... ON DUPLICATE KEY UPDATE query for translation
   // This will insert if translation doesn't exist, or update if it does
-  if (translationLangId !== null) {
-    // Direct language_id value
-    translationQueries.push({
-      query: `
-        INSERT INTO translations (code, language_id, text)
-        VALUES ('${escapedCode}', ${translationLangId}, '${escapedText}')
-        ON DUPLICATE KEY UPDATE text = '${escapedText}'
-      `.trim(),
-      type: 'translation_insert',
-      description: `Create/update translation for ${lookupType} with language_id ${translationLangId}`
-    });
-  } else {
-    // Use language_code to get language_id
-    const escapedLanguageCode = languageCode.replace(/'/g, "''");
-    translationQueries.push({
-      query: `
-        INSERT INTO translations (code, language_id, text)
-        SELECT '${escapedCode}', l.id, '${escapedText}'
-        FROM languages l
-        WHERE l.code = '${escapedLanguageCode}'
-        ON DUPLICATE KEY UPDATE text = '${escapedText}'
-      `.trim(),
-      type: 'translation_insert',
-      description: `Create/update translation for ${lookupType} with language_code '${languageCode}'`
-    });
-  }
+  // language_id is now always provided from frontend
+  translationQueries.push({
+    query: `
+      INSERT INTO translations (code, language_id, text)
+      VALUES ('${escapedCode}', ${translationLangId}, '${escapedText}')
+      ON DUPLICATE KEY UPDATE text = '${escapedText}'
+    `.trim(),
+    type: 'translation_insert',
+    description: `Create/update translation for ${lookupType} with language_id ${translationLangId}`
+  });
   
   // If we want to create translations for ALL languages (using the provided text as default)
   // This is optional - uncomment if you want this behavior

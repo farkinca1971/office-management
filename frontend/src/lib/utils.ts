@@ -72,3 +72,17 @@ export function debounce<T extends (...args: any[]) => any>(
   };
 }
 
+/**
+ * Map language code to language_id
+ * Based on seed data: en=1, de=2, hu=3
+ */
+export function getLanguageId(languageCode: 'en' | 'hu' | 'de' | string): number {
+  const languageMap: Record<string, number> = {
+    'en': 1,
+    'de': 2,
+    'hu': 3,
+  };
+  
+  return languageMap[languageCode] || 1; // Default to English (1) if not found
+}
+

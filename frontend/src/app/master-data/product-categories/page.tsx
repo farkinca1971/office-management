@@ -48,8 +48,57 @@ export default function ProductCategoriesPage() {
     }
   };
 
-  const handleUpdate = async (id: number, item: { code?: string; is_active?: boolean; text?: string; language_id?: number }) => {
-    const response = await lookupApi.updateProductCategory(id, item);
+  const handleUpdate = async (id: number, item: { 
+    code?: string; 
+    is_active?: boolean; 
+    text?: string; 
+    language_id?: number; 
+    object_type_id?: number; 
+    update_all_languages?: boolean | number; 
+    old_code?: string;
+    new_code?: string;
+    old_is_active?: boolean;
+    new_is_active?: boolean;
+    old_object_type_id?: number;
+    new_object_type_id?: number;
+    old_text?: string; 
+    new_text?: string;
+  }) => {
+    // Handle update_all_languages if needed (check for both boolean and number)
+    const shouldUpdateAll = item.update_all_languages === true || item.update_all_languages === 1;
+    if (shouldUpdateAll && item.new_text && item.new_code) {
+      // Update translations for all languages
+      try {
+        const languagesResponse = await lookupApi.getLanguages();
+        if (languagesResponse.success) {
+          const languages = languagesResponse.data;
+          // Update translation for all languages
+          const updatePromises = languages.map(lang => 
+            lookupApi.updateTranslation(item.new_code!, lang.id, { text: item.new_text! })
+          );
+          await Promise.all(updatePromises);
+        }
+      } catch (err) {
+        console.error('Failed to update translations for all languages:', err);
+        // Continue with the update even if all languages update fails
+      }
+    }
+    
+    // Request body only includes old/new value pairs, update_all_languages, and language_id
+    const updatePayload = {
+      update_all_languages: shouldUpdateAll ? 1 : 0,
+      language_id: item.language_id,
+      old_code: item.old_code !== undefined ? item.old_code : '',
+      new_code: item.new_code !== undefined ? item.new_code : '',
+      old_is_active: item.old_is_active !== undefined ? item.old_is_active : true,
+      new_is_active: item.new_is_active !== undefined ? item.new_is_active : true,
+      old_object_type_id: item.old_object_type_id !== undefined ? item.old_object_type_id : 0,
+      new_object_type_id: item.new_object_type_id !== undefined ? item.new_object_type_id : 0,
+      old_text: item.old_text !== undefined ? item.old_text : '',
+      new_text: item.new_text !== undefined ? item.new_text : ''
+    };
+    
+    const response = await lookupApi.updateProductCategory(id, updatePayload);
     if (response.success) {
       await loadData();
     } else {
