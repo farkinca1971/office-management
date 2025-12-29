@@ -5,18 +5,11 @@
 'use client';
 
 import React from 'react';
-import { LookupTable } from '@/components/ui/LookupTable';
+import { ObjectRelationTypesTable } from '@/components/ui/ObjectRelationTypesTable';
 import { lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useTranslation } from '@/lib/i18n';
 import type { LookupItem } from '@/types/common';
-
-interface ObjectRelationTypeItem extends LookupItem {
-  parent_object_type_id?: number;
-  child_object_type_id?: number;
-  mirrored_type_id?: number;
-  mirrored_type_code?: string;
-}
 
 export default function ObjectRelationTypesPage() {
   const [data, setData] = React.useState<LookupItem[]>([]);
@@ -84,9 +77,7 @@ export default function ObjectRelationTypesPage() {
       child_object_type_id: item.child_object_type_id !== undefined ? item.child_object_type_id : null,
     };
     const response = await lookupApi.createObjectRelationType(createPayload);
-    if (response.success) {
-      await loadData();
-    } else {
+    if (!response.success) {
       throw new Error('Failed to create object relation type');
     }
   };
@@ -110,26 +101,9 @@ export default function ObjectRelationTypesPage() {
     old_text?: string; 
     new_text?: string;
   }) => {
-    // Handle update_all_languages if needed
-    const shouldUpdateAll = item.update_all_languages === true || item.update_all_languages === 1;
-    if (shouldUpdateAll && item.new_text && item.new_code) {
-      try {
-        const languagesResponse = await lookupApi.getLanguages();
-        if (languagesResponse.success) {
-          const languages = languagesResponse.data;
-          const updatePromises = languages.map(lang => 
-            lookupApi.updateTranslation(item.new_code!, lang.id, { text: item.new_text! })
-          );
-          await Promise.all(updatePromises);
-        }
-      } catch (err) {
-        console.error('Failed to update translations for all languages:', err);
-      }
-    }
-    
     // Request body with old/new value pairs
     const updatePayload: any = {
-      update_all_languages: shouldUpdateAll ? 1 : 0,
+      update_all_languages: item.update_all_languages === true || item.update_all_languages === 1 ? 1 : 0,
       language_id: item.language_id,
       old_code: item.old_code !== undefined ? item.old_code : '',
       new_code: item.new_code !== undefined ? item.new_code : '',
@@ -139,54 +113,21 @@ export default function ObjectRelationTypesPage() {
       new_text: item.new_text !== undefined ? item.new_text : ''
     };
 
-    // Add parent and child object type fields if they exist
-    if (item.old_parent_object_type_id !== undefined || item.new_parent_object_type_id !== undefined) {
-      updatePayload.old_parent_object_type_id = item.old_parent_object_type_id !== undefined ? item.old_parent_object_type_id : null;
-      updatePayload.new_parent_object_type_id = item.new_parent_object_type_id !== undefined ? item.new_parent_object_type_id : null;
-    }
-    if (item.old_child_object_type_id !== undefined || item.new_child_object_type_id !== undefined) {
-      updatePayload.old_child_object_type_id = item.old_child_object_type_id !== undefined ? item.old_child_object_type_id : null;
-      updatePayload.new_child_object_type_id = item.new_child_object_type_id !== undefined ? item.new_child_object_type_id : null;
-    }
+    // Add parent and child object type fields
+    updatePayload.old_parent_object_type_id = item.old_parent_object_type_id !== undefined ? item.old_parent_object_type_id : null;
+    updatePayload.new_parent_object_type_id = item.new_parent_object_type_id !== undefined ? item.new_parent_object_type_id : null;
+    updatePayload.old_child_object_type_id = item.old_child_object_type_id !== undefined ? item.old_child_object_type_id : null;
+    updatePayload.new_child_object_type_id = item.new_child_object_type_id !== undefined ? item.new_child_object_type_id : null;
     
     const response = await lookupApi.updateObjectRelationType(id, updatePayload);
-    if (response.success) {
-      await loadData();
-    } else {
+    if (!response.success) {
       throw new Error('Failed to update object relation type');
     }
-  };
-  
-  // Helper function to get object type name from ID
-  const getObjectTypeName = (objectTypeId?: number): string | undefined => {
-    if (objectTypeId === null || objectTypeId === undefined) {
-      return undefined;
-    }
-    const objectType = objectTypes.find(ot => ot.id === objectTypeId);
-    return objectType?.name || objectType?.code || undefined;
-  };
-
-  // Helper function to format object category display (Parent → Child)
-  const getObjectCategoryName = (item: LookupItem): string | undefined => {
-    const relationItem = item as ObjectRelationTypeItem;
-    const parentType = getObjectTypeName(relationItem.parent_object_type_id);
-    const childType = getObjectTypeName(relationItem.child_object_type_id);
-    
-    if (parentType && childType) {
-      return `${parentType} → ${childType}`;
-    } else if (parentType) {
-      return parentType;
-    } else if (childType) {
-      return childType;
-    }
-    return undefined;
   };
 
   const handleDelete = async (id: number) => {
     const response = await lookupApi.deleteObjectRelationType(id);
-    if (response.success) {
-      await loadData();
-    } else {
+    if (!response.success) {
       throw new Error('Failed to delete object relation type');
     }
   };
@@ -201,7 +142,7 @@ export default function ObjectRelationTypesPage() {
   }, [data.length, perPage]);
 
   return (
-    <LookupTable
+    <ObjectRelationTypesTable
       title={t('nav.objectRelationTypes')}
       data={data}
       isLoading={isLoading}
@@ -210,9 +151,7 @@ export default function ObjectRelationTypesPage() {
       onCreate={handleCreate}
       onUpdate={handleUpdate}
       onDelete={handleDelete}
-      showObjectCategory={true}
       objectTypes={objectTypes}
-      getObjectCategoryName={getObjectCategoryName}
       pagination={data.length > 0 ? {
         page,
         perPage,
