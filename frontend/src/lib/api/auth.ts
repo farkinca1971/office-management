@@ -36,10 +36,14 @@ export const authApi = {
    * Calls /auth/me endpoint which validates token and returns user data
    */
   getCurrentUser: async (): Promise<{ success: true; data: User }> => {
-    const response = await apiClient.get('/auth/me');
-    // Ensure response has success property
+    const response: any = await apiClient.get('/auth/me');
+    // Handle various response formats
     if (response && response.success && response.data) {
-      return response as { success: true; data: User };
+      return { success: true, data: response.data as User };
+    }
+    // Handle direct user response
+    if (response && response.id) {
+      return { success: true, data: response as User };
     }
     // If response doesn't have expected format, throw error
     throw new Error('Invalid response format from /auth/me');

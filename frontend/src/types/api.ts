@@ -37,6 +37,9 @@ import {
 } from './entities';
 import { ApiResponse, ApiListResponse, SearchParams } from './common';
 
+// Re-export common types for convenience
+export type { ApiResponse, ApiListResponse, SearchParams } from './common';
+
 // Person API Types
 export type PersonListResponse = ApiListResponse<Person>;
 export type PersonResponse = ApiResponse<Person>;
@@ -124,11 +127,21 @@ export interface LoginRequest {
   password: string;
 }
 
+// LoginResponse supports multiple formats from the API:
+// Format 1 (standard): { success: true, data: { token, user } }
+// Format 2 (direct): { token, user }
+// Format 3 (flat): { success: true, token, user }
 export interface LoginResponse {
-  success: true;
-  data: {
+  success?: boolean;
+  data?: {
     token: string;
     user: User;
+  };
+  token?: string;
+  user?: User;
+  error?: {
+    code?: string;
+    message?: string;
   };
 }
 

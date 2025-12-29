@@ -37,42 +37,57 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authApi.login({ username, password });
-          
-          // Expected format from API reference:
-          // {
-          //   "success": true,
-          //   "data": {
-          //     "token": "generated_jwt_token",
-          //     "user": {
-          //       "id": 123,
-          //       "username": "johndoe",
-          //       "status_code": "user_active"
-          //     }
-          //   }
-          // }
-          
-          if (response.success && response.data) {
-            const { token, user } = response.data;
-            
-            if (!token) {
-              throw new Error('Token not found in response');
-            }
-            
-            if (!user) {
-              throw new Error('User data not found in response');
-            }
 
-            authApi.setToken(token);
-            set({
-              user: user,
-              token: token,
-              isAuthenticated: true,
-              isLoading: false,
-              error: null,
-            });
-          } else {
-            throw new Error('Invalid login response: missing success or data');
+          // Handle various response formats from the API:
+          // Format 1 (standard): { success: true, data: { token, user } }
+          // Format 2 (direct): { token, user }
+          // Format 3 (flat): { success: true, token, user }
+
+          let token: string | undefined;
+          let user: User | undefined;
+
+          if (!response) {
+            throw new Error('Empty response from server. Please check your credentials.');
           }
+
+          // Check for error response
+          if (response.success === false) {
+            throw new Error(response.error?.message || 'Login failed');
+          }
+
+          // Format 1: Standard wrapped response
+          if (response.success && response.data) {
+            token = response.data.token;
+            user = response.data.user;
+          }
+          // Format 2: Direct response (token and user at root level)
+          else if (response.token) {
+            token = response.token;
+            user = response.user;
+          }
+          // Format 3: Flat response with success flag
+          else if (response.success && response.token) {
+            token = response.token;
+            user = response.user;
+          }
+
+          if (!token) {
+            throw new Error('Token not found in response. Please check your credentials.');
+          }
+
+          if (!user) {
+            // If no user data but we have a token, create minimal user object
+            user = { id: 0, username: username } as User;
+          }
+
+          authApi.setToken(token);
+          set({
+            user: user,
+            token: token,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          });
         } catch (error: any) {
           console.error('Login error:', error);
           set({

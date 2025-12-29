@@ -2,6 +2,7 @@
  * i18n utilities and translation hook
  */
 
+import { useCallback } from 'react';
 import { useLanguageStore } from '@/store/languageStore';
 import { en } from './translations/en';
 import { hu } from './translations/hu';
@@ -52,9 +53,12 @@ export function getTranslation(
 export function useTranslation() {
   const language = useLanguageStore((state) => state.language);
 
-  const t = (key: string): string => {
-    return getTranslation(language, key);
-  };
+  const t = useCallback(
+    (key: string): string => {
+      return getTranslation(language, key);
+    },
+    [language]
+  );
 
   return { t, language };
 }

@@ -99,6 +99,146 @@ export const hu = {
     transactions: 'Tranzakciók',
   },
 
+  // Persons
+  persons: {
+    subtitle: 'Személyek kezelése',
+    addNew: 'Személy hozzáadása',
+    loadFailed: 'A személyek betöltése sikertelen',
+    selectPersonToViewDetails: 'Válassz ki egy személyt a fenti táblázatból a részletek megtekintéséhez',
+    personId: 'Személy azonosító',
+    salutation: 'Megszólítás',
+    firstName: 'Keresztnév',
+    lastName: 'Vezetéknév',
+    motherName: 'Anyja neve',
+    sex: 'Nem',
+    birthDate: 'Születési dátum',
+    filterByFirstName: 'Szűrés keresztnév szerint...',
+    filterByLastName: 'Szűrés vezetéknév szerint...',
+    filterByMotherName: 'Szűrés anyja neve szerint...',
+  },
+
+  // Audits
+  audits: {
+    title: 'Auditok',
+    audit: 'audit',
+    audits: 'auditok',
+    loadFailed: 'Az auditnaplók betöltése sikertelen',
+    noAudits: 'Nincsenek auditbejegyzések',
+    action: 'Művelet',
+    timestamp: 'Időbélyeg',
+    createdBy: 'Létrehozta',
+    ipAddress: 'IP-cím',
+    oldValues: 'Régi értékek',
+    newValues: 'Új értékek',
+    notes: 'Megjegyzések',
+    unknownAction: 'Ismeretlen művelet',
+  },
+
+  // Forms - New pages
+  forms: {
+    // Common form fields
+    status: 'Státusz',
+    selectStatus: 'Válassz státuszt',
+    systemSettings: 'Rendszerbeállítások',
+    notes: 'Megjegyzések',
+    enterNotes: 'Adj meg további megjegyzéseket',
+    createdSuccess: 'Sikeresen létrehozva! Átirányítás...',
+    createFailed: 'Sikertelen létrehozás',
+    loadFailed: 'Nem sikerült betölteni az űrlap beállításait. Kérjük, frissítsd az oldalt.',
+    statusRequired: 'A státusz megadása kötelező',
+
+    // Person form
+    person: {
+      title: 'Új személy hozzáadása',
+      subtitle: 'Új személy rekord létrehozása',
+      basicInfo: 'Alapadatok',
+      salutation: 'Megszólítás',
+      selectSalutation: 'Válassz megszólítást',
+      sex: 'Nem',
+      selectSex: 'Válassz nemet',
+      firstName: 'Keresztnév',
+      enterFirstName: 'Add meg a keresztnevet',
+      middleName: 'Középső név',
+      enterMiddleName: 'Add meg a középső nevet',
+      lastName: 'Vezetéknév',
+      enterLastName: 'Add meg a vezetéknevet',
+      motherName: 'Anyja neve',
+      enterMotherName: 'Add meg az anyja nevét',
+      birthDate: 'Születési dátum',
+      createButton: 'Személy létrehozása',
+      firstNameRequired: 'A keresztnév megadása kötelező',
+      lastNameRequired: 'A vezetéknév megadása kötelező',
+      createdSuccess: 'Személy sikeresen létrehozva! Átirányítás...',
+    },
+
+    // Company form
+    company: {
+      title: 'Új cég hozzáadása',
+      subtitle: 'Új cég rekord létrehozása',
+      companyInfo: 'Cégadatok',
+      companyId: 'Cégazonosító',
+      enterCompanyId: 'Add meg a cégazonosítót (pl. cégjegyzékszám)',
+      companyName: 'Cégnév',
+      enterCompanyName: 'Add meg a cégnevet',
+      createButton: 'Cég létrehozása',
+      companyIdRequired: 'A cégazonosító megadása kötelező',
+      companyNameRequired: 'A cégnév megadása kötelező',
+      createdSuccess: 'Cég sikeresen létrehozva! Átirányítás...',
+    },
+
+    // Employee form
+    employee: {
+      title: 'Új alkalmazott hozzáadása',
+      subtitle: 'Új alkalmazott rekord létrehozása',
+      employeeInfo: 'Alkalmazott adatai',
+      person: 'Személy',
+      selectPerson: 'Válassz személyt',
+      noPersons: 'Nincs elérhető személy. Kérjük, először hozz létre egy személyt.',
+      createButton: 'Alkalmazott létrehozása',
+      personRequired: 'A személy kiválasztása kötelező',
+      createdSuccess: 'Alkalmazott sikeresen létrehozva! Átirányítás...',
+    },
+
+    // Invoice form
+    invoice: {
+      title: 'Új számla létrehozása',
+      subtitle: 'Új számla rekord létrehozása',
+      invoiceDetails: 'Számla részletei',
+      invoiceNumber: 'Számlaszám',
+      enterInvoiceNumber: 'Add meg a számlaszámot',
+      referenceNumber: 'Hivatkozási szám',
+      enterReferenceNumber: 'Add meg a hivatkozási számot',
+      currency: 'Pénznem',
+      selectCurrency: 'Válassz pénznemet',
+      issueDate: 'Kiállítás dátuma',
+      dueDate: 'Fizetési határidő',
+      amounts: 'Összegek',
+      netAmount: 'Nettó összeg',
+      tax: 'ÁFA',
+      finalAmount: 'Végösszeg',
+      createButton: 'Számla létrehozása',
+      invoiceNumberRequired: 'A számlaszám megadása kötelező',
+      issueDateRequired: 'A kiállítás dátumának megadása kötelező',
+      currencyRequired: 'A pénznem kiválasztása kötelező',
+      createdSuccess: 'Számla sikeresen létrehozva! Átirányítás...',
+    },
+
+    // Transaction form
+    transaction: {
+      title: 'Új tranzakció létrehozása',
+      subtitle: 'Új tranzakció rekord létrehozása',
+      transactionDetails: 'Tranzakció részletei',
+      transactionType: 'Tranzakció típusa',
+      selectTransactionType: 'Válassz tranzakció típust',
+      startDate: 'Kezdő dátum',
+      endDate: 'Befejező dátum',
+      createButton: 'Tranzakció létrehozása',
+      transactionTypeRequired: 'A tranzakció típusának megadása kötelező',
+      startDateRequired: 'A kezdő dátum megadása kötelező',
+      createdSuccess: 'Tranzakció sikeresen létrehozva! Átirányítás...',
+    },
+  },
+
   // Lookup Table
   lookup: {
     manageData: '{title} adatok kezelése',

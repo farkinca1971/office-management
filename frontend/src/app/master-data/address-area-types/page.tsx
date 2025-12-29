@@ -101,15 +101,11 @@ export default function AddressAreaTypesPage() {
     };
     
     const response = await lookupApi.updateAddressAreaType(id, updatePayload);
-    // If response has an error, throw it
-    if (response?.error) {
-      throw new Error(response.error.message || 'Failed to update address area type');
+    // Check if response was successful
+    if (!response.success) {
+      const errorResponse = response as { success: false; error: { message?: string } };
+      throw new Error(errorResponse.error?.message || 'Failed to update address area type');
     }
-    // If response.success is explicitly false, throw error
-    if (response?.success === false) {
-      throw new Error('Failed to update address area type');
-    }
-    // Otherwise, consider it successful (even if success is undefined)
     // Reload data to reflect the changes
     await loadData();
   };

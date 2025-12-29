@@ -8,19 +8,28 @@ import { X } from 'lucide-react';
 
 export interface AlertProps {
   type?: 'success' | 'error' | 'warning' | 'info';
+  variant?: 'success' | 'error' | 'warning' | 'info'; // Alias for type
   title?: string;
-  message: string;
+  message?: string;
+  children?: React.ReactNode; // Alternative to message
   onClose?: () => void;
   className?: string;
 }
 
 export const Alert: React.FC<AlertProps> = ({
-  type = 'info',
+  type,
+  variant,
   title,
   message,
+  children,
   onClose,
   className,
 }) => {
+  // Support both 'type' and 'variant' props (variant takes precedence for compatibility)
+  const alertType = variant || type || 'info';
+  // Support both 'message' and 'children' props
+  const content = children || message;
+
   const styles = {
     success: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 shadow-sm',
     error: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 shadow-sm',
@@ -32,7 +41,7 @@ export const Alert: React.FC<AlertProps> = ({
     <div
       className={cn(
         'border rounded-lg p-4 shadow-md',
-        styles[type],
+        styles[alertType],
         className
       )}
     >
@@ -41,7 +50,7 @@ export const Alert: React.FC<AlertProps> = ({
           {title && (
             <h4 className="font-semibold mb-1">{title}</h4>
           )}
-          <p className="text-sm">{message}</p>
+          <div className="text-sm">{content}</div>
         </div>
         {onClose && (
           <button

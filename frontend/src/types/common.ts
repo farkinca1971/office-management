@@ -56,6 +56,7 @@ export interface LookupItem {
   code: string;
   is_active: boolean;
   name?: string; // Translation text for the current language (from translations table)
+  translations?: Translation[]; // Array of translations (optional, only present in some responses)
 }
 
 // Translation

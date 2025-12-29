@@ -50,7 +50,7 @@ export default function AddressTypesPage() {
     }
   };
 
-  const handleUpdate = async (id: number, item: { code?: string; is_active?: boolean; text?: string; language_id?: number; object_type_id?: number; update_all_languages?: boolean | number; old_text?: string; new_text?: string }) => {
+  const handleUpdate = async (id: number, item: { code?: string; is_active?: boolean; text?: string; language_id?: number; object_type_id?: number; update_all_languages?: boolean | number; old_code?: string; new_code?: string; old_is_active?: boolean; new_is_active?: boolean; old_object_type_id?: number; new_object_type_id?: number; old_text?: string; new_text?: string }) => {
     // Handle update_all_languages if needed (check for both boolean and number)
     const shouldUpdateAll = item.update_all_languages === true || item.update_all_languages === 1;
     if (shouldUpdateAll && item.new_text && item.new_code) {

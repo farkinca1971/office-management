@@ -387,10 +387,10 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
           new_code: editingData.code || '',
           old_is_active: originalValues.is_active,
           new_is_active: editingData.is_active,
-          old_parent_object_type_id: originalValues.parent_object_type_id !== undefined ? originalValues.parent_object_type_id : null,
-          new_parent_object_type_id: editingData.parent_object_type_id !== undefined ? editingData.parent_object_type_id : null,
-          old_child_object_type_id: originalValues.child_object_type_id !== undefined ? originalValues.child_object_type_id : null,
-          new_child_object_type_id: editingData.child_object_type_id !== undefined ? editingData.child_object_type_id : null,
+          old_parent_object_type_id: originalValues.parent_object_type_id !== undefined ? originalValues.parent_object_type_id : undefined,
+          new_parent_object_type_id: editingData.parent_object_type_id !== undefined ? editingData.parent_object_type_id : undefined,
+          old_child_object_type_id: originalValues.child_object_type_id !== undefined ? originalValues.child_object_type_id : undefined,
+          new_child_object_type_id: editingData.child_object_type_id !== undefined ? editingData.child_object_type_id : undefined,
           old_text: originalValues.name || '',
           new_text: editingData.name || ''
         });
@@ -437,8 +437,8 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
         is_active: newItem.is_active,
         text: newItem.name.trim() || undefined,
         language_id: currentLanguageId,
-        parent_object_type_id: newItem.parent_object_type_id !== undefined ? newItem.parent_object_type_id : null,
-        child_object_type_id: newItem.child_object_type_id !== undefined ? newItem.child_object_type_id : null,
+        parent_object_type_id: newItem.parent_object_type_id !== undefined ? newItem.parent_object_type_id : undefined,
+        child_object_type_id: newItem.child_object_type_id !== undefined ? newItem.child_object_type_id : undefined,
       });
 
       // Reload data after successful create

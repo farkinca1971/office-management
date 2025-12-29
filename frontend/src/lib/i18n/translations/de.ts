@@ -99,6 +99,146 @@ export const de = {
     transactions: 'Transaktionen',
   },
 
+  // Persons
+  persons: {
+    subtitle: 'Personendatensätze verwalten',
+    addNew: 'Person hinzufügen',
+    loadFailed: 'Personen konnten nicht geladen werden',
+    selectPersonToViewDetails: 'Wählen Sie eine Person aus der obigen Tabelle aus, um Details anzuzeigen',
+    personId: 'Personen-ID',
+    salutation: 'Anrede',
+    firstName: 'Vorname',
+    lastName: 'Nachname',
+    motherName: 'Name der Mutter',
+    sex: 'Geschlecht',
+    birthDate: 'Geburtsdatum',
+    filterByFirstName: 'Nach Vorname filtern...',
+    filterByLastName: 'Nach Nachname filtern...',
+    filterByMotherName: 'Nach Muttername filtern...',
+  },
+
+  // Audits
+  audits: {
+    title: 'Prüfprotokolle',
+    audit: 'Prüfprotokoll',
+    audits: 'Prüfprotokolle',
+    loadFailed: 'Prüfprotokolle konnten nicht geladen werden',
+    noAudits: 'Keine Prüfprotokolle gefunden',
+    action: 'Aktion',
+    timestamp: 'Zeitstempel',
+    createdBy: 'Erstellt von',
+    ipAddress: 'IP-Adresse',
+    oldValues: 'Alte Werte',
+    newValues: 'Neue Werte',
+    notes: 'Notizen',
+    unknownAction: 'Unbekannte Aktion',
+  },
+
+  // Forms - New pages
+  forms: {
+    // Common form fields
+    status: 'Status',
+    selectStatus: 'Status auswählen',
+    systemSettings: 'Systemeinstellungen',
+    notes: 'Notizen',
+    enterNotes: 'Zusätzliche Notizen eingeben',
+    createdSuccess: 'Erfolgreich erstellt! Weiterleitung...',
+    createFailed: 'Erstellung fehlgeschlagen',
+    loadFailed: 'Formularoptionen konnten nicht geladen werden. Bitte aktualisiere die Seite.',
+    statusRequired: 'Status ist erforderlich',
+
+    // Person form
+    person: {
+      title: 'Neue Person hinzufügen',
+      subtitle: 'Neuen Personendatensatz erstellen',
+      basicInfo: 'Grundinformationen',
+      salutation: 'Anrede',
+      selectSalutation: 'Anrede auswählen',
+      sex: 'Geschlecht',
+      selectSex: 'Geschlecht auswählen',
+      firstName: 'Vorname',
+      enterFirstName: 'Vorname eingeben',
+      middleName: 'Zweiter Vorname',
+      enterMiddleName: 'Zweiten Vornamen eingeben',
+      lastName: 'Nachname',
+      enterLastName: 'Nachname eingeben',
+      motherName: 'Name der Mutter',
+      enterMotherName: 'Name der Mutter eingeben',
+      birthDate: 'Geburtsdatum',
+      createButton: 'Person erstellen',
+      firstNameRequired: 'Vorname ist erforderlich',
+      lastNameRequired: 'Nachname ist erforderlich',
+      createdSuccess: 'Person erfolgreich erstellt! Weiterleitung...',
+    },
+
+    // Company form
+    company: {
+      title: 'Neues Unternehmen hinzufügen',
+      subtitle: 'Neuen Unternehmensdatensatz erstellen',
+      companyInfo: 'Unternehmensinformationen',
+      companyId: 'Unternehmens-ID',
+      enterCompanyId: 'Unternehmens-ID eingeben (z.B. Registrierungsnummer)',
+      companyName: 'Unternehmensname',
+      enterCompanyName: 'Unternehmensname eingeben',
+      createButton: 'Unternehmen erstellen',
+      companyIdRequired: 'Unternehmens-ID ist erforderlich',
+      companyNameRequired: 'Unternehmensname ist erforderlich',
+      createdSuccess: 'Unternehmen erfolgreich erstellt! Weiterleitung...',
+    },
+
+    // Employee form
+    employee: {
+      title: 'Neuen Mitarbeiter hinzufügen',
+      subtitle: 'Neuen Mitarbeiterdatensatz erstellen',
+      employeeInfo: 'Mitarbeiterinformationen',
+      person: 'Person',
+      selectPerson: 'Person auswählen',
+      noPersons: 'Keine Personen verfügbar. Bitte erstelle zuerst eine Person.',
+      createButton: 'Mitarbeiter erstellen',
+      personRequired: 'Person ist erforderlich',
+      createdSuccess: 'Mitarbeiter erfolgreich erstellt! Weiterleitung...',
+    },
+
+    // Invoice form
+    invoice: {
+      title: 'Neue Rechnung erstellen',
+      subtitle: 'Neuen Rechnungsdatensatz erstellen',
+      invoiceDetails: 'Rechnungsdetails',
+      invoiceNumber: 'Rechnungsnummer',
+      enterInvoiceNumber: 'Rechnungsnummer eingeben',
+      referenceNumber: 'Referenznummer',
+      enterReferenceNumber: 'Referenznummer eingeben',
+      currency: 'Währung',
+      selectCurrency: 'Währung auswählen',
+      issueDate: 'Ausstellungsdatum',
+      dueDate: 'Fälligkeitsdatum',
+      amounts: 'Beträge',
+      netAmount: 'Nettobetrag',
+      tax: 'MwSt.',
+      finalAmount: 'Endbetrag',
+      createButton: 'Rechnung erstellen',
+      invoiceNumberRequired: 'Rechnungsnummer ist erforderlich',
+      issueDateRequired: 'Ausstellungsdatum ist erforderlich',
+      currencyRequired: 'Währung ist erforderlich',
+      createdSuccess: 'Rechnung erfolgreich erstellt! Weiterleitung...',
+    },
+
+    // Transaction form
+    transaction: {
+      title: 'Neue Transaktion erstellen',
+      subtitle: 'Neuen Transaktionsdatensatz erstellen',
+      transactionDetails: 'Transaktionsdetails',
+      transactionType: 'Transaktionstyp',
+      selectTransactionType: 'Transaktionstyp auswählen',
+      startDate: 'Startdatum',
+      endDate: 'Enddatum',
+      createButton: 'Transaktion erstellen',
+      transactionTypeRequired: 'Transaktionstyp ist erforderlich',
+      startDateRequired: 'Startdatum ist erforderlich',
+      createdSuccess: 'Transaktion erfolgreich erstellt! Weiterleitung...',
+    },
+  },
+
   // Lookup Table
   lookup: {
     manageData: '{title} Daten verwalten',

@@ -73,8 +73,8 @@ export default function ObjectRelationTypesPage() {
       is_active: item.is_active !== undefined ? item.is_active : true,
       text: item.text,
       language_id: item.language_id,
-      parent_object_type_id: item.parent_object_type_id !== undefined ? item.parent_object_type_id : null,
-      child_object_type_id: item.child_object_type_id !== undefined ? item.child_object_type_id : null,
+      parent_object_type_id: item.parent_object_type_id !== undefined ? item.parent_object_type_id : undefined,
+      child_object_type_id: item.child_object_type_id !== undefined ? item.child_object_type_id : undefined,
     };
     const response = await lookupApi.createObjectRelationType(createPayload);
     if (!response.success) {

@@ -19,6 +19,67 @@ This document provides a comprehensive list of all API endpoints, their explanat
 
 ---
 
+## Core Database Schema
+
+### Shared Primary Key Pattern
+
+This database uses a **shared primary key pattern** where entity-specific tables (persons, companies, users, invoices, transactions) share their primary key with the `objects` table. This means:
+
+- The `objects.id` column generates the primary key
+- Entity tables use that same ID value as their primary key
+- Entity tables reference `objects.id` via a foreign key with `ON DELETE CASCADE`
+
+### Objects Table (Central Entity Table)
+
+```sql
+CREATE TABLE objects (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'Primary key - shared with entity tables',
+    object_type_id INT NOT NULL COMMENT 'Type of object (person, company, user, invoice, transaction)',
+    object_status_id INT NOT NULL COMMENT 'Status of the object (active, pending, etc.)',
+    FOREIGN KEY (object_type_id) REFERENCES object_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (object_status_id) REFERENCES object_statuses(id) ON DELETE RESTRICT
+);
+```
+
+**Note**: The `objects` table does NOT have `is_active`, `created_at`, or `updated_at` columns. These fields are handled by the entity-specific tables.
+
+### Creating New Entities
+
+When creating a new entity (person, company, user, etc.), follow this pattern:
+
+1. Insert into `objects` table first to generate the shared ID
+2. Use `LAST_INSERT_ID()` to get the generated ID
+3. Insert into the entity table using that ID as the primary key
+
+```sql
+START TRANSACTION;
+
+-- Step 1: Create the object record
+INSERT INTO objects (object_type_id, object_status_id)
+VALUES ((SELECT id FROM object_types WHERE code = 'person'), 1);
+
+-- Step 2: Get the generated ID
+SET @object_id = LAST_INSERT_ID();
+
+-- Step 3: Insert into entity table using the same ID
+INSERT INTO persons (id, first_name, last_name, ...)
+VALUES (@object_id, 'John', 'Doe', ...);
+
+COMMIT;
+```
+
+### Object Types Reference
+
+| Code | ID | Description |
+|------|-----|-------------|
+| `person` | 1 | Natural person |
+| `company` | 2 | Legal entity/company |
+| `user` | 3 | System user |
+| `invoice` | 4 | Invoice document |
+| `transaction` | 5 | Financial transaction |
+
+---
+
 ## Lookup/Reference Data Endpoints
 
 All lookup table endpoints use a unified endpoint pattern: `/api/v1/lookups/:lookup_type`
@@ -268,7 +329,7 @@ All lookup tables support the following operations:
 | `contact-types` | `contact_types` | Contact method types (phone, email, etc.) |
 | `transaction-types` | `transaction_types` | Transaction classification (SALE, PURCHASE, etc.) |
 | `currencies` | `currencies` | Currency codes (ISO codes) |
-| `object-relation-types` | `object_relation_types` | Relationship types between objects |
+| `object-relation-types` | `object_relation_types` | Relationship types between objects (special structure - see below) |
 | `translations` | `translations` | Multi-language text storage (special structure) |
 
 ---
@@ -298,6 +359,97 @@ Translations use a composite key (code + language_id) instead of a single ID.
 ```
 
 **Delete Translation**: `DELETE /api/v1/lookups/translations/:code/:language_id`
+
+---
+
+### Special Case: Object Relation Types
+
+Object relation types define relationships between objects and have additional fields for parent/child object types and mirrored relationships.
+
+**Database Schema**:
+```sql
+CREATE TABLE object_relation_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(30) UNIQUE NOT NULL COMMENT 'Relation type code (e.g., mother, son, employer, worker)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this relation type is currently active',
+    parent_object_type_id INT COMMENT 'Parent object type ID (references object_types.id)',
+    child_object_type_id INT COMMENT 'Child object type ID (references object_types.id)',
+    mirrored_type_id INT COMMENT 'Mirrored relation type ID (references object_relation_types.id)',
+    FOREIGN KEY (code) REFERENCES translations(code) ON DELETE RESTRICT,
+    FOREIGN KEY (parent_object_type_id) REFERENCES object_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (child_object_type_id) REFERENCES object_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (mirrored_type_id) REFERENCES object_relation_types(id) ON DELETE RESTRICT
+);
+```
+
+**List Object Relation Types**: `GET /api/v1/lookups/object-relation-types?language_code={lang}&parent_object_type_id={id}&child_object_type_id={id}`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "mother",
+      "is_active": true,
+      "parent_object_type_id": 1,
+      "child_object_type_id": 1,
+      "mirrored_type_id": 2,
+      "name": "Mother"
+    }
+  ]
+}
+```
+
+**Create Object Relation Type**: `POST /api/v1/lookups/object-relation-types`
+```json
+{
+  "code": "employer",
+  "is_active": true,
+  "parent_object_type_id": 2,
+  "child_object_type_id": 1,
+  "mirrored_type_id": null,
+  "text": "Employer",
+  "language_id": 1
+}
+```
+
+**Update Object Relation Type**: `PUT /api/v1/lookups/object-relation-types/:id`
+```json
+{
+  "is_active": true,
+  "parent_object_type_id": 2,
+  "child_object_type_id": 1,
+  "mirrored_type_id": 5,
+  "text": "Employer Updated",
+  "language_id": 1
+}
+```
+
+**Relationship Examples**:
+- **Family (Person → Person)**: mother ↔ child, father ↔ child, spouse ↔ spouse
+- **Business (Company → Person)**: employer ↔ worker
+- **Symmetric**: spouse (self-mirrored), sibling (self-mirrored), business_partner (self-mirrored)
+
+**MySQL Query (Get with translations)**:
+```sql
+SELECT
+    ort.id,
+    ort.code,
+    ort.is_active,
+    ort.parent_object_type_id,
+    ort.child_object_type_id,
+    ort.mirrored_type_id,
+    t.text as name
+FROM object_relation_types ort
+LEFT JOIN translations t ON t.code = ort.code
+    AND t.language_id = (SELECT id FROM languages WHERE code = {{ $json.query.language_code }} OR {{ $json.query.language_code }} IS NULL LIMIT 1)
+WHERE ort.is_active = 1
+    AND ({{ $json.query.parent_object_type_id }} IS NULL OR ort.parent_object_type_id = {{ $json.query.parent_object_type_id }})
+    AND ({{ $json.query.child_object_type_id }} IS NULL OR ort.child_object_type_id = {{ $json.query.child_object_type_id }})
+ORDER BY ort.code;
+```
 
 ---
 
@@ -376,6 +528,30 @@ SELECT 1 as success;
 
 ## Person Endpoints
 
+### Database Schema Reference
+
+The `persons` table uses a shared primary key pattern with the `objects` table:
+
+```sql
+CREATE TABLE persons (
+    id BIGINT PRIMARY KEY COMMENT 'References objects.id (shared primary key)',
+    first_name VARCHAR(100) NOT NULL COMMENT 'First/given name',
+    middle_name VARCHAR(100) COMMENT 'Middle name (optional)',
+    last_name VARCHAR(100) NOT NULL COMMENT 'Last/family name',
+    mother_name VARCHAR(100) COMMENT 'Mother\'s name (for cultural requirements)',
+    sex_id INT COMMENT 'Sex/gender from sexes table',
+    salutation_id INT COMMENT 'Title/salutation from salutations table',
+    birth_date DATE COMMENT 'Date of birth',
+    FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (sex_id) REFERENCES sexes(id) ON DELETE RESTRICT,
+    FOREIGN KEY (salutation_id) REFERENCES salutations(id) ON DELETE RESTRICT
+);
+```
+
+**Note**: The `persons.id` column IS the `objects.id` (shared primary key pattern). There is no separate `object_id` column. Contact information (email, phone) is stored in the `object_contacts` table.
+
+---
+
 ### 15. List Persons
 
 **Endpoint**: `GET /api/v1/persons?page=1&per_page=20&object_status_id={id}&search={term}`
@@ -386,7 +562,7 @@ SELECT 1 as success;
 - `page` (default: 1): Page number
 - `per_page` (default: 20): Items per page
 - `object_status_id` (optional): Filter by status
-- `search` (optional): Search term (searches first_name, last_name, email)
+- `search` (optional): Search term (searches first_name, last_name)
 
 **Response**:
 ```json
@@ -395,10 +571,15 @@ SELECT 1 as success;
   "data": [
     {
       "id": 1,
-      "object_id": 100,
       "first_name": "John",
+      "middle_name": null,
       "last_name": "Doe",
-      "email": "john@example.com"
+      "mother_name": null,
+      "sex_id": 1,
+      "salutation_id": 2,
+      "birth_date": "1990-01-15",
+      "object_status_id": 1,
+      "object_type_id": 1
     }
   ],
   "pagination": {
@@ -415,40 +596,33 @@ SELECT 1 as success;
 -- Count total
 SELECT COUNT(*) as total
 FROM persons p
-JOIN objects o ON o.id = p.object_id
-WHERE o.is_active = 1
-    AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+JOIN objects o ON o.id = p.id
+WHERE ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
     AND (
         {{ $json.query.search }} IS NULL OR
         p.first_name LIKE CONCAT('%', {{ $json.query.search }}, '%') OR
-        p.last_name LIKE CONCAT('%', {{ $json.query.search }}, '%') OR
-        p.email LIKE CONCAT('%', {{ $json.query.search }}, '%')
+        p.last_name LIKE CONCAT('%', {{ $json.query.search }}, '%')
     );
 
 -- Get paginated results
-SELECT 
+SELECT
     p.id,
-    p.object_id,
     p.first_name,
-    p.last_name,
     p.middle_name,
-    p.email,
-    p.phone,
-    p.birth_date,
+    p.last_name,
+    p.mother_name,
     p.sex_id,
     p.salutation_id,
+    p.birth_date,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM persons p
-JOIN objects o ON o.id = p.object_id
-WHERE o.is_active = 1
-    AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+JOIN objects o ON o.id = p.id
+WHERE ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
     AND (
         {{ $json.query.search }} IS NULL OR
         p.first_name LIKE CONCAT('%', {{ $json.query.search }}, '%') OR
-        p.last_name LIKE CONCAT('%', {{ $json.query.search }}, '%') OR
-        p.email LIKE CONCAT('%', {{ $json.query.search }}, '%')
+        p.last_name LIKE CONCAT('%', {{ $json.query.search }}, '%')
     )
 ORDER BY p.last_name, p.first_name
 LIMIT {{ $json.query.per_page }}
@@ -463,17 +637,41 @@ OFFSET {{ ($json.query.page - 1) * $json.query.per_page }};
 
 **Description**: Retrieve a single person by ID.
 
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "first_name": "John",
+    "middle_name": null,
+    "last_name": "Doe",
+    "mother_name": null,
+    "sex_id": 1,
+    "salutation_id": 2,
+    "birth_date": "1990-01-15",
+    "object_status_id": 1,
+    "object_type_id": 1
+  }
+}
+```
+
 **MySQL Query**:
 ```sql
-SELECT 
-    p.*,
+SELECT
+    p.id,
+    p.first_name,
+    p.middle_name,
+    p.last_name,
+    p.mother_name,
+    p.sex_id,
+    p.salutation_id,
+    p.birth_date,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM persons p
-JOIN objects o ON o.id = p.object_id
-WHERE p.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+JOIN objects o ON o.id = p.id
+WHERE p.id = {{ $json.params.id }};
 ```
 
 ---
@@ -482,17 +680,38 @@ WHERE p.id = {{ $json.params.id }}
 
 **Endpoint**: `POST /api/v1/persons`
 
-**Description**: Create a new person.
+**Description**: Create a new person. The person's ID will be the same as the object ID (shared primary key pattern).
 
 **Request Body**:
 ```json
 {
   "first_name": "John",
   "last_name": "Doe",
-  "email": "john@example.com",
+  "middle_name": null,
+  "mother_name": null,
   "object_status_id": 1,
   "sex_id": 1,
-  "salutation_id": 1
+  "salutation_id": 1,
+  "birth_date": "1990-01-15"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 100,
+    "first_name": "John",
+    "middle_name": null,
+    "last_name": "Doe",
+    "mother_name": null,
+    "sex_id": 1,
+    "salutation_id": 1,
+    "birth_date": "1990-01-15",
+    "object_status_id": 1,
+    "object_type_id": 1
+  }
 }
 ```
 
@@ -501,64 +720,56 @@ WHERE p.id = {{ $json.params.id }}
 -- Start transaction
 START TRANSACTION;
 
--- Insert into objects table
+-- Insert into objects table first (generates the shared ID)
 INSERT INTO objects (
     object_type_id,
-    object_status_id,
-    is_active,
-    created_at,
-    updated_at
+    object_status_id
 ) VALUES (
     (SELECT id FROM object_types WHERE code = 'person'),
-    {{ $json.body.object_status_id }},
-    1,
-    NOW(),
-    NOW()
+    {{ $json.body.object_status_id }}
 );
 
 SET @object_id = LAST_INSERT_ID();
 
--- Insert into persons table
+-- Insert into persons table using the same ID
 INSERT INTO persons (
-    object_id,
+    id,
     first_name,
     last_name,
     middle_name,
-    email,
-    phone,
+    mother_name,
     birth_date,
     sex_id,
-    salutation_id,
-    created_at,
-    updated_at
+    salutation_id
 ) VALUES (
     @object_id,
     {{ $json.body.first_name }},
     {{ $json.body.last_name }},
     {{ $json.body.middle_name }},
-    {{ $json.body.email }},
-    {{ $json.body.phone }},
+    {{ $json.body.mother_name }},
     {{ $json.body.birth_date }},
     {{ $json.body.sex_id }},
-    {{ $json.body.salutation_id }},
-    NOW(),
-    NOW()
+    {{ $json.body.salutation_id }}
 );
-
-SET @person_id = LAST_INSERT_ID();
 
 -- Commit transaction
 COMMIT;
 
 -- Return created person
-SELECT 
-    p.*,
+SELECT
+    p.id,
+    p.first_name,
+    p.middle_name,
+    p.last_name,
+    p.mother_name,
+    p.sex_id,
+    p.salutation_id,
+    p.birth_date,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM persons p
-JOIN objects o ON o.id = p.object_id
-WHERE p.id = @person_id;
+JOIN objects o ON o.id = p.id
+WHERE p.id = @object_id;
 ```
 
 ---
@@ -570,35 +781,44 @@ WHERE p.id = @person_id;
 **Description**: Update an existing person.
 
 **Request Body**: Partial update (only include fields to update)
+```json
+{
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "object_status_id": 2
+}
+```
 
 **MySQL Query**:
 ```sql
 -- Update persons table
 UPDATE persons p
-JOIN objects o ON o.id = p.object_id
-SET 
+JOIN objects o ON o.id = p.id
+SET
     p.first_name = COALESCE({{ $json.body.first_name }}, p.first_name),
     p.last_name = COALESCE({{ $json.body.last_name }}, p.last_name),
     p.middle_name = COALESCE({{ $json.body.middle_name }}, p.middle_name),
-    p.email = COALESCE({{ $json.body.email }}, p.email),
-    p.phone = COALESCE({{ $json.body.phone }}, p.phone),
+    p.mother_name = COALESCE({{ $json.body.mother_name }}, p.mother_name),
     p.birth_date = COALESCE({{ $json.body.birth_date }}, p.birth_date),
     p.sex_id = COALESCE({{ $json.body.sex_id }}, p.sex_id),
     p.salutation_id = COALESCE({{ $json.body.salutation_id }}, p.salutation_id),
-    p.updated_at = NOW(),
-    o.updated_at = NOW(),
     o.object_status_id = COALESCE({{ $json.body.object_status_id }}, o.object_status_id)
-WHERE p.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+WHERE p.id = {{ $json.params.id }};
 
 -- Return updated person
-SELECT 
-    p.*,
+SELECT
+    p.id,
+    p.first_name,
+    p.middle_name,
+    p.last_name,
+    p.mother_name,
+    p.sex_id,
+    p.salutation_id,
+    p.birth_date,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM persons p
-JOIN objects o ON o.id = p.object_id
+JOIN objects o ON o.id = p.id
 WHERE p.id = {{ $json.params.id }};
 ```
 
@@ -608,25 +828,40 @@ WHERE p.id = {{ $json.params.id }};
 
 **Endpoint**: `DELETE /api/v1/persons/{id}`
 
-**Description**: Soft delete a person (sets is_active = 0).
+**Description**: Delete a person. This will cascade delete the person record since `persons.id` references `objects.id` with `ON DELETE CASCADE`.
 
 **MySQL Query**:
 ```sql
--- Soft delete (set is_active = 0)
-UPDATE objects o
-JOIN persons p ON p.object_id = o.id
-SET 
-    o.is_active = 0,
-    o.updated_at = NOW()
-WHERE p.id = {{ $json.params.id }};
+-- Delete object (cascades to persons table)
+DELETE FROM objects
+WHERE id = {{ $json.params.id }};
 
 -- Return success
 SELECT 1 as success;
 ```
 
+**Note**: The `persons` table has `FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE`, so deleting the object will automatically delete the person record.
+
 ---
 
 ## Company Endpoints
+
+### Database Schema Reference
+
+The `companies` table uses a shared primary key pattern with the `objects` table:
+
+```sql
+CREATE TABLE companies (
+    id BIGINT PRIMARY KEY COMMENT 'References objects.id (shared primary key)',
+    company_id VARCHAR(255) NOT NULL COMMENT 'Company registration/tax ID (business identifier)',
+    company_name VARCHAR(255) NOT NULL COMMENT 'Legal company name',
+    FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE
+);
+```
+
+**Note**: The `companies.id` column IS the `objects.id` (shared primary key pattern). There is no separate `object_id` column.
+
+---
 
 ### 20. List Companies
 
@@ -634,14 +869,35 @@ SELECT 1 as success;
 
 **Description**: Retrieve a paginated list of companies.
 
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "company_name": "Acme Corp",
+      "company_id": "REG-12345",
+      "object_status_id": 1,
+      "object_type_id": 2
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 50,
+    "total_pages": 3
+  }
+}
+```
+
 **MySQL Query**:
 ```sql
 -- Count total
 SELECT COUNT(*) as total
 FROM companies c
-JOIN objects o ON o.id = c.object_id
-WHERE o.is_active = 1
-    AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+JOIN objects o ON o.id = c.id
+WHERE ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
     AND (
         {{ $json.query.search }} IS NULL OR
         c.company_name LIKE CONCAT('%', {{ $json.query.search }}, '%') OR
@@ -649,20 +905,15 @@ WHERE o.is_active = 1
     );
 
 -- Get paginated results
-SELECT 
+SELECT
     c.id,
-    c.object_id,
     c.company_name,
     c.company_id,
-    c.tax_id,
-    c.vat_number,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM companies c
-JOIN objects o ON o.id = c.object_id
-WHERE o.is_active = 1
-    AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+JOIN objects o ON o.id = c.id
+WHERE ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
     AND (
         {{ $json.query.search }} IS NULL OR
         c.company_name LIKE CONCAT('%', {{ $json.query.search }}, '%') OR
@@ -679,17 +930,31 @@ OFFSET {{ ($json.query.page - 1) * $json.query.per_page }};
 
 **Endpoint**: `GET /api/v1/companies/{id}`
 
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "company_name": "Acme Corp",
+    "company_id": "REG-12345",
+    "object_status_id": 1,
+    "object_type_id": 2
+  }
+}
+```
+
 **MySQL Query**:
 ```sql
-SELECT 
-    c.*,
+SELECT
+    c.id,
+    c.company_name,
+    c.company_id,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM companies c
-JOIN objects o ON o.id = c.object_id
-WHERE c.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+JOIN objects o ON o.id = c.id
+WHERE c.id = {{ $json.params.id }};
 ```
 
 ---
@@ -703,9 +968,21 @@ WHERE c.id = {{ $json.params.id }}
 {
   "company_name": "Acme Corp",
   "company_id": "REG-12345",
-  "tax_id": "TAX-123",
-  "vat_number": "VAT-456",
   "object_status_id": 1
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 100,
+    "company_name": "Acme Corp",
+    "company_id": "REG-12345",
+    "object_status_id": 1,
+    "object_type_id": 2
+  }
 }
 ```
 
@@ -713,52 +990,40 @@ WHERE c.id = {{ $json.params.id }}
 ```sql
 START TRANSACTION;
 
+-- Insert into objects table first (generates the shared ID)
 INSERT INTO objects (
     object_type_id,
-    object_status_id,
-    is_active,
-    created_at,
-    updated_at
+    object_status_id
 ) VALUES (
     (SELECT id FROM object_types WHERE code = 'company'),
-    {{ $json.body.object_status_id }},
-    1,
-    NOW(),
-    NOW()
+    {{ $json.body.object_status_id }}
 );
 
 SET @object_id = LAST_INSERT_ID();
 
+-- Insert into companies table using the same ID
 INSERT INTO companies (
-    object_id,
+    id,
     company_name,
-    company_id,
-    tax_id,
-    vat_number,
-    created_at,
-    updated_at
+    company_id
 ) VALUES (
     @object_id,
     {{ $json.body.company_name }},
-    {{ $json.body.company_id }},
-    {{ $json.body.tax_id }},
-    {{ $json.body.vat_number }},
-    NOW(),
-    NOW()
+    {{ $json.body.company_id }}
 );
-
-SET @company_id = LAST_INSERT_ID();
 
 COMMIT;
 
-SELECT 
-    c.*,
+-- Return created company
+SELECT
+    c.id,
+    c.company_name,
+    c.company_id,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM companies c
-JOIN objects o ON o.id = c.object_id
-WHERE c.id = @company_id;
+JOIN objects o ON o.id = c.id
+WHERE c.id = @object_id;
 ```
 
 ---
@@ -767,28 +1032,33 @@ WHERE c.id = @company_id;
 
 **Endpoint**: `PUT /api/v1/companies/{id}`
 
+**Request Body**: Partial update (only include fields to update)
+```json
+{
+  "company_name": "Acme Corporation",
+  "object_status_id": 2
+}
+```
+
 **MySQL Query**:
 ```sql
 UPDATE companies c
-JOIN objects o ON o.id = c.object_id
-SET 
+JOIN objects o ON o.id = c.id
+SET
     c.company_name = COALESCE({{ $json.body.company_name }}, c.company_name),
     c.company_id = COALESCE({{ $json.body.company_id }}, c.company_id),
-    c.tax_id = COALESCE({{ $json.body.tax_id }}, c.tax_id),
-    c.vat_number = COALESCE({{ $json.body.vat_number }}, c.vat_number),
-    c.updated_at = NOW(),
-    o.updated_at = NOW(),
     o.object_status_id = COALESCE({{ $json.body.object_status_id }}, o.object_status_id)
-WHERE c.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+WHERE c.id = {{ $json.params.id }};
 
-SELECT 
-    c.*,
+-- Return updated company
+SELECT
+    c.id,
+    c.company_name,
+    c.company_id,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM companies c
-JOIN objects o ON o.id = c.object_id
+JOIN objects o ON o.id = c.id
 WHERE c.id = {{ $json.params.id }};
 ```
 
@@ -798,56 +1068,97 @@ WHERE c.id = {{ $json.params.id }};
 
 **Endpoint**: `DELETE /api/v1/companies/{id}`
 
+**Description**: Delete a company. This will cascade delete the company record.
+
 **MySQL Query**:
 ```sql
-UPDATE objects o
-JOIN companies c ON c.object_id = o.id
-SET 
-    o.is_active = 0,
-    o.updated_at = NOW()
-WHERE c.id = {{ $json.params.id }};
+-- Delete object (cascades to companies table)
+DELETE FROM objects
+WHERE id = {{ $json.params.id }};
 
 SELECT 1 as success;
 ```
+
+**Note**: The `companies` table has `FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE`, so deleting the object will automatically delete the company record.
 
 ---
 
 ## User Endpoints
 
+### Database Schema Reference
+
+The `users` table uses a shared primary key pattern with the `objects` table. Passwords are stored separately in `user_passwords`:
+
+```sql
+CREATE TABLE users (
+    id BIGINT PRIMARY KEY COMMENT 'References objects.id (shared primary key)',
+    username VARCHAR(255) COMMENT 'Username for login (should be unique)',
+    FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_passwords (
+    user_id BIGINT PRIMARY KEY COMMENT 'References users.id',
+    password_hash VARCHAR(255) NOT NULL COMMENT 'Hashed password (bcrypt, argon2, etc.)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this password is currently active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+**Note**: The `users.id` column IS the `objects.id` (shared primary key pattern). There is no separate `object_id` column. User passwords are stored in a separate `user_passwords` table for security.
+
+---
+
 ### 25. List Users
 
 **Endpoint**: `GET /api/v1/users?page=1&per_page=20&object_status_id={id}&search={term}`
 
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "username": "johndoe",
+      "object_status_id": 1,
+      "object_type_id": 3
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 10,
+    "total_pages": 1
+  }
+}
+```
+
 **MySQL Query**:
 ```sql
+-- Count total
 SELECT COUNT(*) as total
 FROM users u
-JOIN objects o ON o.id = u.object_id
-WHERE o.is_active = 1
-    AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+JOIN objects o ON o.id = u.id
+WHERE ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
     AND (
         {{ $json.query.search }} IS NULL OR
-        u.username LIKE CONCAT('%', {{ $json.query.search }}, '%') OR
-        u.email LIKE CONCAT('%', {{ $json.query.search }}, '%')
+        u.username LIKE CONCAT('%', {{ $json.query.search }}, '%')
     );
 
-SELECT 
+-- Get paginated results
+SELECT
     u.id,
-    u.object_id,
     u.username,
-    u.email,
-    u.is_active as user_active,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM users u
-JOIN objects o ON o.id = u.object_id
-WHERE o.is_active = 1
-    AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+JOIN objects o ON o.id = u.id
+WHERE ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
     AND (
         {{ $json.query.search }} IS NULL OR
-        u.username LIKE CONCAT('%', {{ $json.query.search }}, '%') OR
-        u.email LIKE CONCAT('%', {{ $json.query.search }}, '%')
+        u.username LIKE CONCAT('%', {{ $json.query.search }}, '%')
     )
 ORDER BY u.username
 LIMIT {{ $json.query.per_page }}
@@ -860,17 +1171,29 @@ OFFSET {{ ($json.query.page - 1) * $json.query.per_page }};
 
 **Endpoint**: `GET /api/v1/users/{id}`
 
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "username": "johndoe",
+    "object_status_id": 1,
+    "object_type_id": 3
+  }
+}
+```
+
 **MySQL Query**:
 ```sql
-SELECT 
-    u.*,
+SELECT
+    u.id,
+    u.username,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM users u
-JOIN objects o ON o.id = u.object_id
-WHERE u.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+JOIN objects o ON o.id = u.id
+WHERE u.id = {{ $json.params.id }};
 ```
 
 ---
@@ -883,9 +1206,21 @@ WHERE u.id = {{ $json.params.id }}
 ```json
 {
   "username": "johndoe",
-  "email": "john@example.com",
-  "password": "hashed_password",
+  "password": "password123",
   "object_status_id": 1
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 100,
+    "username": "johndoe",
+    "object_status_id": 1,
+    "object_type_id": 3
+  }
 }
 ```
 
@@ -893,56 +1228,48 @@ WHERE u.id = {{ $json.params.id }}
 ```sql
 START TRANSACTION;
 
+-- Insert into objects table first (generates the shared ID)
 INSERT INTO objects (
     object_type_id,
-    object_status_id,
-    is_active,
-    created_at,
-    updated_at
+    object_status_id
 ) VALUES (
     (SELECT id FROM object_types WHERE code = 'user'),
-    {{ $json.body.object_status_id }},
-    1,
-    NOW(),
-    NOW()
+    {{ $json.body.object_status_id }}
 );
 
 SET @object_id = LAST_INSERT_ID();
 
+-- Insert into users table using the same ID
 INSERT INTO users (
-    object_id,
-    username,
-    email,
-    password_hash,
-    is_active,
-    created_at,
-    updated_at
+    id,
+    username
 ) VALUES (
     @object_id,
-    {{ $json.body.username }},
-    {{ $json.body.email }},
-    {{ $json.body.password }}, -- Should be hashed before insertion
-    1,
-    NOW(),
-    NOW()
+    {{ $json.body.username }}
 );
 
-SET @user_id = LAST_INSERT_ID();
+-- Insert password into user_passwords table (password should be hashed before insertion)
+INSERT INTO user_passwords (
+    user_id,
+    password_hash,
+    is_active
+) VALUES (
+    @object_id,
+    {{ $json.body.password }},  -- Should be hashed (bcrypt, argon2, etc.) before insertion
+    TRUE
+);
 
 COMMIT;
 
-SELECT 
+-- Return created user (without password)
+SELECT
     u.id,
-    u.object_id,
     u.username,
-    u.email,
-    u.is_active as user_active,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM users u
-JOIN objects o ON o.id = u.object_id
-WHERE u.id = @user_id;
+JOIN objects o ON o.id = u.id
+WHERE u.id = @object_id;
 ```
 
 ---
@@ -951,28 +1278,35 @@ WHERE u.id = @user_id;
 
 **Endpoint**: `PUT /api/v1/users/{id}`
 
+**Request Body**: Partial update (only include fields to update)
+```json
+{
+  "username": "johndoe_updated",
+  "object_status_id": 2
+}
+```
+
 **MySQL Query**:
 ```sql
 UPDATE users u
-JOIN objects o ON o.id = u.object_id
-SET 
+JOIN objects o ON o.id = u.id
+SET
     u.username = COALESCE({{ $json.body.username }}, u.username),
-    u.email = COALESCE({{ $json.body.email }}, u.email),
-    u.password_hash = COALESCE({{ $json.body.password }}, u.password_hash),
-    u.is_active = COALESCE({{ $json.body.is_active }}, u.is_active),
-    u.updated_at = NOW(),
-    o.updated_at = NOW(),
     o.object_status_id = COALESCE({{ $json.body.object_status_id }}, o.object_status_id)
-WHERE u.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+WHERE u.id = {{ $json.params.id }};
 
-SELECT 
-    u.*,
+-- If password is being updated, update user_passwords separately
+-- UPDATE user_passwords SET password_hash = {{ $json.body.password }}, updated_at = NOW()
+-- WHERE user_id = {{ $json.params.id }} AND is_active = TRUE;
+
+-- Return updated user
+SELECT
+    u.id,
+    u.username,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM users u
-JOIN objects o ON o.id = u.object_id
+JOIN objects o ON o.id = u.id
 WHERE u.id = {{ $json.params.id }};
 ```
 
@@ -982,21 +1316,52 @@ WHERE u.id = {{ $json.params.id }};
 
 **Endpoint**: `DELETE /api/v1/users/{id}`
 
+**Description**: Delete a user. This will cascade delete the user record and associated password.
+
 **MySQL Query**:
 ```sql
-UPDATE objects o
-JOIN users u ON u.object_id = o.id
-SET 
-    o.is_active = 0,
-    o.updated_at = NOW()
-WHERE u.id = {{ $json.params.id }};
+-- Delete object (cascades to users and user_passwords tables)
+DELETE FROM objects
+WHERE id = {{ $json.params.id }};
 
 SELECT 1 as success;
 ```
 
+**Note**: The `users` table has `FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE`, and `user_passwords` has `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`, so deleting the object will automatically delete both the user and password records.
+
 ---
 
 ## Address Endpoints
+
+### Database Schema Reference
+
+```sql
+CREATE TABLE object_addresses (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    object_id BIGINT NOT NULL COMMENT 'References objects.id',
+    address_type_id INT NOT NULL COMMENT 'Type of address (home, work, etc.)',
+    street_address_1 VARCHAR(255) NOT NULL COMMENT 'Primary street address',
+    street_address_2 VARCHAR(255) COMMENT 'Secondary street address (apt, suite, etc.)',
+    address_area_type_id INT COMMENT 'Street/area type (street, avenue, etc.)',
+    city VARCHAR(100) NOT NULL COMMENT 'City name',
+    state_province VARCHAR(100) COMMENT 'State or province',
+    postal_code VARCHAR(20) COMMENT 'Postal/ZIP code',
+    country_id INT NOT NULL COMMENT 'Country from countries table',
+    latitude DECIMAL(10, 8) COMMENT 'Geographic latitude',
+    longitude DECIMAL(11, 8) COMMENT 'Geographic longitude',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this address is currently active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by BIGINT COMMENT 'User/object who created this address',
+    FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (address_type_id) REFERENCES address_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (address_area_type_id) REFERENCES address_area_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (country_id) REFERENCES countries(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL
+);
+```
+
+---
 
 ### 30. Get Object Addresses
 
@@ -1004,25 +1369,56 @@ SELECT 1 as success;
 
 **Description**: Retrieve all addresses for a specific object.
 
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "object_id": 100,
+      "address_type_id": 1,
+      "street_address_1": "123 Main Street",
+      "street_address_2": "Apt 4B",
+      "address_area_type_id": 1,
+      "city": "New York",
+      "state_province": "NY",
+      "postal_code": "10001",
+      "country_id": 1,
+      "latitude": 40.71280000,
+      "longitude": -74.00600000,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "created_by": 1
+    }
+  ]
+}
+```
+
 **MySQL Query**:
 ```sql
-SELECT 
-    a.id,
-    a.object_id,
-    a.address_type_id,
-    a.country_id,
-    a.address_area_type_id,
-    a.postal_code,
-    a.city,
-    a.street,
-    a.house_number,
-    a.is_active,
-    a.created_at,
-    a.updated_at
-FROM addresses a
-WHERE a.object_id = {{ $json.params.object_id }}
-    AND ({{ $json.query.is_active }} IS NULL OR a.is_active = {{ $json.query.is_active }})
-ORDER BY a.created_at DESC;
+SELECT
+    oa.id,
+    oa.object_id,
+    oa.address_type_id,
+    oa.street_address_1,
+    oa.street_address_2,
+    oa.address_area_type_id,
+    oa.city,
+    oa.state_province,
+    oa.postal_code,
+    oa.country_id,
+    oa.latitude,
+    oa.longitude,
+    oa.is_active,
+    oa.created_at,
+    oa.updated_at,
+    oa.created_by
+FROM object_addresses oa
+WHERE oa.object_id = {{ $json.params.object_id }}
+    AND ({{ $json.query.is_active }} IS NULL OR oa.is_active = {{ $json.query.is_active }})
+ORDER BY oa.created_at DESC;
 ```
 
 ---
@@ -1035,44 +1431,52 @@ ORDER BY a.created_at DESC;
 ```json
 {
   "address_type_id": 1,
-  "country_id": 1,
+  "street_address_1": "123 Main Street",
+  "street_address_2": "Apt 4B",
   "address_area_type_id": 1,
-  "postal_code": "12345",
   "city": "New York",
-  "street": "Main Street",
-  "house_number": "123"
+  "state_province": "NY",
+  "postal_code": "10001",
+  "country_id": 1,
+  "latitude": 40.7128,
+  "longitude": -74.006,
+  "created_by": 1
 }
 ```
 
 **MySQL Query**:
 ```sql
-INSERT INTO addresses (
+INSERT INTO object_addresses (
     object_id,
     address_type_id,
-    country_id,
+    street_address_1,
+    street_address_2,
     address_area_type_id,
-    postal_code,
     city,
-    street,
-    house_number,
+    state_province,
+    postal_code,
+    country_id,
+    latitude,
+    longitude,
     is_active,
-    created_at,
-    updated_at
+    created_by
 ) VALUES (
     {{ $json.params.object_id }},
     {{ $json.body.address_type_id }},
-    {{ $json.body.country_id }},
+    {{ $json.body.street_address_1 }},
+    {{ $json.body.street_address_2 }},
     {{ $json.body.address_area_type_id }},
-    {{ $json.body.postal_code }},
     {{ $json.body.city }},
-    {{ $json.body.street }},
-    {{ $json.body.house_number }},
+    {{ $json.body.state_province }},
+    {{ $json.body.postal_code }},
+    {{ $json.body.country_id }},
+    {{ $json.body.latitude }},
+    {{ $json.body.longitude }},
     1,
-    NOW(),
-    NOW()
+    {{ $json.body.created_by }}
 );
 
-SELECT * FROM addresses WHERE id = LAST_INSERT_ID();
+SELECT * FROM object_addresses WHERE id = LAST_INSERT_ID();
 ```
 
 ---
@@ -1083,20 +1487,22 @@ SELECT * FROM addresses WHERE id = LAST_INSERT_ID();
 
 **MySQL Query**:
 ```sql
-UPDATE addresses
-SET 
+UPDATE object_addresses
+SET
     address_type_id = COALESCE({{ $json.body.address_type_id }}, address_type_id),
-    country_id = COALESCE({{ $json.body.country_id }}, country_id),
+    street_address_1 = COALESCE({{ $json.body.street_address_1 }}, street_address_1),
+    street_address_2 = COALESCE({{ $json.body.street_address_2 }}, street_address_2),
     address_area_type_id = COALESCE({{ $json.body.address_area_type_id }}, address_area_type_id),
-    postal_code = COALESCE({{ $json.body.postal_code }}, postal_code),
     city = COALESCE({{ $json.body.city }}, city),
-    street = COALESCE({{ $json.body.street }}, street),
-    house_number = COALESCE({{ $json.body.house_number }}, house_number),
-    is_active = COALESCE({{ $json.body.is_active }}, is_active),
-    updated_at = NOW()
+    state_province = COALESCE({{ $json.body.state_province }}, state_province),
+    postal_code = COALESCE({{ $json.body.postal_code }}, postal_code),
+    country_id = COALESCE({{ $json.body.country_id }}, country_id),
+    latitude = COALESCE({{ $json.body.latitude }}, latitude),
+    longitude = COALESCE({{ $json.body.longitude }}, longitude),
+    is_active = COALESCE({{ $json.body.is_active }}, is_active)
 WHERE id = {{ $json.params.address_id }};
 
-SELECT * FROM addresses WHERE id = {{ $json.params.address_id }};
+SELECT * FROM object_addresses WHERE id = {{ $json.params.address_id }};
 ```
 
 ---
@@ -1107,10 +1513,8 @@ SELECT * FROM addresses WHERE id = {{ $json.params.address_id }};
 
 **MySQL Query**:
 ```sql
-UPDATE addresses
-SET 
-    is_active = 0,
-    updated_at = NOW()
+UPDATE object_addresses
+SET is_active = 0
 WHERE id = {{ $json.params.address_id }};
 
 SELECT 1 as success;
@@ -1120,25 +1524,65 @@ SELECT 1 as success;
 
 ## Contact Endpoints
 
+### Database Schema Reference
+
+```sql
+CREATE TABLE object_contacts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    object_id BIGINT NOT NULL COMMENT 'References objects.id',
+    contact_type_id INT NOT NULL COMMENT 'Type of contact (phone, email, etc.)',
+    contact_value VARCHAR(255) NOT NULL COMMENT 'Contact value (phone number, email address, etc.)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this contact is currently active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by BIGINT COMMENT 'User/object who created this contact',
+    FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (contact_type_id) REFERENCES contact_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL
+);
+```
+
+---
+
 ### 34. Get Object Contacts
 
 **Endpoint**: `GET /api/v1/objects/{object_id}/contacts?is_active={true|false}&contact_type_id={type_id}`
 
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "object_id": 100,
+      "contact_type_id": 1,
+      "contact_value": "john@example.com",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "created_by": 1
+    }
+  ]
+}
+```
+
 **MySQL Query**:
 ```sql
-SELECT 
-    c.id,
-    c.object_id,
-    c.contact_type_id,
-    c.contact_value,
-    c.is_active,
-    c.created_at,
-    c.updated_at
-FROM contacts c
-WHERE c.object_id = {{ $json.params.object_id }}
-    AND ({{ $json.query.is_active }} IS NULL OR c.is_active = {{ $json.query.is_active }})
-    AND ({{ $json.query.contact_type_id }} IS NULL OR c.contact_type_id = {{ $json.query.contact_type_id }})
-ORDER BY c.created_at DESC;
+SELECT
+    oc.id,
+    oc.object_id,
+    oc.contact_type_id,
+    oc.contact_value,
+    oc.is_active,
+    oc.created_at,
+    oc.updated_at,
+    oc.created_by
+FROM object_contacts oc
+WHERE oc.object_id = {{ $json.params.object_id }}
+    AND ({{ $json.query.is_active }} IS NULL OR oc.is_active = {{ $json.query.is_active }})
+    AND ({{ $json.query.contact_type_id }} IS NULL OR oc.contact_type_id = {{ $json.query.contact_type_id }})
+ORDER BY oc.created_at DESC;
 ```
 
 ---
@@ -1151,29 +1595,28 @@ ORDER BY c.created_at DESC;
 ```json
 {
   "contact_type_id": 1,
-  "contact_value": "john@example.com"
+  "contact_value": "john@example.com",
+  "created_by": 1
 }
 ```
 
 **MySQL Query**:
 ```sql
-INSERT INTO contacts (
+INSERT INTO object_contacts (
     object_id,
     contact_type_id,
     contact_value,
     is_active,
-    created_at,
-    updated_at
+    created_by
 ) VALUES (
     {{ $json.params.object_id }},
     {{ $json.body.contact_type_id }},
     {{ $json.body.contact_value }},
     1,
-    NOW(),
-    NOW()
+    {{ $json.body.created_by }}
 );
 
-SELECT * FROM contacts WHERE id = LAST_INSERT_ID();
+SELECT * FROM object_contacts WHERE id = LAST_INSERT_ID();
 ```
 
 ---
@@ -1184,15 +1627,14 @@ SELECT * FROM contacts WHERE id = LAST_INSERT_ID();
 
 **MySQL Query**:
 ```sql
-UPDATE contacts
-SET 
+UPDATE object_contacts
+SET
     contact_type_id = COALESCE({{ $json.body.contact_type_id }}, contact_type_id),
     contact_value = COALESCE({{ $json.body.contact_value }}, contact_value),
-    is_active = COALESCE({{ $json.body.is_active }}, is_active),
-    updated_at = NOW()
+    is_active = COALESCE({{ $json.body.is_active }}, is_active)
 WHERE id = {{ $json.params.contact_id }};
 
-SELECT * FROM contacts WHERE id = {{ $json.params.contact_id }};
+SELECT * FROM object_contacts WHERE id = {{ $json.params.contact_id }};
 ```
 
 ---
@@ -1203,10 +1645,8 @@ SELECT * FROM contacts WHERE id = {{ $json.params.contact_id }};
 
 **MySQL Query**:
 ```sql
-UPDATE contacts
-SET 
-    is_active = 0,
-    updated_at = NOW()
+UPDATE object_contacts
+SET is_active = 0
 WHERE id = {{ $json.params.contact_id }};
 
 SELECT 1 as success;
@@ -1216,24 +1656,64 @@ SELECT 1 as success;
 
 ## Identification Endpoints
 
+### Database Schema Reference
+
+```sql
+CREATE TABLE object_identifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    object_id BIGINT NOT NULL COMMENT 'References objects.id',
+    identification_type_id INT NOT NULL COMMENT 'Type of identification document',
+    identification_value VARCHAR(255) NOT NULL COMMENT 'Identification number/value',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this identification is currently active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by BIGINT COMMENT 'User/object who created this identification',
+    FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (identification_type_id) REFERENCES identification_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL
+);
+```
+
+---
+
 ### 38. Get Object Identifications
 
 **Endpoint**: `GET /api/v1/objects/{object_id}/identifications?is_active={true|false}`
 
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "object_id": 100,
+      "identification_type_id": 1,
+      "identification_value": "P123456789",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "created_by": 1
+    }
+  ]
+}
+```
+
 **MySQL Query**:
 ```sql
-SELECT 
-    i.id,
-    i.object_id,
-    i.identification_type_id,
-    i.identification_value,
-    i.is_active,
-    i.created_at,
-    i.updated_at
-FROM identifications i
-WHERE i.object_id = {{ $json.params.object_id }}
-    AND ({{ $json.query.is_active }} IS NULL OR i.is_active = {{ $json.query.is_active }})
-ORDER BY i.created_at DESC;
+SELECT
+    oi.id,
+    oi.object_id,
+    oi.identification_type_id,
+    oi.identification_value,
+    oi.is_active,
+    oi.created_at,
+    oi.updated_at,
+    oi.created_by
+FROM object_identifications oi
+WHERE oi.object_id = {{ $json.params.object_id }}
+    AND ({{ $json.query.is_active }} IS NULL OR oi.is_active = {{ $json.query.is_active }})
+ORDER BY oi.created_at DESC;
 ```
 
 ---
@@ -1246,29 +1726,28 @@ ORDER BY i.created_at DESC;
 ```json
 {
   "identification_type_id": 1,
-  "identification_value": "P123456789"
+  "identification_value": "P123456789",
+  "created_by": 1
 }
 ```
 
 **MySQL Query**:
 ```sql
-INSERT INTO identifications (
+INSERT INTO object_identifications (
     object_id,
     identification_type_id,
     identification_value,
     is_active,
-    created_at,
-    updated_at
+    created_by
 ) VALUES (
     {{ $json.params.object_id }},
     {{ $json.body.identification_type_id }},
     {{ $json.body.identification_value }},
     1,
-    NOW(),
-    NOW()
+    {{ $json.body.created_by }}
 );
 
-SELECT * FROM identifications WHERE id = LAST_INSERT_ID();
+SELECT * FROM object_identifications WHERE id = LAST_INSERT_ID();
 ```
 
 ---
@@ -1279,15 +1758,14 @@ SELECT * FROM identifications WHERE id = LAST_INSERT_ID();
 
 **MySQL Query**:
 ```sql
-UPDATE identifications
-SET 
+UPDATE object_identifications
+SET
     identification_type_id = COALESCE({{ $json.body.identification_type_id }}, identification_type_id),
     identification_value = COALESCE({{ $json.body.identification_value }}, identification_value),
-    is_active = COALESCE({{ $json.body.is_active }}, is_active),
-    updated_at = NOW()
+    is_active = COALESCE({{ $json.body.is_active }}, is_active)
 WHERE id = {{ $json.params.identification_id }};
 
-SELECT * FROM identifications WHERE id = {{ $json.params.identification_id }};
+SELECT * FROM object_identifications WHERE id = {{ $json.params.identification_id }};
 ```
 
 ---
@@ -1298,10 +1776,8 @@ SELECT * FROM identifications WHERE id = {{ $json.params.identification_id }};
 
 **MySQL Query**:
 ```sql
-UPDATE identifications
-SET 
-    is_active = 0,
-    updated_at = NOW()
+UPDATE object_identifications
+SET is_active = 0
 WHERE id = {{ $json.params.identification_id }};
 
 SELECT 1 as success;
@@ -1310,6 +1786,43 @@ SELECT 1 as success;
 ---
 
 ## Invoice Endpoints
+
+### Database Schema Reference
+
+The `invoices` table uses a shared primary key pattern with the `objects` table:
+
+```sql
+CREATE TABLE invoices (
+    id BIGINT PRIMARY KEY COMMENT 'References objects.id (shared primary key)',
+    transaction_id BIGINT COMMENT 'Associated transaction (if any)',
+    invoice_number VARCHAR(50) NOT NULL COMMENT 'Unique invoice number',
+    issue_date DATE NOT NULL COMMENT 'Invoice issue date',
+    due_date DATE COMMENT 'Payment due date',
+    payment_date DATE COMMENT 'Actual payment date',
+    partner_id_from BIGINT COMMENT 'Partner/object issuing invoice',
+    partner_id_to BIGINT COMMENT 'Partner/object receiving invoice',
+    note VARCHAR(255) COMMENT 'Invoice notes',
+    reference_number VARCHAR(100) COMMENT 'Reference number (PO, etc.)',
+    is_mirror BOOLEAN COMMENT 'Whether this is a mirror/credit note',
+    currency_id INT NOT NULL COMMENT 'Currency from currencies table',
+    netto_amount DECIMAL(10,2) COMMENT 'Net amount (before tax)',
+    tax DECIMAL(10,2) COMMENT 'Tax amount',
+    final_amount DECIMAL(10,2) COMMENT 'Final amount (netto + tax)',
+    is_paid BOOLEAN DEFAULT FALSE COMMENT 'Whether invoice has been paid',
+    is_void BOOLEAN DEFAULT FALSE COMMENT 'Whether invoice is void',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+    FOREIGN KEY (partner_id_from) REFERENCES objects(id) ON DELETE SET NULL,
+    FOREIGN KEY (partner_id_to) REFERENCES objects(id) ON DELETE SET NULL,
+    FOREIGN KEY (currency_id) REFERENCES currencies(id) ON DELETE RESTRICT
+);
+```
+
+**Note**: The `invoices.id` column IS the `objects.id` (shared primary key pattern).
+
+---
 
 ### 42. List Invoices
 
@@ -1320,22 +1833,21 @@ SELECT 1 as success;
 -- Count total
 SELECT COUNT(*) as total
 FROM invoices i
-JOIN objects o ON o.id = i.object_id
-WHERE o.is_active = 1
-    AND ({{ $json.query.partner_id }} IS NULL OR i.partner_id_from = {{ $json.query.partner_id }} OR i.partner_id_to = {{ $json.query.partner_id }})
+JOIN objects o ON o.id = i.id
+WHERE ({{ $json.query.partner_id }} IS NULL OR i.partner_id_from = {{ $json.query.partner_id }} OR i.partner_id_to = {{ $json.query.partner_id }})
     AND ({{ $json.query.is_paid }} IS NULL OR i.is_paid = {{ $json.query.is_paid }})
     AND ({{ $json.query.is_void }} IS NULL OR i.is_void = {{ $json.query.is_void }})
     AND ({{ $json.query.date_from }} IS NULL OR i.issue_date >= {{ $json.query.date_from }})
     AND ({{ $json.query.date_to }} IS NULL OR i.issue_date <= {{ $json.query.date_to }});
 
 -- Get paginated results
-SELECT 
+SELECT
     i.id,
-    i.object_id,
     i.transaction_id,
     i.invoice_number,
     i.issue_date,
     i.due_date,
+    i.payment_date,
     i.partner_id_from,
     i.partner_id_to,
     i.currency_id,
@@ -1346,13 +1858,14 @@ SELECT
     i.is_void,
     i.note,
     i.reference_number,
+    i.is_mirror,
+    i.created_at,
+    i.updated_at,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM invoices i
-JOIN objects o ON o.id = i.object_id
-WHERE o.is_active = 1
-    AND ({{ $json.query.partner_id }} IS NULL OR i.partner_id_from = {{ $json.query.partner_id }} OR i.partner_id_to = {{ $json.query.partner_id }})
+JOIN objects o ON o.id = i.id
+WHERE ({{ $json.query.partner_id }} IS NULL OR i.partner_id_from = {{ $json.query.partner_id }} OR i.partner_id_to = {{ $json.query.partner_id }})
     AND ({{ $json.query.is_paid }} IS NULL OR i.is_paid = {{ $json.query.is_paid }})
     AND ({{ $json.query.is_void }} IS NULL OR i.is_void = {{ $json.query.is_void }})
     AND ({{ $json.query.date_from }} IS NULL OR i.issue_date >= {{ $json.query.date_from }})
@@ -1370,15 +1883,31 @@ OFFSET {{ ($json.query.page - 1) * $json.query.per_page }};
 
 **MySQL Query**:
 ```sql
-SELECT 
-    i.*,
+SELECT
+    i.id,
+    i.transaction_id,
+    i.invoice_number,
+    i.issue_date,
+    i.due_date,
+    i.payment_date,
+    i.partner_id_from,
+    i.partner_id_to,
+    i.currency_id,
+    i.netto_amount,
+    i.tax,
+    i.final_amount,
+    i.is_paid,
+    i.is_void,
+    i.note,
+    i.reference_number,
+    i.is_mirror,
+    i.created_at,
+    i.updated_at,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM invoices i
-JOIN objects o ON o.id = i.object_id
-WHERE i.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+JOIN objects o ON o.id = i.id
+WHERE i.id = {{ $json.params.id }};
 ```
 
 ---
@@ -1410,24 +1939,20 @@ WHERE i.id = {{ $json.params.id }}
 ```sql
 START TRANSACTION;
 
+-- Insert into objects table first (generates the shared ID)
 INSERT INTO objects (
     object_type_id,
-    object_status_id,
-    is_active,
-    created_at,
-    updated_at
+    object_status_id
 ) VALUES (
-    (SELECT id FROM object_types WHERE code = 'document'),
-    {{ $json.body.object_status_id }},
-    1,
-    NOW(),
-    NOW()
+    (SELECT id FROM object_types WHERE code = 'invoice'),
+    {{ $json.body.object_status_id }}
 );
 
 SET @object_id = LAST_INSERT_ID();
 
+-- Insert into invoices table using the same ID
 INSERT INTO invoices (
-    object_id,
+    id,
     transaction_id,
     invoice_number,
     issue_date,
@@ -1441,9 +1966,7 @@ INSERT INTO invoices (
     is_paid,
     is_void,
     note,
-    reference_number,
-    created_at,
-    updated_at
+    reference_number
 ) VALUES (
     @object_id,
     {{ $json.body.transaction_id }},
@@ -1459,23 +1982,35 @@ INSERT INTO invoices (
     0,
     0,
     {{ $json.body.note }},
-    {{ $json.body.reference_number }},
-    NOW(),
-    NOW()
+    {{ $json.body.reference_number }}
 );
-
-SET @invoice_id = LAST_INSERT_ID();
 
 COMMIT;
 
-SELECT 
-    i.*,
+-- Return created invoice
+SELECT
+    i.id,
+    i.transaction_id,
+    i.invoice_number,
+    i.issue_date,
+    i.due_date,
+    i.partner_id_from,
+    i.partner_id_to,
+    i.currency_id,
+    i.netto_amount,
+    i.tax,
+    i.final_amount,
+    i.is_paid,
+    i.is_void,
+    i.note,
+    i.reference_number,
+    i.created_at,
+    i.updated_at,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM invoices i
-JOIN objects o ON o.id = i.object_id
-WHERE i.id = @invoice_id;
+JOIN objects o ON o.id = i.id
+WHERE i.id = @object_id;
 ```
 
 ---
@@ -1487,8 +2022,8 @@ WHERE i.id = @invoice_id;
 **MySQL Query**:
 ```sql
 UPDATE invoices i
-JOIN objects o ON o.id = i.object_id
-SET 
+JOIN objects o ON o.id = i.id
+SET
     i.transaction_id = COALESCE({{ $json.body.transaction_id }}, i.transaction_id),
     i.invoice_number = COALESCE({{ $json.body.invoice_number }}, i.invoice_number),
     i.issue_date = COALESCE({{ $json.body.issue_date }}, i.issue_date),
@@ -1501,19 +2036,32 @@ SET
     i.final_amount = COALESCE({{ $json.body.final_amount }}, i.final_amount),
     i.note = COALESCE({{ $json.body.note }}, i.note),
     i.reference_number = COALESCE({{ $json.body.reference_number }}, i.reference_number),
-    i.updated_at = NOW(),
-    o.updated_at = NOW(),
     o.object_status_id = COALESCE({{ $json.body.object_status_id }}, o.object_status_id)
-WHERE i.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+WHERE i.id = {{ $json.params.id }};
 
-SELECT 
-    i.*,
+-- Return updated invoice
+SELECT
+    i.id,
+    i.transaction_id,
+    i.invoice_number,
+    i.issue_date,
+    i.due_date,
+    i.partner_id_from,
+    i.partner_id_to,
+    i.currency_id,
+    i.netto_amount,
+    i.tax,
+    i.final_amount,
+    i.is_paid,
+    i.is_void,
+    i.note,
+    i.reference_number,
+    i.created_at,
+    i.updated_at,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM invoices i
-JOIN objects o ON o.id = i.object_id
+JOIN objects o ON o.id = i.id
 WHERE i.id = {{ $json.params.id }};
 ```
 
@@ -1533,19 +2081,19 @@ WHERE i.id = {{ $json.params.id }};
 **MySQL Query**:
 ```sql
 UPDATE invoices
-SET 
+SET
     is_paid = 1,
-    payment_date = COALESCE({{ $json.body.payment_date }}, NOW()),
-    updated_at = NOW()
+    payment_date = COALESCE({{ $json.body.payment_date }}, CURDATE())
 WHERE id = {{ $json.params.id }};
 
-SELECT 
-    i.*,
-    o.object_status_id,
-    o.created_at,
-    o.updated_at
+SELECT
+    i.id,
+    i.invoice_number,
+    i.is_paid,
+    i.payment_date,
+    o.object_status_id
 FROM invoices i
-JOIN objects o ON o.id = i.object_id
+JOIN objects o ON o.id = i.id
 WHERE i.id = {{ $json.params.id }};
 ```
 
@@ -1558,18 +2106,16 @@ WHERE i.id = {{ $json.params.id }};
 **MySQL Query**:
 ```sql
 UPDATE invoices
-SET 
-    is_void = 1,
-    updated_at = NOW()
+SET is_void = 1
 WHERE id = {{ $json.params.id }};
 
-SELECT 
-    i.*,
-    o.object_status_id,
-    o.created_at,
-    o.updated_at
+SELECT
+    i.id,
+    i.invoice_number,
+    i.is_void,
+    o.object_status_id
 FROM invoices i
-JOIN objects o ON o.id = i.object_id
+JOIN objects o ON o.id = i.id
 WHERE i.id = {{ $json.params.id }};
 ```
 
@@ -1579,14 +2125,13 @@ WHERE i.id = {{ $json.params.id }};
 
 **Endpoint**: `DELETE /api/v1/invoices/{id}`
 
+**Description**: Delete an invoice. This will cascade delete the invoice record.
+
 **MySQL Query**:
 ```sql
-UPDATE objects o
-JOIN invoices i ON i.object_id = o.id
-SET 
-    o.is_active = 0,
-    o.updated_at = NOW()
-WHERE i.id = {{ $json.params.id }};
+-- Delete object (cascades to invoices table)
+DELETE FROM objects
+WHERE id = {{ $json.params.id }};
 
 SELECT 1 as success;
 ```
@@ -1594,6 +2139,30 @@ SELECT 1 as success;
 ---
 
 ## Transaction Endpoints
+
+### Database Schema Reference
+
+The `transactions` table uses a shared primary key pattern with the `objects` table:
+
+```sql
+CREATE TABLE transactions (
+    id BIGINT PRIMARY KEY COMMENT 'References objects.id (shared primary key)',
+    transaction_type_id INT NOT NULL COMMENT 'Type of transaction (SALE, PURCHASE, etc.)',
+    transaction_date_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Transaction start date/time',
+    transaction_date_end TIMESTAMP COMMENT 'Transaction end date/time (if applicable)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this transaction is currently active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    note VARCHAR(255) COMMENT 'Transaction note (references translations)',
+    FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (transaction_type_id) REFERENCES transaction_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (note) REFERENCES translations(code) ON DELETE SET NULL
+);
+```
+
+**Note**: The `transactions.id` column IS the `objects.id` (shared primary key pattern).
+
+---
 
 ### 49. List Transactions
 
@@ -1604,26 +2173,27 @@ SELECT 1 as success;
 -- Count total
 SELECT COUNT(*) as total
 FROM transactions t
-JOIN objects o ON o.id = t.object_id
-WHERE o.is_active = 1
+JOIN objects o ON o.id = t.id
+WHERE t.is_active = 1
     AND ({{ $json.query.transaction_type_id }} IS NULL OR t.transaction_type_id = {{ $json.query.transaction_type_id }})
     AND ({{ $json.query.date_from }} IS NULL OR t.transaction_date_start >= {{ $json.query.date_from }})
     AND ({{ $json.query.date_to }} IS NULL OR t.transaction_date_start <= {{ $json.query.date_to }});
 
 -- Get paginated results
-SELECT 
+SELECT
     t.id,
-    t.object_id,
     t.transaction_type_id,
     t.transaction_date_start,
     t.transaction_date_end,
+    t.is_active,
     t.note,
+    t.created_at,
+    t.updated_at,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM transactions t
-JOIN objects o ON o.id = t.object_id
-WHERE o.is_active = 1
+JOIN objects o ON o.id = t.id
+WHERE t.is_active = 1
     AND ({{ $json.query.transaction_type_id }} IS NULL OR t.transaction_type_id = {{ $json.query.transaction_type_id }})
     AND ({{ $json.query.date_from }} IS NULL OR t.transaction_date_start >= {{ $json.query.date_from }})
     AND ({{ $json.query.date_to }} IS NULL OR t.transaction_date_start <= {{ $json.query.date_to }})
@@ -1640,15 +2210,20 @@ OFFSET {{ ($json.query.page - 1) * $json.query.per_page }};
 
 **MySQL Query**:
 ```sql
-SELECT 
-    t.*,
+SELECT
+    t.id,
+    t.transaction_type_id,
+    t.transaction_date_start,
+    t.transaction_date_end,
+    t.is_active,
+    t.note,
+    t.created_at,
+    t.updated_at,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM transactions t
-JOIN objects o ON o.id = t.object_id
-WHERE t.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+JOIN objects o ON o.id = t.id
+WHERE t.id = {{ $json.params.id }};
 ```
 
 ---
@@ -1672,52 +2247,51 @@ WHERE t.id = {{ $json.params.id }}
 ```sql
 START TRANSACTION;
 
+-- Insert into objects table first (generates the shared ID)
 INSERT INTO objects (
     object_type_id,
-    object_status_id,
-    is_active,
-    created_at,
-    updated_at
+    object_status_id
 ) VALUES (
     (SELECT id FROM object_types WHERE code = 'transaction'),
-    {{ $json.body.object_status_id }},
-    1,
-    NOW(),
-    NOW()
+    {{ $json.body.object_status_id }}
 );
 
 SET @object_id = LAST_INSERT_ID();
 
+-- Insert into transactions table using the same ID
 INSERT INTO transactions (
-    object_id,
+    id,
     transaction_type_id,
     transaction_date_start,
     transaction_date_end,
-    note,
-    created_at,
-    updated_at
+    is_active,
+    note
 ) VALUES (
     @object_id,
     {{ $json.body.transaction_type_id }},
     {{ $json.body.transaction_date_start }},
     {{ $json.body.transaction_date_end }},
-    {{ $json.body.note }},
-    NOW(),
-    NOW()
+    1,
+    {{ $json.body.note }}
 );
-
-SET @transaction_id = LAST_INSERT_ID();
 
 COMMIT;
 
-SELECT 
-    t.*,
+-- Return created transaction
+SELECT
+    t.id,
+    t.transaction_type_id,
+    t.transaction_date_start,
+    t.transaction_date_end,
+    t.is_active,
+    t.note,
+    t.created_at,
+    t.updated_at,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM transactions t
-JOIN objects o ON o.id = t.object_id
-WHERE t.id = @transaction_id;
+JOIN objects o ON o.id = t.id
+WHERE t.id = @object_id;
 ```
 
 ---
@@ -1729,25 +2303,30 @@ WHERE t.id = @transaction_id;
 **MySQL Query**:
 ```sql
 UPDATE transactions t
-JOIN objects o ON o.id = t.object_id
-SET 
+JOIN objects o ON o.id = t.id
+SET
     t.transaction_type_id = COALESCE({{ $json.body.transaction_type_id }}, t.transaction_type_id),
     t.transaction_date_start = COALESCE({{ $json.body.transaction_date_start }}, t.transaction_date_start),
     t.transaction_date_end = COALESCE({{ $json.body.transaction_date_end }}, t.transaction_date_end),
     t.note = COALESCE({{ $json.body.note }}, t.note),
-    t.updated_at = NOW(),
-    o.updated_at = NOW(),
+    t.is_active = COALESCE({{ $json.body.is_active }}, t.is_active),
     o.object_status_id = COALESCE({{ $json.body.object_status_id }}, o.object_status_id)
-WHERE t.id = {{ $json.params.id }}
-    AND o.is_active = 1;
+WHERE t.id = {{ $json.params.id }};
 
-SELECT 
-    t.*,
+-- Return updated transaction
+SELECT
+    t.id,
+    t.transaction_type_id,
+    t.transaction_date_start,
+    t.transaction_date_end,
+    t.is_active,
+    t.note,
+    t.created_at,
+    t.updated_at,
     o.object_status_id,
-    o.created_at,
-    o.updated_at
+    o.object_type_id
 FROM transactions t
-JOIN objects o ON o.id = t.object_id
+JOIN objects o ON o.id = t.id
 WHERE t.id = {{ $json.params.id }};
 ```
 
@@ -1757,17 +2336,18 @@ WHERE t.id = {{ $json.params.id }};
 
 **Endpoint**: `DELETE /api/v1/transactions/{id}`
 
+**Description**: Soft delete a transaction by setting is_active to false.
+
 **MySQL Query**:
 ```sql
-UPDATE objects o
-JOIN transactions t ON t.object_id = o.id
-SET 
-    o.is_active = 0,
-    o.updated_at = NOW()
-WHERE t.id = {{ $json.params.id }};
+UPDATE transactions
+SET is_active = 0
+WHERE id = {{ $json.params.id }};
 
 SELECT 1 as success;
 ```
+
+**Note**: For hard delete, use: `DELETE FROM objects WHERE id = {{ $json.params.id }};` (cascades to transactions table)
 
 ---
 

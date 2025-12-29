@@ -99,6 +99,146 @@ export const en = {
     transactions: 'Transactions',
   },
 
+  // Persons
+  persons: {
+    subtitle: 'Manage person records',
+    addNew: 'Add Person',
+    loadFailed: 'Failed to load persons',
+    selectPersonToViewDetails: 'Select a person from the table above to view details',
+    personId: 'Person ID',
+    salutation: 'Salutation',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    motherName: 'Mother Name',
+    sex: 'Sex',
+    birthDate: 'Birth Date',
+    filterByFirstName: 'Filter by first name...',
+    filterByLastName: 'Filter by last name...',
+    filterByMotherName: 'Filter by mother name...',
+  },
+
+  // Audits
+  audits: {
+    title: 'Audits',
+    audit: 'audit',
+    audits: 'audits',
+    loadFailed: 'Failed to load audit logs',
+    noAudits: 'No audit records found',
+    action: 'Action',
+    timestamp: 'Timestamp',
+    createdBy: 'Created By',
+    ipAddress: 'IP Address',
+    oldValues: 'Old Values',
+    newValues: 'New Values',
+    notes: 'Notes',
+    unknownAction: 'Unknown Action',
+  },
+
+  // Forms - New pages
+  forms: {
+    // Common form fields
+    status: 'Status',
+    selectStatus: 'Select status',
+    systemSettings: 'System Settings',
+    notes: 'Notes',
+    enterNotes: 'Enter any additional notes',
+    createdSuccess: 'Created successfully! Redirecting...',
+    createFailed: 'Failed to create',
+    loadFailed: 'Failed to load form options. Please refresh the page.',
+    statusRequired: 'Status is required',
+
+    // Person form
+    person: {
+      title: 'Add New Person',
+      subtitle: 'Create a new person record',
+      basicInfo: 'Basic Information',
+      salutation: 'Salutation',
+      selectSalutation: 'Select salutation',
+      sex: 'Sex',
+      selectSex: 'Select sex',
+      firstName: 'First Name',
+      enterFirstName: 'Enter first name',
+      middleName: 'Middle Name',
+      enterMiddleName: 'Enter middle name',
+      lastName: 'Last Name',
+      enterLastName: 'Enter last name',
+      motherName: "Mother's Name",
+      enterMotherName: "Enter mother's name",
+      birthDate: 'Birth Date',
+      createButton: 'Create Person',
+      firstNameRequired: 'First name is required',
+      lastNameRequired: 'Last name is required',
+      createdSuccess: 'Person created successfully! Redirecting...',
+    },
+
+    // Company form
+    company: {
+      title: 'Add New Company',
+      subtitle: 'Create a new company record',
+      companyInfo: 'Company Information',
+      companyId: 'Company ID',
+      enterCompanyId: 'Enter company ID (e.g., registration number)',
+      companyName: 'Company Name',
+      enterCompanyName: 'Enter company name',
+      createButton: 'Create Company',
+      companyIdRequired: 'Company ID is required',
+      companyNameRequired: 'Company name is required',
+      createdSuccess: 'Company created successfully! Redirecting...',
+    },
+
+    // Employee form
+    employee: {
+      title: 'Add New Employee',
+      subtitle: 'Create a new employee record',
+      employeeInfo: 'Employee Information',
+      person: 'Person',
+      selectPerson: 'Select a person',
+      noPersons: 'No persons available. Please create a person first.',
+      createButton: 'Create Employee',
+      personRequired: 'Person is required',
+      createdSuccess: 'Employee created successfully! Redirecting...',
+    },
+
+    // Invoice form
+    invoice: {
+      title: 'Create New Invoice',
+      subtitle: 'Create a new invoice record',
+      invoiceDetails: 'Invoice Details',
+      invoiceNumber: 'Invoice Number',
+      enterInvoiceNumber: 'Enter invoice number',
+      referenceNumber: 'Reference Number',
+      enterReferenceNumber: 'Enter reference number',
+      currency: 'Currency',
+      selectCurrency: 'Select currency',
+      issueDate: 'Issue Date',
+      dueDate: 'Due Date',
+      amounts: 'Amounts',
+      netAmount: 'Net Amount',
+      tax: 'Tax',
+      finalAmount: 'Final Amount',
+      createButton: 'Create Invoice',
+      invoiceNumberRequired: 'Invoice number is required',
+      issueDateRequired: 'Issue date is required',
+      currencyRequired: 'Currency is required',
+      createdSuccess: 'Invoice created successfully! Redirecting...',
+    },
+
+    // Transaction form
+    transaction: {
+      title: 'Create New Transaction',
+      subtitle: 'Create a new transaction record',
+      transactionDetails: 'Transaction Details',
+      transactionType: 'Transaction Type',
+      selectTransactionType: 'Select transaction type',
+      startDate: 'Start Date',
+      endDate: 'End Date',
+      createButton: 'Create Transaction',
+      transactionTypeRequired: 'Transaction type is required',
+      startDateRequired: 'Start date is required',
+      createdSuccess: 'Transaction created successfully! Redirecting...',
+    },
+  },
+
   // Lookup Table
   lookup: {
     manageData: 'Manage {title} data',
