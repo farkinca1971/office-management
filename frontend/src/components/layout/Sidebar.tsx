@@ -56,6 +56,7 @@ const navItems: NavItem[] = [
       { href: '/master-data/contact-types', labelKey: 'nav.contactTypes' },
       { href: '/master-data/transaction-types', labelKey: 'nav.transactionTypes' },
       { href: '/master-data/currencies', labelKey: 'nav.currencies' },
+      { href: '/master-data/audit-actions', labelKey: 'nav.auditActions' },
       { href: '/master-data/object-relation-types', labelKey: 'nav.objectRelationTypes' },
       { href: '/master-data/translations', labelKey: 'nav.translations' },
     ],

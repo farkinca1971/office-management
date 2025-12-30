@@ -1,0 +1,166 @@
+{
+  "name": "Contacts GET Endpoint",
+  "nodes": [
+    {
+      "name": "Webhook - GET /objects/:object_id/contacts",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "api/v1/objects/:object_id/contacts",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "name": "Build Query",
+      "type": "n8n-nodes-base.set",
+      "position": [450, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "/* See n8n_contacts_get_query_builder.js */\n\nconst objectId = $json.params.object_id;\nconst isActiveParam = $json.query.is_active;\nconst contactTypeId = $json.query.contact_type_id;\n\nlet sql = `\n  SELECT\n    oc.id,\n    oc.object_id,\n    oc.contact_type_id,\n    oc.contact_value,\n    oc.is_active,\n    oc.created_at,\n    oc.updated_at,\n    oc.created_by,\n    ct.code as contact_type_code,\n    COALESCE(\n      (SELECT text FROM translations\n       WHERE code = ct.code\n       AND language_id = ${$json.query.language_id || 1}\n       LIMIT 1),\n      ct.code\n    ) as contact_type_name\n  FROM object_contacts oc\n  LEFT JOIN contact_types ct ON oc.contact_type_id = ct.id\n  WHERE oc.object_id = ${objectId}\n`;\n\nconst conditions = [];\n\nif (isActiveParam !== undefined && isActiveParam !== null && isActiveParam !== '') {\n  const isActive = isActiveParam === true || isActiveParam === 'true' || isActiveParam === '1';\n  conditions.push(`oc.is_active = ${isActive ? 'TRUE' : 'FALSE'}`);\n}\n\nif (contactTypeId !== undefined && contactTypeId !== null && contactTypeId !== '') {\n  conditions.push(`oc.contact_type_id = ${contactTypeId}`);\n}\n\nif (conditions.length > 0) {\n  sql += ' AND ' + conditions.join(' AND ');\n}\n\nsql += ' ORDER BY oc.created_at DESC';\n\nreturn {\n  query: sql,\n  object_id: objectId\n};"
+      }
+    },
+    {
+      "name": "Execute Query",
+      "type": "n8n-nodes-base.postgres",
+      "position": [650, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.query }}"
+      },
+      "credentials": {
+        "postgres": {
+          "name": "PostgreSQL - Office DB"
+        }
+      }
+    },
+    {
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "position": [850, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Get all contacts from the query result\nconst contacts = $input.all().map(item => item.json);\n\n// Return standardized API response\nreturn {\n  success: true,\n  data: contacts,\n  meta: {\n    total: contacts.length,\n    object_id: parseInt($('Build Query').item.json.object_id)\n  }\n};"
+      }
+    },
+    {
+      "name": "Response - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1050, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.set",
+      "position": [850, 450],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return {\n  success: false,\n  error: {\n    code: 'DATABASE_ERROR',\n    message: $json.message || 'Failed to fetch contacts',\n    details: $json\n  }\n};"
+      }
+    },
+    {
+      "name": "Response - Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1050, 450],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 500,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - GET /objects/:object_id/contacts": {
+      "main": [
+        [
+          {
+            "node": "Build Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Query": {
+      "main": [
+        [
+          {
+            "node": "Execute Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Query": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Response - Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Response - Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -76,7 +76,7 @@ export type AddressListParams = {
 export type ContactListResponse = ApiListResponse<Contact>;
 export type ContactResponse = ApiResponse<Contact>;
 export type ContactListParams = {
-  is_active?: boolean;
+  is_active?: number; // 0 = false, 1 = true
   contact_type_id?: number;
 };
 

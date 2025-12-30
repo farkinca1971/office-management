@@ -7,21 +7,29 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { Plus, FileText } from 'lucide-react';
-import { PersonsTable } from '@/components/persons/PersonsTable';
+import { ViewToggle } from '@/components/ui/ViewToggle';
+import { Plus, FileText, Phone, MapPin, Briefcase, CreditCard, Network, StickyNote } from 'lucide-react';
+import { PersonsView } from '@/components/persons/PersonsView';
 import { AuditsTable } from '@/components/audits/AuditsTable';
 import { Tabs } from '@/components/ui/Tabs';
+import ContactsTab from '@/components/contacts/ContactsTab';
+import IdentificationsTab from '@/components/identifications/IdentificationsTab';
+import AddressesTab from '@/components/addresses/AddressesTab';
 import { personApi } from '@/lib/api/persons';
 import { auditApi } from '@/lib/api/audits';
 import { lookupApi } from '@/lib/api/lookups';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguageStore } from '@/store/languageStore';
+import { useViewMode } from '@/hooks/useViewMode';
 import type { Person, ObjectAudit } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 export default function PersonsPage() {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
+
+  // View mode management
+  const { viewMode, toggleViewMode } = useViewMode('persons-view-mode');
 
   // Persons state
   const [persons, setPersons] = useState<Person[]>([]);
@@ -45,23 +53,22 @@ export default function PersonsPage() {
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const [salutationsRes, sexesRes, statusesRes] = await Promise.all([
+        const [salutationsRes, sexesRes, statusesRes, auditActionsRes] = await Promise.all([
           lookupApi.getSalutations(language),
           lookupApi.getSexes(language),
           lookupApi.getObjectStatuses(undefined, language),
+          lookupApi.getAuditActions(undefined, language),
         ]);
 
         const salutationsList = salutationsRes?.data || salutationsRes || [];
         const sexesList = sexesRes?.data || sexesRes || [];
         const statusesList = statusesRes?.data || statusesRes || [];
+        const auditActionsList = auditActionsRes?.data || auditActionsRes || [];
 
         setSalutations(Array.isArray(salutationsList) ? salutationsList : []);
         setSexes(Array.isArray(sexesList) ? sexesList : []);
         setStatuses(Array.isArray(statusesList) ? statusesList : []);
-
-        // TODO: Load audit actions when API is available
-        // For now, use empty array
-        setAuditActions([]);
+        setAuditActions(Array.isArray(auditActionsList) ? auditActionsList : []);
       } catch (err) {
         console.error('Failed to load lookup data:', err);
       } finally {
@@ -135,6 +142,84 @@ export default function PersonsPage() {
 
   const tabs = [
     {
+      id: 'contacts',
+      label: t('persons.contacts'),
+      icon: <Phone className="h-5 w-5" />,
+      content: selectedPerson ? (
+        <ContactsTab objectId={selectedPerson.id} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('persons.selectPersonToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedPerson,
+    },
+    {
+      id: 'addresses',
+      label: t('persons.addresses'),
+      icon: <MapPin className="h-5 w-5" />,
+      content: selectedPerson ? (
+        <AddressesTab objectId={selectedPerson.id} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('persons.selectPersonToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedPerson,
+    },
+    {
+      id: 'employers',
+      label: t('persons.employers'),
+      icon: <Briefcase className="h-5 w-5" />,
+      content: (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('persons.employers')} - {t('persons.comingSoon')}</p>
+        </div>
+      ),
+      disabled: !selectedPerson,
+    },
+    {
+      id: 'identifications',
+      label: t('persons.identifications'),
+      icon: <CreditCard className="h-5 w-5" />,
+      content: selectedPerson ? (
+        <IdentificationsTab objectId={selectedPerson.id} objectTypeId={selectedPerson.object_type_id} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('persons.selectPersonToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedPerson,
+    },
+    {
+      id: 'relationships',
+      label: t('persons.relationships'),
+      icon: <Network className="h-5 w-5" />,
+      content: (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <Network className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('persons.relationships')} - {t('persons.comingSoon')}</p>
+        </div>
+      ),
+      disabled: !selectedPerson,
+    },
+    {
+      id: 'notes',
+      label: t('persons.notes'),
+      icon: <StickyNote className="h-5 w-5" />,
+      content: (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <StickyNote className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('persons.notes')} - {t('persons.comingSoon')}</p>
+        </div>
+      ),
+      disabled: !selectedPerson,
+    },
+    {
       id: 'audits',
       label: t('audits.title'),
       icon: <FileText className="h-5 w-5" />,
@@ -158,20 +243,29 @@ export default function PersonsPage() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('nav.persons')}</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">{t('persons.subtitle')}</p>
         </div>
-        <Link href="/persons/new">
-          <Button variant="primary" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            {t('persons.addNew')}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <ViewToggle
+            viewMode={viewMode}
+            onToggle={toggleViewMode}
+            gridLabel={t('lookup.gridView') || 'Grid View'}
+            cardLabel={t('lookup.cardView') || 'Card View'}
+          />
+          <Link href="/persons/new">
+            <Button variant="primary" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              {t('persons.addNew')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Persons Grid - Upper Half */}
+      {/* Persons View - Upper Half */}
       <div className="mb-6">
-        <PersonsTable
+        <PersonsView
           persons={persons}
           isLoading={isLoadingPersons || loadingLookups}
           error={personsError}
+          viewMode={viewMode}
           onPersonSelect={handlePersonSelect}
           selectedPersonId={selectedPerson?.id}
           onEdit={handleEdit}
@@ -191,17 +285,7 @@ export default function PersonsPage() {
             </p>
           </div>
         ) : (
-          <div>
-            <div className="mb-4 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {selectedPerson.first_name} {selectedPerson.last_name}
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('persons.personId')}: {selectedPerson.id}
-              </p>
-            </div>
-            <Tabs tabs={tabs} defaultTab="audits" />
-          </div>
+          <Tabs tabs={tabs} defaultTab="contacts" />
         )}
       </div>
     </div>

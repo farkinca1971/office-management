@@ -138,7 +138,26 @@ export interface CreateAddressRequest {
   longitude?: number;
 }
 
-export interface UpdateAddressRequest extends Partial<CreateAddressRequest> {}
+export interface UpdateAddressRequest {
+  address_type_id_old: number;
+  address_type_id_new: number;
+  street_address_1_old: string;
+  street_address_1_new: string;
+  street_address_2_old?: string;
+  street_address_2_new?: string;
+  address_area_type_id_old?: number;
+  address_area_type_id_new?: number;
+  city_old: string;
+  city_new: string;
+  state_province_old?: string;
+  state_province_new?: string;
+  postal_code_old?: string;
+  postal_code_new?: string;
+  country_id_old: number;
+  country_id_new: number;
+  is_active_old: boolean;
+  is_active_new: boolean;
+}
 
 // Contact
 export interface Contact extends BaseEntity {
@@ -156,7 +175,14 @@ export interface CreateContactRequest {
   contact_value: string;
 }
 
-export interface UpdateContactRequest extends Partial<CreateContactRequest> {}
+export interface UpdateContactRequest {
+  contact_type_id_old: number;
+  contact_type_id_new: number;
+  contact_value_old: string;
+  contact_value_new: string;
+  is_active_old: boolean;
+  is_active_new: boolean;
+}
 
 // Identification
 export interface Identification extends BaseEntity {
@@ -174,7 +200,14 @@ export interface CreateIdentificationRequest {
   identification_value: string;
 }
 
-export interface UpdateIdentificationRequest extends Partial<CreateIdentificationRequest> {}
+export interface UpdateIdentificationRequest {
+  identification_type_id_old: number;
+  identification_type_id_new: number;
+  identification_value_old: string;
+  identification_value_new: string;
+  is_active_old: boolean;
+  is_active_new: boolean;
+}
 
 // Invoice
 export interface Invoice extends BaseEntity {
@@ -275,6 +308,7 @@ export interface ObjectAudit extends BaseEntity {
   object_id: number;
   audit_action_id: number;
   created_by?: number;
+  created_by_username?: string; // Username from users table
   created_at: string;
   old_values?: Record<string, any>;
   new_values?: Record<string, any>;

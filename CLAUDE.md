@@ -136,6 +136,19 @@ Environment variables prefixed with `NEXT_PUBLIC_` are embedded at build time an
 
 ## Key Implementation Details
 
+### Date & Time Formatting Standards
+**CRITICAL**: All date and timestamp fields MUST be displayed using standardized formats:
+- **Date fields**: `YYYY-MM-DD` format (e.g., `2025-02-25`)
+- **Timestamp fields**: `YYYY-MM-DD HH:mm:ss` format (e.g., `2025-02-25 23:25:12`)
+
+**Implementation**:
+- Use `formatDate()` from `@/lib/utils` for date-only fields (birth_date, issue_date, due_date, etc.)
+- Use `formatDateTime()` from `@/lib/utils` for timestamp fields (created_at, updated_at, transaction_date_start, etc.)
+- NEVER use inline date formatting (`.toLocaleDateString()`, `.toLocaleString()`) - always use utility functions
+- HTML5 date inputs (`type="date"`) naturally work with `YYYY-MM-DD` format
+- Both functions handle null/undefined values by returning `-`
+- Both functions validate dates and return `-` for invalid dates
+
 ### Language & Translation Management
 - Current language stored in `languageStore` with persist middleware
 - Language ID (1-based numeric) mapped from ISO codes via `getLanguageId()` utility
@@ -241,6 +254,90 @@ All backend operations happen through n8n webhooks. The frontend only provides H
 - Audit logging
 
 Ensure webhook endpoints match the expected request/response formats in the n8n workflow documentation.
+
+#### Contacts API - Separate Webhook Endpoint
+**IMPORTANT**: The contacts API uses a **dedicated webhook endpoint** separate from the main API:
+
+**Main API Webhook:**
+```
+https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1
+```
+Used for: lookups, persons, companies, transactions, etc.
+
+**Contacts API Webhook:**
+```
+https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1
+```
+Used for: object contacts (email, phone, social media, etc.)
+
+**Contacts Endpoints:**
+- `GET /objects/:object_id/contacts` - List all contacts for an object
+- `GET /contacts/:id` - Get single contact by ID
+- `POST /objects/:object_id/contacts` - Create new contact for an object
+- `PUT /contacts/:id` - Update existing contact
+- `DELETE /contacts/:id` - Soft delete contact (sets is_active = false)
+
+**Implementation Note:**
+The contacts API requires a separate Axios client instance configured with the contacts webhook base URL. See `src/lib/api/contacts.ts` for the implementation pattern.
+
+**Database Table:** `object_contacts`
+- Links contacts to any object (person, company, employee, etc.)
+- Foreign key: `object_id` → `objects.id`
+- Foreign key: `contact_type_id` → `contact_types.id` (lookup table)
+- Supports soft deletes via `is_active` flag
+
+#### Identifications API - Separate Webhook Endpoint
+**IMPORTANT**: The identifications API uses the **same dedicated webhook endpoint** as contacts:
+
+**Identifications API Webhook:**
+```
+https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1
+```
+Used for: object identifications (passport, ID card, driver's license, etc.)
+
+**Identifications Endpoints:**
+- `GET /objects/:object_id/identifications` - List all identifications for an object
+- `GET /identifications/:id` - Get single identification by ID
+- `POST /objects/:object_id/identifications` - Create new identification for an object
+- `PUT /identifications/:id` - Update existing identification
+- `DELETE /identifications/:id` - Soft delete identification (sets is_active = false)
+
+**Implementation Note:**
+The identifications API requires a separate Axios client instance configured with the identifications webhook base URL. See [src/lib/api/identifications.ts](src/lib/api/identifications.ts) for the implementation pattern.
+
+**Database Table:** `object_identifications`
+- Links identifications to any object (person, company, employee, etc.)
+- Foreign key: `object_id` → `objects.id`
+- Foreign key: `identification_type_id` → `identification_types.id` (lookup table)
+- Supports soft deletes via `is_active` flag
+
+#### Addresses API - Separate Webhook Endpoint
+**IMPORTANT**: The addresses API uses the **same dedicated webhook endpoint** as contacts and identifications:
+
+**Addresses API Webhook:**
+```
+https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1
+```
+Used for: object addresses (home, work, billing, shipping, etc.)
+
+**Addresses Endpoints:**
+- `GET /objects/:object_id/addresses` - List all addresses for an object
+- `GET /addresses/:id` - Get single address by ID
+- `POST /objects/:object_id/addresses` - Create new address for an object
+- `PUT /addresses/:id` - Update existing address
+- `DELETE /addresses/:id` - Soft delete address (sets is_active = false)
+
+**Implementation Note:**
+The addresses API requires a separate Axios client instance configured with the addresses webhook base URL. See [src/lib/api/addresses.ts](src/lib/api/addresses.ts) for the implementation pattern.
+
+**Database Table:** `object_addresses`
+- Links addresses to any object (person, company, employee, etc.)
+- Foreign key: `object_id` → `objects.id`
+- Foreign key: `address_type_id` → `address_types.id` (lookup table)
+- Foreign key: `address_area_type_id` → `address_area_types.id` (lookup table, optional)
+- Foreign key: `country_id` → `countries.id` (lookup table)
+- Supports soft deletes via `is_active` flag
+- Fields: street_address_1, street_address_2, city, state_province, postal_code, latitude, longitude
 
 ## Debugging Tips
 

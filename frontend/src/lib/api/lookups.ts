@@ -230,6 +230,26 @@ export const lookupApi = {
     return apiClient.delete(lookupPath('contact-types', id));
   },
 
+  // Identification Types
+  getIdentificationTypes: async (languageCode?: string, objectTypeId?: number): Promise<LookupListResponse<LookupItem>> => {
+    const params: any = {};
+    if (languageCode) params.language_code = languageCode;
+    if (objectTypeId) params.object_type_id = objectTypeId;
+    return apiClient.get(lookupPath('identification-types'), { params });
+  },
+  getIdentificationType: async (id: number): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.get(lookupPath('identification-types', id));
+  },
+  createIdentificationType: async (data: CreateLookupRequest): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.post(lookupPath('identification-types'), data);
+  },
+  updateIdentificationType: async (id: number, data: UpdateLookupRequest): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.put(lookupPath('identification-types', id), data);
+  },
+  deleteIdentificationType: async (id: number): Promise<ApiResponse<{ success: true }>> => {
+    return apiClient.delete(lookupPath('identification-types', id));
+  },
+
   // Transaction Types
   getTransactionTypes: async (languageCode?: string): Promise<LookupListResponse<LookupItem>> => {
     const params = languageCode ? { language_code: languageCode } : {};
@@ -264,6 +284,26 @@ export const lookupApi = {
   },
   deleteCurrency: async (id: number): Promise<ApiResponse<{ success: true }>> => {
     return apiClient.delete(lookupPath('currencies', id));
+  },
+
+  // Audit Actions
+  getAuditActions: async (objectTypeId?: number, languageCode?: string): Promise<LookupListResponse<LookupItem>> => {
+    const params: Record<string, any> = {};
+    if (objectTypeId) params.object_type_id = objectTypeId;
+    if (languageCode) params.language_code = languageCode;
+    return apiClient.get(lookupPath('audit-actions'), { params });
+  },
+  getAuditAction: async (id: number): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.get(lookupPath('audit-actions', id));
+  },
+  createAuditAction: async (data: CreateLookupRequest & { object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.post(lookupPath('audit-actions'), data);
+  },
+  updateAuditAction: async (id: number, data: UpdateLookupRequest & { object_type_id?: number }): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.put(lookupPath('audit-actions', id), data);
+  },
+  deleteAuditAction: async (id: number): Promise<ApiResponse<{ success: true }>> => {
+    return apiClient.delete(lookupPath('audit-actions', id));
   },
 
   // Object Relation Types

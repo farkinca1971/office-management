@@ -27,6 +27,22 @@ export const getApiConfig = (): ApiConfig => {
 };
 
 /**
+ * Get Audit API configuration from environment variables
+ * Uses a separate webhook endpoint for audit operations
+ */
+export const getAuditApiConfig = (): ApiConfig => {
+  const baseURL = process.env.NEXT_PUBLIC_AUDIT_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5678/api/v1';
+  const timeout = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10);
+  const apiKey = process.env.NEXT_PUBLIC_N8N_API_KEY;
+
+  return {
+    baseURL: baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL,
+    timeout,
+    apiKey,
+  };
+};
+
+/**
  * n8n Webhook Endpoint Paths
  * 
  * These paths correspond to n8n webhook nodes configured in your workflow.

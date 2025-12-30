@@ -1,0 +1,307 @@
+{
+  "workflow_name": "Object Contacts API",
+  "description": "Universal endpoint for managing object contacts (email, phone, etc.)",
+  "base_path": "/api/v1",
+  "endpoints": [
+    {
+      "path": "/objects/:object_id/contacts",
+      "method": "GET",
+      "description": "Get all contacts for a specific object",
+      "set_node_config": {
+        "method": "GET",
+        "table": "object_contacts",
+        "params": {
+          "object_id": "={{ $json.params.object_id }}"
+        },
+        "query": {
+          "is_active": "={{ $json.query.is_active }}",
+          "contact_type_id": "={{ $json.query.contact_type_id }}"
+        },
+        "select": [
+          "oc.id",
+          "oc.object_id",
+          "oc.contact_type_id",
+          "oc.contact_value",
+          "oc.is_active",
+          "oc.created_at",
+          "oc.updated_at",
+          "oc.created_by"
+        ],
+        "joins": [
+          {
+            "type": "LEFT",
+            "table": "contact_types",
+            "alias": "ct",
+            "on": "ct.id = oc.contact_type_id"
+          }
+        ],
+        "orderBy": {
+          "column": "created_at",
+          "direction": "DESC"
+        }
+      },
+      "example_request": "GET /api/v1/objects/5/contacts?is_active=true",
+      "example_response": {
+        "success": true,
+        "data": [
+          {
+            "id": 1,
+            "object_id": 5,
+            "contact_type_id": 1,
+            "contact_value": "john@example.com",
+            "is_active": true,
+            "created_at": "2024-01-15 10:00:00",
+            "updated_at": "2024-01-15 10:00:00",
+            "created_by": 1
+          }
+        ]
+      }
+    },
+    {
+      "path": "/contacts/:id",
+      "method": "GET",
+      "description": "Get a single contact by ID",
+      "set_node_config": {
+        "method": "GET",
+        "table": "object_contacts",
+        "params": {
+          "id": "={{ $json.params.id }}"
+        },
+        "select": [
+          "oc.id",
+          "oc.object_id",
+          "oc.contact_type_id",
+          "oc.contact_value",
+          "oc.is_active",
+          "oc.created_at",
+          "oc.updated_at",
+          "oc.created_by"
+        ],
+        "joins": [
+          {
+            "type": "LEFT",
+            "table": "contact_types",
+            "alias": "ct",
+            "on": "ct.id = oc.contact_type_id"
+          }
+        ]
+      },
+      "example_request": "GET /api/v1/contacts/123",
+      "example_response": {
+        "success": true,
+        "data": {
+          "id": 123,
+          "object_id": 5,
+          "contact_type_id": 1,
+          "contact_value": "john@example.com",
+          "is_active": true,
+          "created_at": "2024-01-15 10:00:00",
+          "updated_at": "2024-01-15 10:00:00",
+          "created_by": 1
+        }
+      }
+    },
+    {
+      "path": "/objects/:object_id/contacts",
+      "method": "POST",
+      "description": "Create a new contact for an object",
+      "set_node_config": {
+        "method": "POST",
+        "table": "object_contacts",
+        "params": {
+          "object_id": "={{ $json.params.object_id }}"
+        },
+        "body": {
+          "object_id": "={{ $json.params.object_id }}",
+          "contact_type_id": "={{ $json.body.contact_type_id }}",
+          "contact_value": "={{ $json.body.contact_value }}",
+          "is_active": true,
+          "created_by": "={{ $json.body.created_by || 1 }}"
+        }
+      },
+      "example_request": {
+        "url": "POST /api/v1/objects/5/contacts",
+        "body": {
+          "contact_type_id": 1,
+          "contact_value": "newemail@example.com"
+        }
+      },
+      "example_response": {
+        "success": true,
+        "data": {
+          "affectedRows": 1,
+          "insertId": 456
+        }
+      }
+    },
+    {
+      "path": "/contacts/:id",
+      "method": "PUT",
+      "description": "Update an existing contact",
+      "set_node_config": {
+        "method": "PUT",
+        "table": "object_contacts",
+        "params": {
+          "id": "={{ $json.params.id }}"
+        },
+        "body": {
+          "contact_type_id": "={{ $json.body.contact_type_id }}",
+          "contact_value": "={{ $json.body.contact_value }}",
+          "is_active": "={{ $json.body.is_active }}"
+        }
+      },
+      "example_request": {
+        "url": "PUT /api/v1/contacts/123",
+        "body": {
+          "contact_type_id": 2,
+          "contact_value": "+1-555-1234"
+        }
+      },
+      "example_response": {
+        "success": true,
+        "data": {
+          "affectedRows": 1
+        }
+      }
+    },
+    {
+      "path": "/contacts/:id",
+      "method": "DELETE",
+      "description": "Soft delete a contact (sets is_active = false)",
+      "set_node_config": {
+        "method": "DELETE",
+        "table": "object_contacts",
+        "params": {
+          "id": "={{ $json.params.id }}"
+        },
+        "softDelete": true
+      },
+      "example_request": "DELETE /api/v1/contacts/123",
+      "example_response": {
+        "success": true,
+        "data": {
+          "affectedRows": 1
+        }
+      }
+    }
+  ],
+  "implementation_steps": [
+    {
+      "step": 1,
+      "title": "Create Webhook Node",
+      "details": "Add a new Webhook node and configure it to listen on multiple paths using regex or create separate webhooks for each endpoint"
+    },
+    {
+      "step": 2,
+      "title": "Add Set Node",
+      "details": "Configure the Set node with the appropriate config from above based on the HTTP method and path. Use IF nodes to route different endpoints if using a single webhook."
+    },
+    {
+      "step": 3,
+      "title": "Add Query Builder Code Node",
+      "details": "Copy the contents of n8n_universal_sql_query_builder.js into a Code node. This generates the SQL query dynamically."
+    },
+    {
+      "step": 4,
+      "title": "Add MySQL Node",
+      "details": "Configure MySQL node to execute the generated query: {{ $json.query }}"
+    },
+    {
+      "step": 5,
+      "title": "Add Response Generator Code Node",
+      "details": "Copy the contents of n8n_universal_response_body_generator.js into a Code node. This formats the response."
+    },
+    {
+      "step": 6,
+      "title": "Connect to Webhook Response",
+      "details": "Connect the Response Generator output to the Webhook Response node to return the formatted response to the client."
+    }
+  ],
+  "routing_logic": {
+    "description": "Use IF nodes to route requests based on path and method",
+    "examples": [
+      {
+        "condition": "{{ $json.method === 'GET' && $json.path.includes('/objects/') && $json.path.includes('/contacts') && !$json.params.id }}",
+        "route_to": "GET /objects/:object_id/contacts"
+      },
+      {
+        "condition": "{{ $json.method === 'GET' && $json.path.includes('/contacts/') && $json.params.id }}",
+        "route_to": "GET /contacts/:id"
+      },
+      {
+        "condition": "{{ $json.method === 'POST' && $json.path.includes('/objects/') && $json.path.includes('/contacts') }}",
+        "route_to": "POST /objects/:object_id/contacts"
+      },
+      {
+        "condition": "{{ $json.method === 'PUT' && $json.path.includes('/contacts/') && $json.params.id }}",
+        "route_to": "PUT /contacts/:id"
+      },
+      {
+        "condition": "{{ $json.method === 'DELETE' && $json.path.includes('/contacts/') && $json.params.id }}",
+        "route_to": "DELETE /contacts/:id"
+      }
+    ]
+  },
+  "database_requirements": {
+    "table": "object_contacts",
+    "required_columns": [
+      "id BIGINT AUTO_INCREMENT PRIMARY KEY",
+      "object_id BIGINT NOT NULL",
+      "contact_type_id INT NOT NULL",
+      "contact_value VARCHAR(255) NOT NULL",
+      "is_active BOOLEAN DEFAULT TRUE",
+      "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+      "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+      "created_by BIGINT"
+    ],
+    "foreign_keys": [
+      "FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE CASCADE",
+      "FOREIGN KEY (contact_type_id) REFERENCES contact_types(id) ON DELETE RESTRICT",
+      "FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL"
+    ],
+    "indexes": [
+      "INDEX idx_object_id (object_id)",
+      "INDEX idx_contact_type_id (contact_type_id)",
+      "INDEX idx_is_active (is_active)"
+    ]
+  },
+  "frontend_integration": {
+    "api_file": "frontend/src/lib/api/contacts.ts",
+    "base_url": "process.env.NEXT_PUBLIC_API_BASE_URL",
+    "methods": [
+      "contactApi.getByObjectId(objectId, params)",
+      "contactApi.getById(id)",
+      "contactApi.create(objectId, data)",
+      "contactApi.update(id, data)",
+      "contactApi.delete(id)"
+    ]
+  },
+  "testing": {
+    "curl_examples": [
+      {
+        "name": "Get all contacts for object 5",
+        "command": "curl -X GET 'https://n8n.wolfitlab.duckdns.org/webhook/YOUR-WEBHOOK-ID/api/v1/objects/5/contacts?is_active=true' \\\n  -H 'Content-Type: application/json'"
+      },
+      {
+        "name": "Create new contact",
+        "command": "curl -X POST 'https://n8n.wolfitlab.duckdns.org/webhook/YOUR-WEBHOOK-ID/api/v1/objects/5/contacts' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"contact_type_id\": 1, \"contact_value\": \"test@example.com\"}'"
+      },
+      {
+        "name": "Update contact",
+        "command": "curl -X PUT 'https://n8n.wolfitlab.duckdns.org/webhook/YOUR-WEBHOOK-ID/api/v1/contacts/123' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"contact_value\": \"updated@example.com\"}'"
+      },
+      {
+        "name": "Delete contact (soft delete)",
+        "command": "curl -X DELETE 'https://n8n.wolfitlab.duckdns.org/webhook/YOUR-WEBHOOK-ID/api/v1/contacts/123' \\\n  -H 'Content-Type: application/json'"
+      }
+    ]
+  },
+  "notes": [
+    "All POST/PUT/PATCH requests automatically receive language_id from the frontend API client interceptor",
+    "Soft deletes are the default - records are never physically removed unless softDelete: false is explicitly set",
+    "Contact types must exist in the contact_types lookup table before creating contacts",
+    "The table alias 'oc' is used consistently for object_contacts throughout the queries",
+    "Response format always follows { success: true/false, data: ..., error: ... } structure",
+    "Created_by should reference the user's object_id, defaulting to 1 if not provided"
+  ]
+}

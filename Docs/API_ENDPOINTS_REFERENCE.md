@@ -1546,7 +1546,9 @@ CREATE TABLE object_contacts (
 
 ### 34. Get Object Contacts
 
-**Endpoint**: `GET /api/v1/objects/{object_id}/contacts?is_active={true|false}&contact_type_id={type_id}`
+**Endpoint**: `GET https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/objects/:object_id/contacts?is_active={true|false}&contact_type_id={type_id}`
+
+**Note**: The base URL `https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f` should be set in `NEXT_PUBLIC_API_BASE_URL` environment variable.
 
 **Response**:
 ```json
