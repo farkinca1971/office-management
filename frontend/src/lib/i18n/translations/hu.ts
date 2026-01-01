@@ -25,6 +25,13 @@ export const hu = {
     filter: 'Szűrés',
     actions: 'Műveletek',
     noData: 'Nincs elérhető adat',
+    id: 'Azonosító',
+    status: 'Státusz',
+    active: 'Aktív',
+    inactive: 'Inaktív',
+    all: 'Összes',
+    createdAt: 'Létrehozva',
+    updatedAt: 'Frissítve',
   },
 
   // Navigation
@@ -127,6 +134,31 @@ export const hu = {
     comingSoon: 'Hamarosan elérhető',
   },
 
+  // Contacts
+  contacts: {
+    title: 'Kapcsolatok',
+    loadFailed: 'A kapcsolatok betöltése sikertelen',
+    noContacts: 'Nincsenek kapcsolatok',
+    addNew: 'Új kapcsolat hozzáadása',
+    contactType: 'Kapcsolat típusa',
+    contactValue: 'Kapcsolat értéke',
+    allTypes: 'Minden típus',
+    unknown: 'Ismeretlen',
+    loading: 'Kapcsolatok betöltése...',
+    showing: 'Megjelenítés',
+    of: 'ennyiből',
+    newContact: 'Új kapcsolat',
+    createContact: 'Kapcsolat létrehozása',
+    creating: 'Létrehozás...',
+    created: 'Kapcsolat sikeresen létrehozva',
+    updated: 'Kapcsolat sikeresen frissítve',
+    deleted: 'Kapcsolat sikeresen törölve',
+    valuePlaceholder: 'Kapcsolat értéke...',
+    valueRequired: 'A kapcsolat értéke kötelező',
+    tableView: 'Táblázat nézet',
+    cardView: 'Kártya nézet',
+  },
+
   // Identifications
   identifications: {
     title: 'Azonosítók',
@@ -215,6 +247,7 @@ export const hu = {
     loadFailed: 'A jegyzetek betöltése sikertelen',
     noNotes: 'Nincsenek jegyzetek',
     addNew: 'Új jegyzet hozzáadása',
+    editNote: 'Jegyzet szerkesztése',
     type: 'Típus',
     subject: 'Tárgy',
     noteText: 'Jegyzet',
@@ -222,6 +255,8 @@ export const hu = {
     createdBy: 'Létrehozta',
     pin: 'Rögzítés',
     unpin: 'Rögzítés feloldása',
+    pinToggled: 'Jegyzet rögzítési állapota megváltoztatva',
+    pinToggleFailed: 'A rögzítési állapot megváltoztatása sikertelen',
     unknownType: 'Ismeretlen típus',
     selectType: 'Válassz jegyzet típust (opcionális)',
     subjectPlaceholder: 'Tárgy megadása (opcionális)',
@@ -232,6 +267,10 @@ export const hu = {
     creating: 'Létrehozás...',
     createSuccess: 'Jegyzet sikeresen létrehozva',
     createFailed: 'A jegyzet létrehozása sikertelen',
+    updateSuccess: 'Jegyzet sikeresen frissítve',
+    updateFailed: 'A jegyzet frissítése sikertelen',
+    deleteSuccess: 'Jegyzet sikeresen törölve',
+    deleteFailed: 'A jegyzet törlése sikertelen',
   },
 
   // Forms - New pages

@@ -69,7 +69,7 @@ export type EmployeeListParams = SearchParams & {
 export type AddressListResponse = ApiListResponse<Address>;
 export type AddressResponse = ApiResponse<Address>;
 export type AddressListParams = {
-  is_active?: boolean;
+  is_active?: number; // 0 = false, 1 = true
 };
 
 // Contact API Types

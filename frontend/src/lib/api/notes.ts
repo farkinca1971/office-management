@@ -15,8 +15,8 @@ import type {
 import type { ApiResponse, ApiErrorResponse } from '@/types/common';
 
 export type ObjectNoteListParams = {
-  is_active?: boolean;
-  is_pinned?: boolean;
+  is_active?: number; // 0 = false, 1 = true
+  is_pinned?: number; // 0 = false, 1 = true
   language_id?: number;
 };
 
@@ -171,9 +171,11 @@ export const notesApi = {
 
   /**
    * Update an existing note
+   * Sends old/new values for all editable fields (consistent with other tables)
+   * IMPORTANT: Uses POST instead of PUT because PUT method is not working on n8n webhook
    */
   update: async (id: number, data: UpdateObjectNoteRequest): Promise<ObjectNoteResponse> => {
-    return notesClient.put(`/notes/${id}`, data);
+    return notesClient.post(`/notes/${id}`, data);
   },
 
   /**

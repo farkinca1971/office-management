@@ -25,14 +25,16 @@ import type { ContactFormData } from './ContactFormModal';
 import { contactApi, lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
+import { useTranslation } from '@/lib/i18n';
 import type { Contact } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 interface ContactsTabProps {
   objectId: number;
+  onDataChange?: () => void | Promise<void>;
 }
 
-export default function ContactsTab({ objectId }: ContactsTabProps) {
+export default function ContactsTab({ objectId, onDataChange }: ContactsTabProps) {
   console.log('🔵 ContactsTab component rendered with objectId:', objectId);
 
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -49,6 +51,7 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
   const [isCreating, setIsCreating] = useState(false);
 
   const language = useLanguageStore((state) => state.language);
+  const { t } = useTranslation();
 
   // View mode management
   const { viewMode, toggleViewMode } = useViewMode('contacts-view-mode');
@@ -135,14 +138,20 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
       if (response.success) {
         // Reload contacts to get the complete updated data
         await loadData();
-        setSuccessMessage('Contact updated successfully');
+
+        // Trigger audit reload on parent
+        if (onDataChange) {
+          await onDataChange();
+        }
+
+        setSuccessMessage(t('contacts.updated'));
 
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(null), 3000);
       }
     } catch (err: any) {
       console.error('Error updating contact:', err);
-      setError(err?.error?.message || 'Failed to update contact');
+      setError(err?.error?.message || t('contacts.loadFailed'));
       throw err; // Re-throw to let ContactsTable handle it
     }
   };
@@ -157,13 +166,19 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
 
       // Reload contacts to reflect the soft delete (is_active = false)
       await loadData();
-      setSuccessMessage('Contact deleted successfully');
+
+      // Trigger audit reload on parent
+      if (onDataChange) {
+        await onDataChange();
+      }
+
+      setSuccessMessage(t('contacts.deleted'));
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
       console.error('Error deleting contact:', err);
-      setError(err?.error?.message || 'Failed to delete contact');
+      setError(err?.error?.message || t('contacts.loadFailed'));
       throw err; // Re-throw to let ContactsTable handle it
     }
   };
@@ -188,14 +203,19 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
         // Reload contacts to get the complete data with proper IDs
         await loadData();
 
-        setSuccessMessage('Contact created successfully');
+        // Trigger audit reload on parent
+        if (onDataChange) {
+          await onDataChange();
+        }
+
+        setSuccessMessage(t('contacts.created'));
 
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(null), 3000);
       }
     } catch (err: any) {
       console.error('Error creating contact:', err);
-      setError(err?.error?.message || 'Failed to create contact');
+      setError(err?.error?.message || t('contacts.loadFailed'));
       throw err;
     } finally {
       setIsCreating(false);
@@ -215,8 +235,8 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
         <ViewToggle
           viewMode={viewMode}
           onToggle={toggleViewMode}
-          gridLabel="Table View"
-          cardLabel="Card View"
+          gridLabel={t('contacts.tableView')}
+          cardLabel={t('contacts.cardView')}
         />
       </div>
 
@@ -238,11 +258,11 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {isLoading ? (
             <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-              Loading contacts...
+              {t('contacts.loading')}
             </div>
           ) : contacts.length === 0 ? (
             <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-              No contacts found
+              {t('contacts.noContacts')}
             </div>
           ) : (
             contacts.map((contact) => (
@@ -270,7 +290,7 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
           className="flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
-          Add New Contact
+          {t('contacts.addNew')}
         </Button>
       </div>
 

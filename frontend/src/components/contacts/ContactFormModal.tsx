@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { X } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 import type { LookupItem } from '@/types/common';
 
 export interface ContactFormData {
@@ -31,6 +32,7 @@ export const ContactFormModal: React.FC<ContactFormModalProps> = ({
   contactTypes,
   isSubmitting = false,
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<ContactFormData>({
     contact_type_id: 0,
     contact_value: '',
@@ -49,11 +51,11 @@ export const ContactFormModal: React.FC<ContactFormModalProps> = ({
     const newErrors: Partial<Record<keyof ContactFormData, string>> = {};
 
     if (!formData.contact_type_id) {
-      newErrors.contact_type_id = 'Contact type is required';
+      newErrors.contact_type_id = t('common.error');
     }
 
     if (!formData.contact_value.trim()) {
-      newErrors.contact_value = 'Contact value is required';
+      newErrors.contact_value = t('contacts.valueRequired');
     }
 
     setErrors(newErrors);
@@ -97,7 +99,7 @@ export const ContactFormModal: React.FC<ContactFormModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Add New Contact
+            {t('contacts.addNew')}
           </h2>
           <button
             onClick={handleClose}
@@ -113,7 +115,7 @@ export const ContactFormModal: React.FC<ContactFormModalProps> = ({
           {/* Contact Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Contact Type <span className="text-red-500">*</span>
+              {t('contacts.contactType')} <span className="text-red-500">*</span>
             </label>
             <Select
               value={formData.contact_type_id.toString()}
@@ -125,7 +127,7 @@ export const ContactFormModal: React.FC<ContactFormModalProps> = ({
                   value: type.id,
                   label: type.name || type.code
                 }))}
-              placeholder="Select contact type..."
+              placeholder={`${t('common.search')} ${t('contacts.contactType').toLowerCase()}...`}
             />
             {errors.contact_type_id && (
               <p className="mt-1 text-sm text-red-500">{errors.contact_type_id}</p>
@@ -135,7 +137,7 @@ export const ContactFormModal: React.FC<ContactFormModalProps> = ({
           {/* Contact Value */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Contact Value <span className="text-red-500">*</span>
+              {t('contacts.contactValue')} <span className="text-red-500">*</span>
             </label>
             <Input
               type="text"
@@ -158,14 +160,14 @@ export const ContactFormModal: React.FC<ContactFormModalProps> = ({
               onClick={handleClose}
               disabled={isSubmitting}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               variant="primary"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : 'Create Contact'}
+              {isSubmitting ? t('contacts.creating') : t('contacts.createContact')}
             </Button>
           </div>
         </form>

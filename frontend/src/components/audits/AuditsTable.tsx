@@ -7,6 +7,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { TextColumnFilter, SelectColumnFilter, DateColumnFilter } from '@/components/ui/ColumnFilters';
 import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import type { ObjectAudit } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
@@ -36,6 +37,12 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
 }) => {
   const { t } = useTranslation();
   const [sortState, setSortState] = useState<SortState>({ field: 'created_at', direction: 'desc' });
+  const [filterAction, setFilterAction] = useState<number | ''>('');
+  const [filterCreatedBy, setFilterCreatedBy] = useState('');
+  const [filterCreatedAt, setFilterCreatedAt] = useState('');
+  const [filterOldValues, setFilterOldValues] = useState('');
+  const [filterNewValues, setFilterNewValues] = useState('');
+  const [filterNotes, setFilterNotes] = useState('');
 
   const getActionName = (actionId: number): string => {
     const action = auditActions.find(a => a.id === actionId);
@@ -70,10 +77,48 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
     return <ArrowUpDown className="h-4 w-4" />;
   };
 
-  // Sorting
-  const sortedAudits = useMemo(() => {
+  // Filtering and Sorting
+  const filteredAndSortedAudits = useMemo(() => {
     let result = [...audits];
 
+    // Apply client-side filters
+    if (filterAction !== '') {
+      result = result.filter(a => a.audit_action_id === filterAction);
+    }
+    if (filterCreatedBy) {
+      result = result.filter(a =>
+        a.created_by_username?.toLowerCase().includes(filterCreatedBy.toLowerCase())
+      );
+    }
+    if (filterCreatedAt) {
+      result = result.filter(a => {
+        if (!a.created_at) return false;
+        // Extract date part from timestamp (YYYY-MM-DD)
+        const auditDate = a.created_at.split(' ')[0];
+        return auditDate === filterCreatedAt;
+      });
+    }
+    if (filterOldValues) {
+      result = result.filter(a => {
+        if (!a.old_values) return false;
+        const jsonString = JSON.stringify(a.old_values).toLowerCase();
+        return jsonString.includes(filterOldValues.toLowerCase());
+      });
+    }
+    if (filterNewValues) {
+      result = result.filter(a => {
+        if (!a.new_values) return false;
+        const jsonString = JSON.stringify(a.new_values).toLowerCase();
+        return jsonString.includes(filterNewValues.toLowerCase());
+      });
+    }
+    if (filterNotes) {
+      result = result.filter(a =>
+        a.notes?.toLowerCase().includes(filterNotes.toLowerCase())
+      );
+    }
+
+    // Apply sorting
     if (sortState.field && sortState.direction) {
       result.sort((a, b) => {
         const field = sortState.field as keyof ObjectAudit;
@@ -86,7 +131,7 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
     }
 
     return result;
-  }, [audits, sortState]);
+  }, [audits, sortState, filterAction, filterCreatedBy, filterCreatedAt, filterOldValues, filterNewValues, filterNotes]);
 
   if (isLoading) {
     return (
@@ -110,7 +155,12 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
     <Card>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="text-sm text-gray-600 dark:text-gray-400">
-          {sortedAudits.length} {sortedAudits.length === 1 ? t('audits.audit') : t('audits.audits')}
+          {filteredAndSortedAudits.length} {filteredAndSortedAudits.length === 1 ? t('audits.audit') : t('audits.audits')}
+          {filteredAndSortedAudits.length !== audits.length && (
+            <span className="ml-2 text-gray-500">
+              (filtered from {audits.length})
+            </span>
+          )}
         </div>
       </div>
 
@@ -118,6 +168,7 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-800">
+            {/* Header Row */}
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -165,16 +216,68 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
                 {t('audits.notes')}
               </th>
             </tr>
+            {/* Filter Row */}
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="px-6 py-2">
+                {/* No filter for ID */}
+              </th>
+              <th className="px-6 py-2">
+                <SelectColumnFilter
+                  value={filterAction}
+                  onChange={(val) => setFilterAction(val === '' || val === 0 ? '' : val as number)}
+                  options={auditActions.map(action => ({
+                    value: action.id,
+                    label: action.name || action.code
+                  }))}
+                  placeholder="All Actions"
+                />
+              </th>
+              <th className="px-6 py-2">
+                <DateColumnFilter
+                  value={filterCreatedAt}
+                  onChange={setFilterCreatedAt}
+                  placeholder="YYYY-MM-DD"
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterCreatedBy}
+                  onChange={setFilterCreatedBy}
+                  placeholder="Created by..."
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterOldValues}
+                  onChange={setFilterOldValues}
+                  placeholder="Search old values..."
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterNewValues}
+                  onChange={setFilterNewValues}
+                  placeholder="Search new values..."
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterNotes}
+                  onChange={setFilterNotes}
+                  placeholder="Search notes..."
+                />
+              </th>
+            </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            {sortedAudits.length === 0 ? (
+            {filteredAndSortedAudits.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                   {t('audits.noAudits')}
                 </td>
               </tr>
             ) : (
-              sortedAudits.map((audit) => (
+              filteredAndSortedAudits.map((audit) => (
                 <tr key={audit.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                     {audit.id}

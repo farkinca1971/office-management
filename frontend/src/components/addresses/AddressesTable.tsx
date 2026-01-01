@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
+import { TextColumnFilter, SelectColumnFilter, CheckboxColumnFilter } from '@/components/ui/ColumnFilters';
 import { formatDateTime } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import type { Address } from '@/types/entities';
@@ -88,8 +89,9 @@ export default function AddressesTable({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<EditData | null>(null);
   const [originalData, setOriginalData] = useState<EditData | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [filterAddressType, setFilterAddressType] = useState<number | ''>('');
+  const [filterCity, setFilterCity] = useState('');
+  const [filterPostalCode, setFilterPostalCode] = useState('');
   const [filterCountry, setFilterCountry] = useState<number | ''>('');
   const [sortField, setSortField] = useState<SortField>('id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -141,6 +143,16 @@ export default function AddressesTable({
     if (filterAddressType !== '') {
       result = result.filter(a => a.address_type_id === filterAddressType);
     }
+    if (filterCity) {
+      result = result.filter(a =>
+        a.city?.toLowerCase().includes(filterCity.toLowerCase())
+      );
+    }
+    if (filterPostalCode) {
+      result = result.filter(a =>
+        a.postal_code?.toLowerCase().includes(filterPostalCode.toLowerCase())
+      );
+    }
     if (filterCountry !== '') {
       result = result.filter(a => a.country_id === filterCountry);
     }
@@ -175,7 +187,7 @@ export default function AddressesTable({
     }
 
     return result;
-  }, [addresses, filterAddressType, filterCountry, sortField, sortDirection, addressTypes, countries]);
+  }, [addresses, filterAddressType, filterCity, filterPostalCode, filterCountry, sortField, sortDirection, addressTypes, countries]);
 
   // Handle edit start
   const handleEdit = (address: Address) => {
@@ -262,75 +274,11 @@ export default function AddressesTable({
 
   return (
     <div className="space-y-4">
-      {/* Filter Toggle */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="ghost"
-          onClick={() => setShowFilters(!showFilters)}
-          className="text-sm"
-        >
-          {showFilters ? t('addresses.hideFilters') : t('addresses.showFilters')}
-        </Button>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('addresses.addressType')}
-            </label>
-            <Select
-              value={filterAddressType.toString()}
-              onChange={(e) => setFilterAddressType(e.target.value === '' ? '' : Number(e.target.value))}
-              options={[
-                { value: '', label: t('addresses.allTypes') },
-                ...addressTypes.map((type) => ({
-                  value: type.id,
-                  label: type.name || type.code
-                }))
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('addresses.country')}
-            </label>
-            <Select
-              value={filterCountry.toString()}
-              onChange={(e) => setFilterCountry(e.target.value === '' ? '' : Number(e.target.value))}
-              options={[
-                { value: '', label: t('addresses.allCountries') },
-                ...countries.map((country) => ({
-                  value: country.id,
-                  label: country.name || country.code
-                }))
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('common.status')}
-            </label>
-            <Select
-              value={filterActive === '' ? '' : filterActive.toString()}
-              onChange={(e) => onFilterActiveChange(e.target.value === '' ? '' : e.target.value === 'true')}
-              options={[
-                { value: '', label: t('common.all') },
-                { value: 'true', label: t('common.active') },
-                { value: 'false', label: t('common.inactive') }
-              ]}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
+            {/* Header Row */}
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -373,6 +321,60 @@ export default function AddressesTable({
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('common.actions')}
+              </th>
+            </tr>
+            {/* Filter Row */}
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="px-6 py-2">
+                {/* No filter for ID */}
+              </th>
+              <th className="px-6 py-2">
+                <SelectColumnFilter
+                  value={filterAddressType}
+                  onChange={(val) => setFilterAddressType(val === '' || val === 0 ? '' : val as number)}
+                  options={addressTypes.map(type => ({
+                    value: type.id,
+                    label: type.name || type.code
+                  }))}
+                  placeholder={t('addresses.allTypes')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterPostalCode}
+                  onChange={setFilterPostalCode}
+                  placeholder="Postal code..."
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterCity}
+                  onChange={setFilterCity}
+                  placeholder="City..."
+                />
+              </th>
+              <th className="px-6 py-2">
+                <SelectColumnFilter
+                  value={filterCountry}
+                  onChange={(val) => setFilterCountry(val === '' || val === 0 ? '' : val as number)}
+                  options={countries.map(country => ({
+                    value: country.id,
+                    label: country.name || country.code
+                  }))}
+                  placeholder={t('addresses.allCountries')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <CheckboxColumnFilter
+                  checked={filterActive === '' ? null : filterActive}
+                  onChange={(val) => onFilterActiveChange(val === null ? '' : val)}
+                />
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for created_at */}
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for actions */}
               </th>
             </tr>
           </thead>

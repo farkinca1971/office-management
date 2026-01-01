@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { X } from 'lucide-react';
@@ -24,6 +24,7 @@ export interface NoteFormModalProps {
   onSubmit: (data: NoteFormData) => Promise<void>;
   noteTypes: LookupItem[];
   isSubmitting?: boolean;
+  initialData?: NoteFormData;
 }
 
 export const NoteFormModal: React.FC<NoteFormModalProps> = ({
@@ -32,6 +33,7 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
   onSubmit,
   noteTypes,
   isSubmitting = false,
+  initialData,
 }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<NoteFormData>({
@@ -40,6 +42,19 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
     is_pinned: false,
   });
   const [errors, setErrors] = useState<Partial<Record<keyof NoteFormData, string>>>({});
+
+  // Update form data when initialData changes (for editing)
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    } else {
+      setFormData({
+        subject: '',
+        note_text: '',
+        is_pinned: false,
+      });
+    }
+  }, [initialData, isOpen]);
 
   const handleChange = (field: keyof NoteFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -99,7 +114,7 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {t('notes.addNew')}
+            {initialData ? t('notes.editNote') : t('notes.addNew')}
           </h2>
           <button
             onClick={handleClose}

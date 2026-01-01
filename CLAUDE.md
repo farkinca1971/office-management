@@ -230,6 +230,65 @@ Use **React Hook Form** + **Zod** for form validation:
 3. Pass to Select component as options
 4. On form submit, include selected lookup ID (not code) in data
 
+### Inline Editing in Data Tables (CRITICAL PATTERN)
+**All table components with inline editing MUST send both old and new values to the API.**
+
+This pattern is used in:
+- [AddressesTable](frontend/src/components/addresses/AddressesTable.tsx)
+- [ContactsTable](frontend/src/components/contacts/ContactsTable.tsx)
+- [IdentificationsTable](frontend/src/components/identifications/IdentificationsTable.tsx)
+- [NotesTable](frontend/src/components/notes/NotesTable.tsx)
+
+**Implementation Requirements:**
+1. Define update payload interface with `_old` and `_new` suffixes for each editable field
+2. Store both `editData` and `originalData` in component state
+3. On edit start (`handleEdit`): capture original values in `originalData`
+4. On save (`handleSave`): send payload with both old and new values
+5. On cancel (`handleCancel`): clear both `editData` and `originalData`
+
+**Example Pattern:**
+```typescript
+interface NoteUpdatePayload {
+  note_type_id_old?: number;
+  note_type_id_new?: number;
+  subject_old?: string;
+  subject_new?: string;
+  note_text_old: string;
+  note_text_new: string;
+}
+
+const handleEdit = (note: ObjectNote) => {
+  const initialData = {
+    note_type_id: note.note_type_id,
+    subject: note.subject || '',
+    note_text: note.note_text,
+  };
+  setEditData(initialData);
+  setOriginalData(initialData); // Store original values
+};
+
+const handleSave = async (id: number) => {
+  if (!editData || !originalData) return;
+
+  const updatePayload: NoteUpdatePayload = {
+    note_type_id_old: originalData.note_type_id,
+    note_type_id_new: editData.note_type_id,
+    subject_old: originalData.subject,
+    subject_new: editData.subject,
+    note_text_old: originalData.note_text,
+    note_text_new: editData.note_text,
+  };
+
+  await onUpdate(id, updatePayload);
+};
+```
+
+**Why This Pattern?**
+- Enables audit logging of what changed
+- Allows backend validation of concurrent edits
+- Supports optimistic concurrency control
+- Provides data for database triggers and history tracking
+
 ## Project-Specific Notes
 
 ### Object Relations & Hierarchy
@@ -352,9 +411,27 @@ Used for: object notes (general, meeting, reminder, important, etc.)
 - `GET /objects/:object_id/notes?language_id={id}` - List all notes for an object with translated content
 - `GET /notes/:id?language_id={id}` - Get single note by ID with translated content
 - `POST /objects/:object_id/notes` - Create new note for an object (with translations)
-- `PUT /notes/:id` - Update existing note (updates translations for specified language)
+- `POST /notes/:id` - **Update existing note** (USE POST, not PUT - PUT method is not working)
 - `DELETE /notes/:id` - Soft delete note (sets is_active = false)
 - `PATCH /notes/:id/pin` - Toggle note pin status
+
+**CRITICAL - Use POST for Updates:**
+⚠️ **IMPORTANT**: For note updates, use **POST method** instead of PUT. The PUT method is not working on the n8n webhook endpoint. The POST method with the note ID in the URL path will handle updates correctly.
+
+**IMPORTANT - Update Request Format:**
+The notes update endpoint accepts old/new values (consistent with other tables):
+```json
+{
+  "note_type_id_old": 1,
+  "note_type_id_new": 2,
+  "subject_old": "Original subject",
+  "subject_new": "Updated subject",
+  "note_text_old": "Original text",
+  "note_text_new": "Updated text",
+  "language_id": 1
+}
+```
+The n8n workflow must be updated to handle this format.
 
 **Implementation Note:**
 The notes API requires a separate Axios client instance configured with the notes webhook base URL. See [src/lib/api/notes.ts](src/lib/api/notes.ts) for the implementation pattern.
@@ -408,6 +485,24 @@ Example GET request:
 GET /objects/123/notes?is_active=true
 X-Language-ID: 1
 ```
+
+Example POST request (update):
+```
+POST /notes/123
+Content-Type: application/json
+X-Language-ID: 1
+
+{
+  "note_type_id_old": 1,
+  "note_type_id_new": 2,
+  "subject_old": "Original subject",
+  "subject_new": "Updated subject",
+  "note_text_old": "Original text",
+  "note_text_new": "Updated text",
+  "language_id": 1
+}
+```
+⚠️ **Note**: Use POST method for updates, not PUT.
 
 ## Debugging Tips
 

@@ -32,9 +32,10 @@ import type { LookupItem } from '@/types/common';
 interface IdentificationsTabProps {
   objectId: number;
   objectTypeId?: number;
+  onDataChange?: () => void | Promise<void>;
 }
 
-export default function IdentificationsTab({ objectId, objectTypeId }: IdentificationsTabProps) {
+export default function IdentificationsTab({ objectId, objectTypeId, onDataChange }: IdentificationsTabProps) {
   console.log('🔵 IdentificationsTab component rendered with objectId:', objectId);
 
   const { t } = useTranslation();
@@ -137,6 +138,12 @@ export default function IdentificationsTab({ objectId, objectTypeId }: Identific
       if (response.success) {
         // Reload identifications to get the complete updated data
         await loadData();
+
+        // Trigger audit reload on parent
+        if (onDataChange) {
+          await onDataChange();
+        }
+
         setSuccessMessage(t('identifications.updated'));
 
         // Clear success message after 3 seconds
@@ -159,6 +166,12 @@ export default function IdentificationsTab({ objectId, objectTypeId }: Identific
 
       // Reload identifications to reflect the soft delete (is_active = false)
       await loadData();
+
+      // Trigger audit reload on parent
+      if (onDataChange) {
+        await onDataChange();
+      }
+
       setSuccessMessage(t('identifications.deleted'));
 
       // Clear success message after 3 seconds
@@ -189,6 +202,11 @@ export default function IdentificationsTab({ objectId, objectTypeId }: Identific
 
         // Reload identifications to get the complete data with proper IDs
         await loadData();
+
+        // Trigger audit reload on parent
+        if (onDataChange) {
+          await onDataChange();
+        }
 
         setSuccessMessage(t('identifications.created'));
 

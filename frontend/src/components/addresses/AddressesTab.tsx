@@ -31,9 +31,10 @@ import type { LookupItem } from '@/types/common';
 
 interface AddressesTabProps {
   objectId: number;
+  onDataChange?: () => void | Promise<void>;
 }
 
-export default function AddressesTab({ objectId }: AddressesTabProps) {
+export default function AddressesTab({ objectId, onDataChange }: AddressesTabProps) {
   console.log('🔵 AddressesTab component rendered with objectId:', objectId);
 
   const { t } = useTranslation();
@@ -65,9 +66,10 @@ export default function AddressesTab({ objectId }: AddressesTabProps) {
       setError(null);
 
       // Build params based on filter
-      const params: { is_active?: boolean } = {};
+      // Convert boolean to 0/1 for API
+      const params: { is_active?: number } = {};
       if (filterActive !== '') {
-        params.is_active = filterActive;
+        params.is_active = filterActive ? 1 : 0;
       }
 
       console.log('[AddressesTab] Making API calls with params:', params);
@@ -153,6 +155,12 @@ export default function AddressesTab({ objectId }: AddressesTabProps) {
       if (response.success) {
         // Reload addresses to get the complete updated data
         await loadData();
+
+        // Trigger audit reload on parent
+        if (onDataChange) {
+          await onDataChange();
+        }
+
         setSuccessMessage(t('addresses.updated'));
 
         // Clear success message after 3 seconds
@@ -175,6 +183,12 @@ export default function AddressesTab({ objectId }: AddressesTabProps) {
 
       // Reload addresses to reflect the soft delete (is_active = false)
       await loadData();
+
+      // Trigger audit reload on parent
+      if (onDataChange) {
+        await onDataChange();
+      }
+
       setSuccessMessage(t('addresses.deleted'));
 
       // Clear success message after 3 seconds
@@ -211,6 +225,11 @@ export default function AddressesTab({ objectId }: AddressesTabProps) {
 
         // Reload addresses to get the complete data with proper IDs
         await loadData();
+
+        // Trigger audit reload on parent
+        if (onDataChange) {
+          await onDataChange();
+        }
 
         setSuccessMessage(t('addresses.created'));
 

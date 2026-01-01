@@ -18,7 +18,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
+import { TextColumnFilter, SelectColumnFilter, CheckboxColumnFilter } from '@/components/ui/ColumnFilters';
 import { formatDateTime } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import type { Contact } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
@@ -55,12 +57,12 @@ export default function ContactsTable({
   filterActive,
   onFilterActiveChange,
 }: ContactsTableProps) {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<{ contact_type_id: number; contact_value: string; is_active: boolean } | null>(null);
   const [originalData, setOriginalData] = useState<{ contact_type_id: number; contact_value: string; is_active: boolean } | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [filterContactType, setFilterContactType] = useState<number | ''>('');
-  // filterActive is now managed by parent (server-side filtering)
+  const [filterContactValue, setFilterContactValue] = useState('');
   const [sortField, setSortField] = useState<SortField>('id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -107,11 +109,15 @@ export default function ContactsTable({
 
     let result = [...contacts];
 
-    // Apply client-side filters (contact type only - is_active is server-side)
+    // Apply client-side filters
     if (filterContactType !== '') {
       result = result.filter(c => c.contact_type_id === filterContactType);
     }
-    // Note: is_active filter is handled server-side via API call
+    if (filterContactValue) {
+      result = result.filter(c =>
+        c.contact_value?.toLowerCase().includes(filterContactValue.toLowerCase())
+      );
+    }
 
     // Apply sorting
     if (sortDirection !== null) {
@@ -140,7 +146,7 @@ export default function ContactsTable({
     }
 
     return result;
-  }, [contacts, filterContactType, sortField, sortDirection, contactTypes]);
+  }, [contacts, filterContactType, filterContactValue, sortField, sortDirection, contactTypes]);
 
   // Handle edit start
   const handleEdit = (contact: Contact) => {
@@ -200,7 +206,7 @@ export default function ContactsTable({
   if (isLoading) {
     return (
       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-        Loading contacts...
+        {t('contacts.loading')}
       </div>
     );
   }
@@ -211,58 +217,11 @@ export default function ContactsTable({
 
   return (
     <div className="space-y-4">
-      {/* Filter Toggle */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="ghost"
-          onClick={() => setShowFilters(!showFilters)}
-          className="text-sm"
-        >
-          {showFilters ? 'Hide Filters' : 'Show Filters'}
-        </Button>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Contact Type
-            </label>
-            <Select
-              value={filterContactType.toString()}
-              onChange={(e) => setFilterContactType(e.target.value === '' ? '' : Number(e.target.value))}
-              options={[
-                { value: '', label: 'All Types' },
-                ...contactTypes.map((type) => ({
-                  value: type.id,
-                  label: type.name || type.code
-                }))
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Status
-            </label>
-            <Select
-              value={filterActive === '' ? '' : filterActive.toString()}
-              onChange={(e) => onFilterActiveChange(e.target.value === '' ? '' : e.target.value === 'true')}
-              options={[
-                { value: '', label: 'All' },
-                { value: 'true', label: 'Active' },
-                { value: 'false', label: 'Inactive' }
-              ]}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
+            {/* Header Row */}
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -298,12 +257,48 @@ export default function ContactsTable({
                 Actions
               </th>
             </tr>
+            {/* Filter Row */}
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="px-6 py-2">
+                {/* No filter for ID */}
+              </th>
+              <th className="px-6 py-2">
+                <SelectColumnFilter
+                  value={filterContactType}
+                  onChange={(val) => setFilterContactType(val === '' || val === 0 ? '' : val as number)}
+                  options={contactTypes.map(type => ({
+                    value: type.id,
+                    label: type.name || type.code
+                  }))}
+                  placeholder={t('contacts.allTypes')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterContactValue}
+                  onChange={setFilterContactValue}
+                  placeholder={t('contacts.valuePlaceholder')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <CheckboxColumnFilter
+                  checked={filterActive === '' ? null : filterActive}
+                  onChange={(val) => onFilterActiveChange(val === null ? '' : val)}
+                />
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for created_at */}
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for actions */}
+              </th>
+            </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedContacts.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                  No contacts found
+                  {t('contacts.noContacts')}
                 </td>
               </tr>
             ) : (
@@ -440,7 +435,7 @@ export default function ContactsTable({
 
       {/* Summary */}
       <div className="text-sm text-gray-500 dark:text-gray-400">
-        Showing {filteredAndSortedContacts.length} of {contacts.length} contacts
+        {t('contacts.showing')} {filteredAndSortedContacts.length} {t('contacts.of')} {contacts.length} {contacts.length === 1 ? t('contacts.newContact').toLowerCase() : t('contacts.title').toLowerCase()}
       </div>
     </div>
   );

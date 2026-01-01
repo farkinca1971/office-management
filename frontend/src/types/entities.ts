@@ -357,12 +357,13 @@ export interface CreateObjectNoteRequest {
 }
 
 export interface UpdateObjectNoteRequest {
-  note_type_id?: number;
-  subject_code?: string; // Translation code for subject
-  subject?: string; // Subject text (for translation update)
-  note_text_code?: string; // Translation code for note text
-  note_text?: string; // Note text (for translation update)
-  is_pinned?: boolean;
+  // Old/new pattern for inline editing (consistent with other tables)
+  note_type_id_old?: number;
+  note_type_id_new?: number;
+  subject_old?: string;
+  subject_new?: string;
+  note_text_old: string;
+  note_text_new: string;
   language_id?: number; // Optional - automatically added by API interceptor
 }
 

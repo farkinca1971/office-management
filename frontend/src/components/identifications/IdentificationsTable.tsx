@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
+import { TextColumnFilter, SelectColumnFilter, CheckboxColumnFilter } from '@/components/ui/ColumnFilters';
 import { formatDateTime } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
 import type { Identification } from '@/types/entities';
@@ -60,9 +61,8 @@ export default function IdentificationsTable({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<{ identification_type_id: number; identification_value: string; is_active: boolean } | null>(null);
   const [originalData, setOriginalData] = useState<{ identification_type_id: number; identification_value: string; is_active: boolean } | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [filterIdentificationType, setFilterIdentificationType] = useState<number | ''>('');
-  // filterActive is now managed by parent (server-side filtering)
+  const [filterIdentificationValue, setFilterIdentificationValue] = useState('');
   const [sortField, setSortField] = useState<SortField>('id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -109,11 +109,15 @@ export default function IdentificationsTable({
 
     let result = [...identifications];
 
-    // Apply client-side filters (identification type only - is_active is server-side)
+    // Apply client-side filters
     if (filterIdentificationType !== '') {
       result = result.filter(i => i.identification_type_id === filterIdentificationType);
     }
-    // Note: is_active filter is handled server-side via API call
+    if (filterIdentificationValue) {
+      result = result.filter(i =>
+        i.identification_value?.toLowerCase().includes(filterIdentificationValue.toLowerCase())
+      );
+    }
 
     // Apply sorting
     if (sortDirection !== null) {
@@ -142,7 +146,7 @@ export default function IdentificationsTable({
     }
 
     return result;
-  }, [identifications, filterIdentificationType, sortField, sortDirection, identificationTypes, t]);
+  }, [identifications, filterIdentificationType, filterIdentificationValue, sortField, sortDirection, identificationTypes, t]);
 
   // Handle edit start
   const handleEdit = (identification: Identification) => {
@@ -213,58 +217,11 @@ export default function IdentificationsTable({
 
   return (
     <div className="space-y-4">
-      {/* Filter Toggle */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="ghost"
-          onClick={() => setShowFilters(!showFilters)}
-          className="text-sm"
-        >
-          {showFilters ? t('table.hideFilters') : t('table.showFilters')}
-        </Button>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('identifications.identificationType')}
-            </label>
-            <Select
-              value={filterIdentificationType.toString()}
-              onChange={(e) => setFilterIdentificationType(e.target.value === '' ? '' : Number(e.target.value))}
-              options={[
-                { value: '', label: t('identifications.allTypes') },
-                ...identificationTypes.map((type) => ({
-                  value: type.id,
-                  label: type.name || type.code
-                }))
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('forms.status')}
-            </label>
-            <Select
-              value={filterActive === '' ? '' : filterActive.toString()}
-              onChange={(e) => onFilterActiveChange(e.target.value === '' ? '' : e.target.value === 'true')}
-              options={[
-                { value: '', label: t('table.all') },
-                { value: 'true', label: t('table.active') },
-                { value: 'false', label: t('table.inactive') }
-              ]}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
+            {/* Header Row */}
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -298,6 +255,42 @@ export default function IdentificationsTable({
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('table.actions')}
+              </th>
+            </tr>
+            {/* Filter Row */}
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="px-6 py-2">
+                {/* No filter for ID */}
+              </th>
+              <th className="px-6 py-2">
+                <SelectColumnFilter
+                  value={filterIdentificationType}
+                  onChange={(val) => setFilterIdentificationType(val === '' || val === 0 ? '' : val as number)}
+                  options={identificationTypes.map(type => ({
+                    value: type.id,
+                    label: type.name || type.code
+                  }))}
+                  placeholder={t('identifications.allTypes')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterIdentificationValue}
+                  onChange={setFilterIdentificationValue}
+                  placeholder="ID number..."
+                />
+              </th>
+              <th className="px-6 py-2">
+                <CheckboxColumnFilter
+                  checked={filterActive === '' ? null : filterActive}
+                  onChange={(val) => onFilterActiveChange(val === null ? '' : val)}
+                />
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for created_at */}
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for actions */}
               </th>
             </tr>
           </thead>
