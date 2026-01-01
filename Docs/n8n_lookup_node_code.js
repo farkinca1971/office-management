@@ -16,7 +16,8 @@
  *            'sexes', 'salutations', 'product_categories' (or 'product-categories'), 'countries', 
  *            'address_types' (or 'address-types'), 'address_area_types' (or 'address-area-types'), 
  *            'contact_types' (or 'contact-types'), 'transaction_types' (or 'transaction-types'),
- *            'currencies', 'object_relation_types' (or ä'object-relation-types'), 'translations'
+ *            'currencies', 'object_relation_types' (or 'object-relation-types'), 'translations',
+ *            'note_types' (or 'note-types')
  *   Note: Hyphens are automatically converted to underscores (e.g., "object-types" -> "object_types")
  * 
  * - object_type_id: Filter for object_statuses (optional)
@@ -79,8 +80,11 @@ const validLookupTypes = [
   'address_area_types',
   'contact_types',
   'transaction_types',
+  'identification_types',
+  'audit_actions',
   'currencies',
   'object_relation_types',
+  'note_types',
   'translations'
 ];
 
@@ -157,6 +161,30 @@ WHERE ot.is_active = 1
 ORDER BY ot.code;
     `;
     break;
+
+ case 'identification_types':
+    // Identification Types: similar to contact_types, includes optional object_type_id filter
+    // This lookup is scoped by object type (person, company, employee, etc.)
+    const idTypeWhere = [];
+    idTypeWhere.push('it.is_active = 1');
+    if (objectTypeId) {
+      idTypeWhere.push(`it.object_type_id = ${parseInt(objectTypeId)}`);
+    }
+    const idTypeJoin = buildTranslationJoin('it');
+    
+    sqlQuery = `
+SELECT 
+    it.id,
+    it.code,
+    it.is_active,
+    it.object_type_id,
+    t.text as name
+FROM identification_types it
+${idTypeJoin.join}
+WHERE ${idTypeWhere.join(' AND ')}
+ORDER BY t.text;
+    `;
+    break;    
 
   case 'object_statuses':
     const statusWhere = [];
@@ -268,7 +296,6 @@ SELECT
     t.text as name
 FROM address_area_types aat
 ${aatJoin.join}
-WHERE aat.is_active = 1
 ORDER BY aat.code;
     `;
     break;
@@ -318,21 +345,64 @@ ORDER BY c.code;
     `;
     break;
 
-  case 'object_relation_types':
-    const ortJoin = buildTranslationJoin('ort');
+  case 'note_types':
+    // Note Types: lookup table for categorizing notes (general, meeting, reminder, etc.)
+    // Codes: note_general, note_meeting, note_reminder, note_important, note_follow_up, note_internal, note_customer_facing
+    const ntJoin = buildTranslationJoin('nt');
     sqlQuery = `
+SELECT 
+    nt.id,
+    nt.code,
+    nt.is_active,
+    t.text as name
+FROM note_types nt
+${ntJoin.join}
+WHERE nt.is_active = 1
+ORDER BY t.text;
+    `;
+    break;
+
+case 'object_relation_types':
+  const ortJoin = buildTranslationJoin('ort');
+  sqlQuery = `
 SELECT 
     ort.id,
     ort.code,
     ort.is_active,
-    ort.object_type_id,
+    ort.parent_object_type_id,
+    ort.child_object_type_id,
+    ort.mirrored_type_id,
     t.text as name
 FROM object_relation_types ort
 ${ortJoin.join}
 WHERE ort.is_active = 1
 ORDER BY ort.code;
-    `;
-    break;
+  `;
+  break;
+
+ case 'audit_actions':
+  // Audit Actions: similar to object_statuses, includes object_type_id filter
+  const auditWhere = [];
+  auditWhere.push('aa.is_active = 1');
+  if (objectTypeId) {
+    auditWhere.push(`aa.object_type_id = ${parseInt(objectTypeId)}`);
+  }
+  const auditJoin = buildTranslationJoin('aa');
+
+  sqlQuery = `
+SELECT
+    aa.id,
+    aa.code,
+    aa.is_active,
+    aa.object_type_id,
+    t.text as name
+FROM audit_actions aa
+${auditJoin.join}
+WHERE ${auditWhere.join(' AND ')}
+ORDER BY aa.code;
+  `;
+  break;
+   
 
   case 'translations':
     const translationWhere = [];
@@ -391,4 +461,3 @@ return {
     }
   }
 };
-

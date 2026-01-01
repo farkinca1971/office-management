@@ -15,13 +15,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import AddressesTable from './AddressesTable';
 import { AddressCard } from './AddressCard';
+import { AddressFormModal } from './AddressFormModal';
+import type { AddressFormData } from './AddressFormModal';
 import { addressApi, lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
@@ -48,16 +48,8 @@ export default function AddressesTab({ objectId }: AddressesTabProps) {
   // Filter state (managed here for server-side filtering)
   const [filterActive, setFilterActive] = useState<boolean | ''>('');
 
-  // New address form state
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [newAddressType, setNewAddressType] = useState<number | ''>('');
-  const [newStreetAddress1, setNewStreetAddress1] = useState('');
-  const [newStreetAddress2, setNewStreetAddress2] = useState('');
-  const [newAddressAreaType, setNewAddressAreaType] = useState<number | ''>('');
-  const [newCity, setNewCity] = useState('');
-  const [newStateProvince, setNewStateProvince] = useState('');
-  const [newPostalCode, setNewPostalCode] = useState('');
-  const [newCountry, setNewCountry] = useState<number | ''>('');
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const language = useLanguageStore((state) => state.language);
@@ -195,45 +187,31 @@ export default function AddressesTab({ objectId }: AddressesTabProps) {
   };
 
   // Handle create new address
-  const handleCreateAddress = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!newAddressType || !newStreetAddress1.trim() || !newCity.trim() || !newCountry) {
-      setError(t('common.fillRequiredFields'));
-      return;
-    }
-
+  const handleCreateAddress = async (data: AddressFormData) => {
+    setIsCreating(true);
     try {
-      setIsCreating(true);
       setError(null);
       setSuccessMessage(null);
 
       const response = await addressApi.create(objectId, {
         object_id: objectId,
-        address_type_id: Number(newAddressType),
-        street_address_1: newStreetAddress1.trim(),
-        street_address_2: newStreetAddress2.trim() || undefined,
-        address_area_type_id: newAddressAreaType ? Number(newAddressAreaType) : undefined,
-        city: newCity.trim(),
-        state_province: newStateProvince.trim() || undefined,
-        postal_code: newPostalCode.trim() || undefined,
-        country_id: Number(newCountry),
+        address_type_id: data.address_type_id,
+        street_address_1: data.street_address_1.trim(),
+        street_address_2: data.street_address_2?.trim() || undefined,
+        address_area_type_id: data.address_area_type_id,
+        city: data.city.trim(),
+        state_province: data.state_province?.trim() || undefined,
+        postal_code: data.postal_code?.trim() || undefined,
+        country_id: data.country_id,
       });
 
       if (response.success && response.data) {
+        // Close modal
+        setIsModalOpen(false);
+
         // Reload addresses to get the complete data with proper IDs
         await loadData();
 
-        // Reset form
-        setNewAddressType('');
-        setNewStreetAddress1('');
-        setNewStreetAddress2('');
-        setNewAddressAreaType('');
-        setNewCity('');
-        setNewStateProvince('');
-        setNewPostalCode('');
-        setNewCountry('');
-        setShowNewForm(false);
         setSuccessMessage(t('addresses.created'));
 
         // Clear success message after 3 seconds
@@ -242,6 +220,7 @@ export default function AddressesTab({ objectId }: AddressesTabProps) {
     } catch (err: any) {
       console.error('Error creating address:', err);
       setError(err?.error?.message || t('addresses.loadFailed'));
+      throw err;
     } finally {
       setIsCreating(false);
     }
@@ -311,185 +290,28 @@ export default function AddressesTab({ objectId }: AddressesTabProps) {
         </div>
       )}
 
-      {/* New Address Section */}
+      {/* New Address Button */}
       <div className="border-t pt-4">
-        {!showNewForm ? (
-          <Button
-            variant="primary"
-            onClick={() => setShowNewForm(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            {t('addresses.addNew')}
-          </Button>
-        ) : (
-          <Card>
-            <form onSubmit={handleCreateAddress} className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {t('addresses.newAddress')}
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Address Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('addresses.addressType')} <span className="text-red-500">*</span>
-                  </label>
-                  <Select
-                    value={newAddressType.toString()}
-                    onChange={(e) => setNewAddressType(e.target.value === '' ? '' : Number(e.target.value))}
-                    required
-                    options={addressTypes
-                      .filter(type => type.is_active)
-                      .map((type) => ({
-                        value: type.id,
-                        label: type.name || type.code
-                      }))}
-                    placeholder={t('addresses.selectAddressType')}
-                  />
-                </div>
-
-                {/* Street Address 1 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('addresses.streetAddress1')} <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={newStreetAddress1}
-                    onChange={(e) => setNewStreetAddress1(e.target.value)}
-                    placeholder={t('addresses.streetAddress1Placeholder')}
-                    required
-                  />
-                </div>
-
-                {/* Street Address 2 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('addresses.streetAddress2')}
-                  </label>
-                  <Input
-                    type="text"
-                    value={newStreetAddress2}
-                    onChange={(e) => setNewStreetAddress2(e.target.value)}
-                    placeholder={t('addresses.streetAddress2Placeholder')}
-                  />
-                </div>
-
-                {/* Address Area Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('addresses.addressAreaType')}
-                  </label>
-                  <Select
-                    value={newAddressAreaType.toString()}
-                    onChange={(e) => setNewAddressAreaType(e.target.value === '' ? '' : Number(e.target.value))}
-                    options={[
-                      { value: '', label: t('addresses.none') },
-                      ...addressAreaTypes
-                        .filter(type => type.is_active)
-                        .map((type) => ({
-                          value: type.id,
-                          label: type.name || type.code
-                        }))
-                    ]}
-                  />
-                </div>
-
-                {/* City */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('addresses.city')} <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={newCity}
-                    onChange={(e) => setNewCity(e.target.value)}
-                    placeholder={t('addresses.cityPlaceholder')}
-                    required
-                  />
-                </div>
-
-                {/* State/Province */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('addresses.stateProvince')}
-                  </label>
-                  <Input
-                    type="text"
-                    value={newStateProvince}
-                    onChange={(e) => setNewStateProvince(e.target.value)}
-                    placeholder={t('addresses.stateProvincePlaceholder')}
-                  />
-                </div>
-
-                {/* Postal Code */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('addresses.postalCode')}
-                  </label>
-                  <Input
-                    type="text"
-                    value={newPostalCode}
-                    onChange={(e) => setNewPostalCode(e.target.value)}
-                    placeholder={t('addresses.postalCodePlaceholder')}
-                  />
-                </div>
-
-                {/* Country */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('addresses.country')} <span className="text-red-500">*</span>
-                  </label>
-                  <Select
-                    value={newCountry.toString()}
-                    onChange={(e) => setNewCountry(e.target.value === '' ? '' : Number(e.target.value))}
-                    required
-                    options={countries
-                      .filter(country => country.is_active)
-                      .map((country) => ({
-                        value: country.id,
-                        label: country.name || country.code
-                      }))}
-                    placeholder={t('addresses.selectCountry')}
-                  />
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={isCreating}
-                  className="flex items-center gap-2"
-                >
-                  {isCreating ? t('addresses.creating') : t('addresses.createAddress')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setShowNewForm(false);
-                    setNewAddressType('');
-                    setNewStreetAddress1('');
-                    setNewStreetAddress2('');
-                    setNewAddressAreaType('');
-                    setNewCity('');
-                    setNewStateProvince('');
-                    setNewPostalCode('');
-                    setNewCountry('');
-                    setError(null);
-                  }}
-                  disabled={isCreating}
-                >
-                  {t('common.cancel')}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
+        <Button
+          variant="primary"
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          {t('addresses.addNew')}
+        </Button>
       </div>
+
+      {/* Address Form Modal */}
+      <AddressFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateAddress}
+        addressTypes={addressTypes}
+        addressAreaTypes={addressAreaTypes}
+        countries={countries}
+        isSubmitting={isCreating}
+      />
     </div>
   );
 }

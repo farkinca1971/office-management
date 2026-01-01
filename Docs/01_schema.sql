@@ -136,6 +136,16 @@ CREATE TABLE currencies (
     FOREIGN KEY (code) REFERENCES translations(code) ON DELETE RESTRICT
 );
 
+-- ----------------------------------------------------------------------------
+-- Note Types: Types of notes/comments
+-- ----------------------------------------------------------------------------
+CREATE TABLE note_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL COMMENT 'Note type code (e.g., general, meeting, reminder)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this note type is currently active',
+    FOREIGN KEY (code) REFERENCES translations(code) ON DELETE RESTRICT
+);
+
 -- ============================================================================
 -- SECTION 2: TRANSLATIONS TABLE
 -- ============================================================================
@@ -443,6 +453,38 @@ CREATE TABLE object_identifications (
     INDEX idx_identification_type_id (identification_type_id),
     INDEX idx_is_active (is_active),
     INDEX idx_object_active (object_id, is_active)
+);
+
+-- ----------------------------------------------------------------------------
+-- Object Notes: Notes and comments associated with objects
+-- ----------------------------------------------------------------------------
+-- Subject and note_text reference translations table via code field.
+-- This allows multi-language support for note content.
+-- Translation codes are generated as: 'note_subject_{id}' and 'note_text_{id}'
+CREATE TABLE object_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    object_id BIGINT NOT NULL COMMENT 'References objects.id - the object this note belongs to',
+    note_type_id INT COMMENT 'Optional: Type of note (general, meeting, reminder, etc.)',
+    subject_code VARCHAR(100) COMMENT 'Translation code for subject - references translations(code)',
+    note_text_code VARCHAR(100) NOT NULL COMMENT 'Translation code for note content - references translations(code)',
+    is_pinned BOOLEAN DEFAULT FALSE COMMENT 'Whether this note should be pinned/highlighted',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this note is currently active (soft delete)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When the note was created',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'When the note was last updated',
+    created_by BIGINT COMMENT 'User/object who created this note',
+    FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (note_type_id) REFERENCES note_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (subject_code) REFERENCES translations(code) ON DELETE RESTRICT,
+    FOREIGN KEY (note_text_code) REFERENCES translations(code) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL,
+    INDEX idx_object_id (object_id),
+    INDEX idx_note_type_id (note_type_id),
+    INDEX idx_subject_code (subject_code),
+    INDEX idx_note_text_code (note_text_code),
+    INDEX idx_is_active (is_active),
+    INDEX idx_is_pinned (is_pinned),
+    INDEX idx_object_active (object_id, is_active),
+    INDEX idx_created_at (created_at)
 );
 
 -- ----------------------------------------------------------------------------

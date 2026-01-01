@@ -339,6 +339,76 @@ The addresses API requires a separate Axios client instance configured with the 
 - Supports soft deletes via `is_active` flag
 - Fields: street_address_1, street_address_2, city, state_province, postal_code, latitude, longitude
 
+#### Notes API - Separate Webhook Endpoint
+**IMPORTANT**: The notes API uses the **same dedicated webhook endpoint** as contacts, identifications, and addresses:
+
+**Notes API Webhook:**
+```
+https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1
+```
+Used for: object notes (general, meeting, reminder, important, etc.)
+
+**Notes Endpoints:**
+- `GET /objects/:object_id/notes?language_id={id}` - List all notes for an object with translated content
+- `GET /notes/:id?language_id={id}` - Get single note by ID with translated content
+- `POST /objects/:object_id/notes` - Create new note for an object (with translations)
+- `PUT /notes/:id` - Update existing note (updates translations for specified language)
+- `DELETE /notes/:id` - Soft delete note (sets is_active = false)
+- `PATCH /notes/:id/pin` - Toggle note pin status
+
+**Implementation Note:**
+The notes API requires a separate Axios client instance configured with the notes webhook base URL. See [src/lib/api/notes.ts](src/lib/api/notes.ts) for the implementation pattern.
+
+**Database Tables:**
+- `note_types` - Lookup table for note categories
+  - Foreign key: `code` → `translations.code` (lookup table)
+  - Codes: note_general, note_meeting, note_reminder, note_important, note_follow_up, note_internal, note_customer_facing
+  - Supports soft deletes via `is_active` flag
+
+- `object_notes` - Links notes to any object (person, company, employee, etc.)
+  - Foreign key: `object_id` → `objects.id`
+  - Foreign key: `note_type_id` → `note_types.id` (lookup table, optional)
+  - Foreign key: `subject_code` → `translations.code` (translation code for subject)
+  - Foreign key: `note_text_code` → `translations.code` (translation code for note content)
+  - Foreign key: `created_by` → `objects.id` (user who created the note)
+  - Supports soft deletes via `is_active` flag
+  - Supports pinning via `is_pinned` flag (pinned notes appear first)
+  - **Multi-language support**: subject and note_text are stored in translations table
+  - Translation codes are generated as: `note_subject_{note_id}` and `note_text_{note_id}`
+  - Sorted by: is_pinned DESC, created_at DESC (pinned notes first, then newest)
+
+**Frontend Implementation:**
+- **API Client**: [src/lib/api/notes.ts](src/lib/api/notes.ts) - Dedicated Axios instance with notes webhook URL
+- **Component**: [src/components/notes/NotesTable.tsx](src/components/notes/NotesTable.tsx) - Display component with sorting and pin toggle
+- **Types**: [src/types/entities.ts](src/types/entities.ts) - ObjectNote, CreateObjectNoteRequest, UpdateObjectNoteRequest
+- **Integration**: Notes tab added to [src/app/persons/page.tsx](src/app/persons/page.tsx) (similar to audits tab)
+- **Features**:
+  - Sortable columns (ID, Type, Created At)
+  - Pin/unpin functionality with visual indicator (yellow background for pinned notes)
+  - Multi-language content retrieval based on current language setting
+  - Automatic language_id injection in request body for ALL methods (GET, POST, PUT, PATCH, DELETE)
+  - Loading states and error handling
+  - Line-clamp (max 3 lines) for note text in table view
+
+**CRITICAL - Language ID Handling:**
+The `language_id` must NOT be sent in the query string for GET requests because n8n's Set node would incorrectly add it to the SQL WHERE clause (where `object_notes` table has no `language_id` column). Instead:
+
+- For **POST/PUT/PATCH requests**: `language_id` is sent in the request body
+- For **GET/DELETE requests**: `language_id` is sent in a custom HTTP header `X-Language-ID`
+- The interceptor in [src/lib/api/notes.ts](src/lib/api/notes.ts) automatically handles this based on the HTTP method
+
+**n8n Workflow Configuration:**
+The n8n workflow must be configured to:
+1. Read `language_id` from the `X-Language-ID` header for GET requests
+2. Use it in the JOIN clause: `LEFT JOIN translations ts ON ts.code = n.subject_code AND ts.language_id = {{ $headers['x-language-id'] }}`
+3. NOT include it in the WHERE clause
+
+Example GET request:
+```
+GET /objects/123/notes?is_active=true
+X-Language-ID: 1
+```
+
 ## Debugging Tips
 
 1. **API Issues**: Check browser DevTools Network tab → inspect request/response payloads

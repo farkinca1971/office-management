@@ -208,6 +208,32 @@ export const en = {
     unknownAction: 'Unknown Action',
   },
 
+  notes: {
+    title: 'Notes',
+    note: 'note',
+    notes: 'notes',
+    loadFailed: 'Failed to load notes',
+    noNotes: 'No notes found',
+    addNew: 'Add New Note',
+    type: 'Type',
+    subject: 'Subject',
+    noteText: 'Note',
+    createdAt: 'Created At',
+    createdBy: 'Created By',
+    pin: 'Pin',
+    unpin: 'Unpin',
+    unknownType: 'Unknown Type',
+    selectType: 'Select note type (optional)',
+    subjectPlaceholder: 'Enter note subject (optional)',
+    noteTextPlaceholder: 'Enter your note here...',
+    noteTextRequired: 'Note text is required',
+    pinNote: 'Pin this note',
+    createNote: 'Create Note',
+    creating: 'Creating...',
+    createSuccess: 'Note created successfully',
+    createFailed: 'Failed to create note',
+  },
+
   // Forms - New pages
   forms: {
     // Common form fields

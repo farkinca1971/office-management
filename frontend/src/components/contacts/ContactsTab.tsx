@@ -15,13 +15,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import ContactsTable from './ContactsTable';
 import { ContactCard } from './ContactCard';
+import { ContactFormModal } from './ContactFormModal';
+import type { ContactFormData } from './ContactFormModal';
 import { contactApi, lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
@@ -44,10 +44,8 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
   // Filter state (managed here for server-side filtering)
   const [filterActive, setFilterActive] = useState<boolean | ''>('');
 
-  // New contact form state
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [newContactType, setNewContactType] = useState<number | ''>('');
-  const [newContactValue, setNewContactValue] = useState('');
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const language = useLanguageStore((state) => state.language);
@@ -171,33 +169,25 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
   };
 
   // Handle create new contact
-  const handleCreateContact = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!newContactType || !newContactValue.trim()) {
-      setError('Please fill in all fields');
-      return;
-    }
-
+  const handleCreateContact = async (data: ContactFormData) => {
+    setIsCreating(true);
     try {
-      setIsCreating(true);
       setError(null);
       setSuccessMessage(null);
 
       const response = await contactApi.create(objectId, {
         object_id: objectId,
-        contact_type_id: Number(newContactType),
-        contact_value: newContactValue.trim(),
+        contact_type_id: data.contact_type_id,
+        contact_value: data.contact_value.trim(),
       });
 
       if (response.success && response.data) {
+        // Close modal
+        setIsModalOpen(false);
+
         // Reload contacts to get the complete data with proper IDs
         await loadData();
 
-        // Reset form
-        setNewContactType('');
-        setNewContactValue('');
-        setShowNewForm(false);
         setSuccessMessage('Contact created successfully');
 
         // Clear success message after 3 seconds
@@ -206,6 +196,7 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
     } catch (err: any) {
       console.error('Error creating contact:', err);
       setError(err?.error?.message || 'Failed to create contact');
+      throw err;
     } finally {
       setIsCreating(false);
     }
@@ -271,87 +262,26 @@ export default function ContactsTab({ objectId }: ContactsTabProps) {
         </div>
       )}
 
-      {/* New Contact Section */}
+      {/* New Contact Button */}
       <div className="border-t pt-4">
-        {!showNewForm ? (
-          <Button
-            variant="primary"
-            onClick={() => setShowNewForm(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add New Contact
-          </Button>
-        ) : (
-          <Card>
-            <form onSubmit={handleCreateContact} className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                New Contact
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Contact Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Contact Type <span className="text-red-500">*</span>
-                  </label>
-                  <Select
-                    value={newContactType.toString()}
-                    onChange={(e) => setNewContactType(e.target.value === '' ? '' : Number(e.target.value))}
-                    required
-                    options={contactTypes
-                      .filter(type => type.is_active)
-                      .map((type) => ({
-                        value: type.id,
-                        label: type.name || type.code
-                      }))}
-                    placeholder="Select contact type..."
-                  />
-                </div>
-
-                {/* Contact Value */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Contact Value <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={newContactValue}
-                    onChange={(e) => setNewContactValue(e.target.value)}
-                    placeholder="e.g., email@example.com or +1-555-1234"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={isCreating}
-                  className="flex items-center gap-2"
-                >
-                  {isCreating ? 'Creating...' : 'Create Contact'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setShowNewForm(false);
-                    setNewContactType('');
-                    setNewContactValue('');
-                    setError(null);
-                  }}
-                  disabled={isCreating}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
+        <Button
+          variant="primary"
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add New Contact
+        </Button>
       </div>
+
+      {/* Contact Form Modal */}
+      <ContactFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateContact}
+        contactTypes={contactTypes}
+        isSubmitting={isCreating}
+      />
     </div>
   );
 }

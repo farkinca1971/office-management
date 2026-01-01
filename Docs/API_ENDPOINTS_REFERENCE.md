@@ -1787,6 +1787,344 @@ SELECT 1 as success;
 
 ---
 
+## Notes Endpoints
+
+### Database Schema Reference
+
+```sql
+CREATE TABLE note_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL COMMENT 'Note type code (e.g., note_general, note_meeting)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this note type is currently active',
+    FOREIGN KEY (code) REFERENCES translations(code) ON DELETE RESTRICT
+);
+
+CREATE TABLE object_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    object_id BIGINT NOT NULL COMMENT 'References objects.id - the object this note belongs to',
+    note_type_id INT COMMENT 'Optional: Type of note (general, meeting, reminder, etc.)',
+    subject_code VARCHAR(100) COMMENT 'Translation code for subject - references translations(code)',
+    note_text_code VARCHAR(100) NOT NULL COMMENT 'Translation code for note content - references translations(code)',
+    is_pinned BOOLEAN DEFAULT FALSE COMMENT 'Whether this note should be pinned/highlighted',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this note is currently active (soft delete)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When the note was created',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'When the note was last updated',
+    created_by BIGINT COMMENT 'User/object who created this note',
+    FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE CASCADE,
+    FOREIGN KEY (note_type_id) REFERENCES note_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (subject_code) REFERENCES translations(code) ON DELETE RESTRICT,
+    FOREIGN KEY (note_text_code) REFERENCES translations(code) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL
+);
+```
+
+**Note**: The `subject_code` and `note_text_code` columns reference the `translations` table, allowing multi-language support for note content. Translation codes are typically generated as `note_subject_{note_id}` and `note_text_{note_id}`.
+
+---
+
+### 42. Get Object Notes
+
+**Endpoint**: `GET /api/v1/objects/{object_id}/notes?is_active={true|false}&is_pinned={true|false}`
+
+**Headers**:
+- `X-Language-ID`: Language ID for translations (e.g., `1` for English, `2` for German, `3` for Hungarian)
+
+**Description**: Retrieve all notes for a specific object with translated content, optionally filtered by active status or pinned status. The `language_id` is sent via the `X-Language-ID` header (NOT in query string) to avoid SQL WHERE clause conflicts.
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "object_id": 100,
+      "note_type_id": 1,
+      "subject_code": "note_subject_1",
+      "note_text_code": "note_text_1",
+      "subject": "First meeting",
+      "note_text": "Discussed project requirements and timeline.",
+      "is_pinned": false,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "created_by": 1
+    }
+  ]
+}
+```
+
+**MySQL Query**:
+```sql
+-- Note: language_id is read from X-Language-ID header, not from query params
+SELECT
+    n.id,
+    n.object_id,
+    n.note_type_id,
+    n.subject_code,
+    n.note_text_code,
+    ts.text AS subject,
+    tt.text AS note_text,
+    n.is_pinned,
+    n.is_active,
+    n.created_at,
+    n.updated_at,
+    n.created_by
+FROM object_notes n
+LEFT JOIN translations ts ON ts.code = n.subject_code AND ts.language_id = {{ $headers['x-language-id'] }}
+LEFT JOIN translations tt ON tt.code = n.note_text_code AND tt.language_id = {{ $headers['x-language-id'] }}
+WHERE n.object_id = {{ $json.params.object_id }}
+    AND ({{ $json.query.is_active }} IS NULL OR n.is_active = {{ $json.query.is_active }})
+    AND ({{ $json.query.is_pinned }} IS NULL OR n.is_pinned = {{ $json.query.is_pinned }})
+ORDER BY n.is_pinned DESC, n.created_at DESC;
+```
+
+---
+
+### 43. Add Note to Object
+
+**Endpoint**: `POST /api/v1/objects/{object_id}/notes`
+
+**Description**: Create a new note for an object. The API should generate unique translation codes and insert translations for each provided language.
+
+**Request Body**:
+```json
+{
+  "note_type_id": 1,
+  "subject": "First meeting",
+  "note_text": "Discussed project requirements and timeline.",
+  "is_pinned": false,
+  "created_by": 1,
+  "language_id": 1
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "object_id": 100,
+    "note_type_id": 1,
+    "subject_code": "note_subject_1",
+    "note_text_code": "note_text_1",
+    "subject": "First meeting",
+    "note_text": "Discussed project requirements and timeline.",
+    "is_pinned": false,
+    "is_active": true,
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "created_by": 1
+  }
+}
+```
+
+**MySQL Query** (Multi-step process):
+```sql
+-- Step 1: Insert the note first to get the auto-generated ID
+INSERT INTO object_notes (
+    object_id,
+    note_type_id,
+    subject_code,
+    note_text_code,
+    is_pinned,
+    is_active,
+    created_by
+) VALUES (
+    {{ $json.params.object_id }},
+    {{ $json.body.note_type_id }},
+    NULL,  -- Will be updated after getting the ID
+    NULL,  -- Will be updated after getting the ID
+    COALESCE({{ $json.body.is_pinned }}, 0),
+    1,
+    {{ $json.body.created_by }}
+);
+
+SET @note_id = LAST_INSERT_ID();
+SET @subject_code = CONCAT('note_subject_', @note_id);
+SET @note_text_code = CONCAT('note_text_', @note_id);
+
+-- Step 2: Insert translations for subject (if provided)
+INSERT INTO translations (code, language_id, text) VALUES
+(@subject_code, {{ $json.body.language_id }}, {{ $json.body.subject }});
+
+-- Step 3: Insert translations for note_text
+INSERT INTO translations (code, language_id, text) VALUES
+(@note_text_code, {{ $json.body.language_id }}, {{ $json.body.note_text }});
+
+-- Step 4: Update the note with translation codes
+UPDATE object_notes
+SET subject_code = @subject_code, note_text_code = @note_text_code
+WHERE id = @note_id;
+
+-- Step 5: Return the created note with translations
+SELECT
+    n.id,
+    n.object_id,
+    n.note_type_id,
+    n.subject_code,
+    n.note_text_code,
+    ts.text AS subject,
+    tt.text AS note_text,
+    n.is_pinned,
+    n.is_active,
+    n.created_at,
+    n.updated_at,
+    n.created_by
+FROM object_notes n
+LEFT JOIN translations ts ON ts.code = n.subject_code AND ts.language_id = {{ $json.body.language_id }}
+LEFT JOIN translations tt ON tt.code = n.note_text_code AND tt.language_id = {{ $json.body.language_id }}
+WHERE n.id = @note_id;
+```
+
+---
+
+### 44. Update Note
+
+**Endpoint**: `PUT /api/v1/notes/{note_id}`
+
+**Description**: Update an existing note. Updates the translation for the specified language.
+
+**Request Body**:
+```json
+{
+  "note_type_id": 2,
+  "subject": "Updated meeting notes",
+  "note_text": "Revised discussion points and action items.",
+  "is_pinned": true,
+  "language_id": 1
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "object_id": 100,
+    "note_type_id": 2,
+    "subject_code": "note_subject_1",
+    "note_text_code": "note_text_1",
+    "subject": "Updated meeting notes",
+    "note_text": "Revised discussion points and action items.",
+    "is_pinned": true,
+    "is_active": true,
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T11:30:00Z",
+    "created_by": 1
+  }
+}
+```
+
+**MySQL Query**:
+```sql
+-- Get the existing translation codes
+SELECT subject_code, note_text_code INTO @subject_code, @note_text_code
+FROM object_notes WHERE id = {{ $json.params.note_id }};
+
+-- Update or insert subject translation
+INSERT INTO translations (code, language_id, text)
+VALUES (@subject_code, {{ $json.body.language_id }}, {{ $json.body.subject }})
+ON DUPLICATE KEY UPDATE text = {{ $json.body.subject }};
+
+-- Update or insert note_text translation
+INSERT INTO translations (code, language_id, text)
+VALUES (@note_text_code, {{ $json.body.language_id }}, {{ $json.body.note_text }})
+ON DUPLICATE KEY UPDATE text = {{ $json.body.note_text }};
+
+-- Update the note metadata
+UPDATE object_notes
+SET
+    note_type_id = COALESCE({{ $json.body.note_type_id }}, note_type_id),
+    is_pinned = COALESCE({{ $json.body.is_pinned }}, is_pinned),
+    updated_at = NOW()
+WHERE id = {{ $json.params.note_id }};
+
+-- Return the updated note with translations
+SELECT
+    n.id,
+    n.object_id,
+    n.note_type_id,
+    n.subject_code,
+    n.note_text_code,
+    ts.text AS subject,
+    tt.text AS note_text,
+    n.is_pinned,
+    n.is_active,
+    n.created_at,
+    n.updated_at,
+    n.created_by
+FROM object_notes n
+LEFT JOIN translations ts ON ts.code = n.subject_code AND ts.language_id = {{ $json.body.language_id }}
+LEFT JOIN translations tt ON tt.code = n.note_text_code AND tt.language_id = {{ $json.body.language_id }}
+WHERE n.id = {{ $json.params.note_id }};
+```
+
+---
+
+### 45. Delete Note
+
+**Endpoint**: `DELETE /api/v1/notes/{note_id}`
+
+**Description**: Soft delete a note by setting is_active to false. Translations are preserved.
+
+**Response**:
+```json
+{
+  "success": true
+}
+```
+
+**MySQL Query**:
+```sql
+UPDATE object_notes
+SET is_active = 0
+WHERE id = {{ $json.params.note_id }};
+
+SELECT 1 as success;
+```
+
+---
+
+### 46. Toggle Note Pin Status
+
+**Endpoint**: `PATCH /api/v1/notes/{note_id}/pin`
+
+**Description**: Toggle the pinned status of a note.
+
+**Request Body**:
+```json
+{
+  "is_pinned": true
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "is_pinned": true
+  }
+}
+```
+
+**MySQL Query**:
+```sql
+UPDATE object_notes
+SET
+    is_pinned = {{ $json.body.is_pinned }},
+    updated_at = NOW()
+WHERE id = {{ $json.params.note_id }};
+
+SELECT id, is_pinned FROM object_notes WHERE id = {{ $json.params.note_id }};
+```
+
+---
+
 ## Invoice Endpoints
 
 ### Database Schema Reference

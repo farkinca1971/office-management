@@ -208,6 +208,32 @@ export const de = {
     unknownAction: 'Unbekannte Aktion',
   },
 
+  notes: {
+    title: 'Notizen',
+    note: 'Notiz',
+    notes: 'Notizen',
+    loadFailed: 'Notizen konnten nicht geladen werden',
+    noNotes: 'Keine Notizen gefunden',
+    addNew: 'Neue Notiz hinzufügen',
+    type: 'Typ',
+    subject: 'Betreff',
+    noteText: 'Notiz',
+    createdAt: 'Erstellt am',
+    createdBy: 'Erstellt von',
+    pin: 'Anheften',
+    unpin: 'Lösen',
+    unknownType: 'Unbekannter Typ',
+    selectType: 'Notiztyp auswählen (optional)',
+    subjectPlaceholder: 'Betreff eingeben (optional)',
+    noteTextPlaceholder: 'Notiz hier eingeben...',
+    noteTextRequired: 'Notiztext ist erforderlich',
+    pinNote: 'Diese Notiz anheften',
+    createNote: 'Notiz erstellen',
+    creating: 'Wird erstellt...',
+    createSuccess: 'Notiz erfolgreich erstellt',
+    createFailed: 'Notiz konnte nicht erstellt werden',
+  },
+
   // Forms - New pages
   forms: {
     // Common form fields

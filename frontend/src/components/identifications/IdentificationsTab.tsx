@@ -15,13 +15,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import IdentificationsTable from './IdentificationsTable';
 import { IdentificationCard } from './IdentificationCard';
+import { IdentificationFormModal } from './IdentificationFormModal';
+import type { IdentificationFormData } from './IdentificationFormModal';
 import { identificationApi, lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
@@ -47,10 +47,8 @@ export default function IdentificationsTab({ objectId, objectTypeId }: Identific
   // Filter state (managed here for server-side filtering)
   const [filterActive, setFilterActive] = useState<boolean | ''>('');
 
-  // New identification form state
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [newIdentificationType, setNewIdentificationType] = useState<number | ''>('');
-  const [newIdentificationValue, setNewIdentificationValue] = useState('');
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const language = useLanguageStore((state) => state.language);
@@ -173,33 +171,25 @@ export default function IdentificationsTab({ objectId, objectTypeId }: Identific
   };
 
   // Handle create new identification
-  const handleCreateIdentification = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!newIdentificationType || !newIdentificationValue.trim()) {
-      setError(t('forms.fillAllFields'));
-      return;
-    }
-
+  const handleCreateIdentification = async (data: IdentificationFormData) => {
+    setIsCreating(true);
     try {
-      setIsCreating(true);
       setError(null);
       setSuccessMessage(null);
 
       const response = await identificationApi.create(objectId, {
         object_id: objectId,
-        identification_type_id: Number(newIdentificationType),
-        identification_value: newIdentificationValue.trim(),
+        identification_type_id: data.identification_type_id,
+        identification_value: data.identification_value.trim(),
       });
 
       if (response.success && response.data) {
+        // Close modal
+        setIsModalOpen(false);
+
         // Reload identifications to get the complete data with proper IDs
         await loadData();
 
-        // Reset form
-        setNewIdentificationType('');
-        setNewIdentificationValue('');
-        setShowNewForm(false);
         setSuccessMessage(t('identifications.created'));
 
         // Clear success message after 3 seconds
@@ -208,6 +198,7 @@ export default function IdentificationsTab({ objectId, objectTypeId }: Identific
     } catch (err: any) {
       console.error('Error creating identification:', err);
       setError(err?.error?.message || t('identifications.loadFailed'));
+      throw err;
     } finally {
       setIsCreating(false);
     }
@@ -273,87 +264,26 @@ export default function IdentificationsTab({ objectId, objectTypeId }: Identific
         </div>
       )}
 
-      {/* New Identification Section */}
+      {/* New Identification Button */}
       <div className="border-t pt-4">
-        {!showNewForm ? (
-          <Button
-            variant="primary"
-            onClick={() => setShowNewForm(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            {t('identifications.addNew')}
-          </Button>
-        ) : (
-          <Card>
-            <form onSubmit={handleCreateIdentification} className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {t('identifications.newIdentification')}
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Identification Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('identifications.identificationType')} <span className="text-red-500">*</span>
-                  </label>
-                  <Select
-                    value={newIdentificationType.toString()}
-                    onChange={(e) => setNewIdentificationType(e.target.value === '' ? '' : Number(e.target.value))}
-                    required
-                    options={identificationTypes
-                      .filter(type => type.is_active)
-                      .map((type) => ({
-                        value: type.id,
-                        label: type.name || type.code
-                      }))}
-                    placeholder={t('forms.selectStatus')}
-                  />
-                </div>
-
-                {/* Identification Value */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('identifications.identificationValue')} <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={newIdentificationValue}
-                    onChange={(e) => setNewIdentificationValue(e.target.value)}
-                    placeholder={t('identifications.valuePlaceholder')}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={isCreating}
-                  className="flex items-center gap-2"
-                >
-                  {isCreating ? t('identifications.creating') : t('identifications.createIdentification')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setShowNewForm(false);
-                    setNewIdentificationType('');
-                    setNewIdentificationValue('');
-                    setError(null);
-                  }}
-                  disabled={isCreating}
-                >
-                  {t('common.cancel')}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
+        <Button
+          variant="primary"
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          {t('identifications.addNew')}
+        </Button>
       </div>
+
+      {/* Identification Form Modal */}
+      <IdentificationFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateIdentification}
+        identificationTypes={identificationTypes}
+        isSubmitting={isCreating}
+      />
     </div>
   );
 }

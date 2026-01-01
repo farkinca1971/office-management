@@ -208,6 +208,32 @@ export const hu = {
     unknownAction: 'Ismeretlen művelet',
   },
 
+  notes: {
+    title: 'Jegyzetek',
+    note: 'jegyzet',
+    notes: 'jegyzetek',
+    loadFailed: 'A jegyzetek betöltése sikertelen',
+    noNotes: 'Nincsenek jegyzetek',
+    addNew: 'Új jegyzet hozzáadása',
+    type: 'Típus',
+    subject: 'Tárgy',
+    noteText: 'Jegyzet',
+    createdAt: 'Létrehozva',
+    createdBy: 'Létrehozta',
+    pin: 'Rögzítés',
+    unpin: 'Rögzítés feloldása',
+    unknownType: 'Ismeretlen típus',
+    selectType: 'Válassz jegyzet típust (opcionális)',
+    subjectPlaceholder: 'Tárgy megadása (opcionális)',
+    noteTextPlaceholder: 'Írd ide a jegyzetedet...',
+    noteTextRequired: 'A jegyzet szövege kötelező',
+    pinNote: 'Jegyzet rögzítése',
+    createNote: 'Jegyzet létrehozása',
+    creating: 'Létrehozás...',
+    createSuccess: 'Jegyzet sikeresen létrehozva',
+    createFailed: 'A jegyzet létrehozása sikertelen',
+  },
+
   // Forms - New pages
   forms: {
     // Common form fields

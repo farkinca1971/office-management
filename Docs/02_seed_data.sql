@@ -2011,12 +2011,54 @@ SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'advis
 WHERE code = 'advisor_to';
 
 -- Update self-mirrored symmetric company relationships
-UPDATE object_relation_types 
-SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'competitor') 
+UPDATE object_relation_types
+SET mirrored_type_id = (SELECT id FROM object_relation_types WHERE code = 'competitor')
 WHERE code = 'competitor';
 
 -- ============================================================================
--- SECTION 15: OBJECT RELATIONS (Example Data)
+-- SECTION 15: NOTE TYPES
+-- ============================================================================
+
+INSERT INTO note_types (code, is_active) VALUES
+('note_general', TRUE),
+('note_meeting', TRUE),
+('note_reminder', TRUE),
+('note_important', TRUE),
+('note_follow_up', TRUE),
+('note_internal', TRUE),
+('note_customer_facing', TRUE);
+
+-- Insert translations for note_types (English, German, Hungarian)
+INSERT INTO translations (code, language_id, text) VALUES
+-- English translations
+('note_general', (SELECT id FROM languages WHERE code = 'en'), 'General Note'),
+('note_meeting', (SELECT id FROM languages WHERE code = 'en'), 'Meeting Note'),
+('note_reminder', (SELECT id FROM languages WHERE code = 'en'), 'Reminder'),
+('note_important', (SELECT id FROM languages WHERE code = 'en'), 'Important'),
+('note_follow_up', (SELECT id FROM languages WHERE code = 'en'), 'Follow-up'),
+('note_internal', (SELECT id FROM languages WHERE code = 'en'), 'Internal Note'),
+('note_customer_facing', (SELECT id FROM languages WHERE code = 'en'), 'Customer-facing Note'),
+
+-- German translations
+('note_general', (SELECT id FROM languages WHERE code = 'de'), 'Allgemeine Notiz'),
+('note_meeting', (SELECT id FROM languages WHERE code = 'de'), 'Besprechungsnotiz'),
+('note_reminder', (SELECT id FROM languages WHERE code = 'de'), 'Erinnerung'),
+('note_important', (SELECT id FROM languages WHERE code = 'de'), 'Wichtig'),
+('note_follow_up', (SELECT id FROM languages WHERE code = 'de'), 'Nachverfolgung'),
+('note_internal', (SELECT id FROM languages WHERE code = 'de'), 'Interne Notiz'),
+('note_customer_facing', (SELECT id FROM languages WHERE code = 'de'), 'Kundenorientierte Notiz'),
+
+-- Hungarian translations
+('note_general', (SELECT id FROM languages WHERE code = 'hu'), 'Általános jegyzet'),
+('note_meeting', (SELECT id FROM languages WHERE code = 'hu'), 'Találkozó jegyzet'),
+('note_reminder', (SELECT id FROM languages WHERE code = 'hu'), 'Emlékeztető'),
+('note_important', (SELECT id FROM languages WHERE code = 'hu'), 'Fontos'),
+('note_follow_up', (SELECT id FROM languages WHERE code = 'hu'), 'Nyomon követés'),
+('note_internal', (SELECT id FROM languages WHERE code = 'hu'), 'Belső jegyzet'),
+('note_customer_facing', (SELECT id FROM languages WHERE code = 'hu'), 'Ügyfélnek szánt jegyzet');
+
+-- ============================================================================
+-- SECTION 16: OBJECT RELATIONS (Example Data)
 -- ============================================================================
 -- Note: These are example relationships. In production, you would insert actual
 -- object IDs after creating objects. The examples below show the structure.

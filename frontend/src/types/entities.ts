@@ -328,3 +328,41 @@ export interface CreateObjectAuditRequest {
   notes?: string;
 }
 
+// Object Note
+export interface ObjectNote extends BaseEntity {
+  id: number;
+  object_id: number;
+  note_type_id?: number;
+  subject_code?: string;
+  note_text_code: string;
+  subject?: string; // Translated text from subject_code
+  note_text: string; // Translated text from note_text_code
+  is_pinned: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: number;
+  created_by_username?: string; // Username from users table
+}
+
+export interface CreateObjectNoteRequest {
+  note_type_id?: number;
+  subject_code?: string; // Translation code for subject (generated client-side)
+  subject?: string; // Subject text (for translation creation)
+  note_text_code: string; // Translation code for note text (generated client-side)
+  note_text: string; // Note text (for translation creation)
+  is_pinned?: boolean;
+  created_by?: number;
+  language_id?: number; // Optional - automatically added by API interceptor
+}
+
+export interface UpdateObjectNoteRequest {
+  note_type_id?: number;
+  subject_code?: string; // Translation code for subject
+  subject?: string; // Subject text (for translation update)
+  note_text_code?: string; // Translation code for note text
+  note_text?: string; // Note text (for translation update)
+  is_pinned?: boolean;
+  language_id?: number; // Optional - automatically added by API interceptor
+}
+

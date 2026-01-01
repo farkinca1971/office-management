@@ -343,5 +343,12 @@ export const lookupApi = {
   deleteTranslation: async (code: string, languageId: number): Promise<ApiResponse<{ success: true }>> => {
     return apiClient.delete(`${lookupPath('translations')}/${code}/${languageId}`);
   },
+
+  // Note Types
+  getNoteTypes: async (languageCode?: string): Promise<LookupListResponse<LookupItem>> => {
+    const params: any = {};
+    if (languageCode) params.language_code = languageCode;
+    return apiClient.get(lookupPath('note_types'), { params });
+  },
 };
 
