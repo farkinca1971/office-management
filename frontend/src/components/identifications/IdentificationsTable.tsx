@@ -44,7 +44,7 @@ interface IdentificationsTableProps {
   onFilterActiveChange: (value: boolean | '') => void;
 }
 
-type SortField = 'id' | 'identification_type_id' | 'identification_value' | 'created_at' | 'is_active';
+type SortField = 'identification_type_id' | 'identification_value' | 'created_at' | 'is_active';
 type SortDirection = 'asc' | 'desc' | null;
 
 export default function IdentificationsTable({
@@ -63,7 +63,7 @@ export default function IdentificationsTable({
   const [originalData, setOriginalData] = useState<{ identification_type_id: number; identification_value: string; is_active: boolean } | null>(null);
   const [filterIdentificationType, setFilterIdentificationType] = useState<number | ''>('');
   const [filterIdentificationValue, setFilterIdentificationValue] = useState('');
-  const [sortField, setSortField] = useState<SortField>('id');
+  const [sortField, setSortField] = useState<SortField>('identification_type_id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -81,7 +81,7 @@ export default function IdentificationsTable({
         setSortDirection('desc');
       } else if (sortDirection === 'desc') {
         setSortDirection(null);
-        setSortField('id'); // Reset to default
+        setSortField('identification_type_id'); // Reset to default
       } else {
         setSortDirection('asc');
       }
@@ -225,12 +225,6 @@ export default function IdentificationsTable({
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('id')}
-              >
-                {t('table.id')} <SortIcon field="id" />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('identification_type_id')}
               >
                 {t('identifications.identificationType')} <SortIcon field="identification_type_id" />
@@ -259,9 +253,6 @@ export default function IdentificationsTable({
             </tr>
             {/* Filter Row */}
             <tr className="bg-gray-100 dark:bg-gray-700">
-              <th className="px-6 py-2">
-                {/* No filter for ID */}
-              </th>
               <th className="px-6 py-2">
                 <SelectColumnFilter
                   value={filterIdentificationType}
@@ -297,7 +288,7 @@ export default function IdentificationsTable({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedIdentifications.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                   {t('identifications.noIdentifications')}
                 </td>
               </tr>
@@ -307,11 +298,6 @@ export default function IdentificationsTable({
 
                 return (
                   <tr key={identification.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    {/* ID */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {identification.id}
-                    </td>
-
                     {/* Identification Type */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       {isEditing ? (

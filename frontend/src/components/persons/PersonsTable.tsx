@@ -28,7 +28,7 @@ export interface PersonsTableProps {
   statuses?: LookupItem[];
 }
 
-type SortField = 'id' | 'first_name' | 'middle_name' | 'last_name' | 'mother_name' | 'birth_date';
+type SortField = 'first_name' | 'middle_name' | 'last_name' | 'mother_name' | 'birth_date';
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortState {
@@ -324,15 +324,6 @@ export const PersonsTable: React.FC<PersonsTableProps> = ({
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('id')}
-              >
-                <div className="flex items-center gap-2">
-                  {t('lookup.id')}
-                  {getSortIcon('id')}
-                </div>
-              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('persons.salutation')}
               </th>
@@ -395,7 +386,7 @@ export const PersonsTable: React.FC<PersonsTableProps> = ({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedPersons.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={9} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                   {hasActiveFilters ? t('lookup.noResultsMatch') : t('lookup.noDataAvailable')}
                 </td>
               </tr>
@@ -411,9 +402,6 @@ export const PersonsTable: React.FC<PersonsTableProps> = ({
                       selectedPersonId === person.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''
                     }`}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {person.id}
-                    </td>
                     <td className="px-2 py-2 whitespace-nowrap text-sm">
                       {isEditing ? (
                         <select

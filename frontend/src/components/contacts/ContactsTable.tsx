@@ -44,7 +44,7 @@ interface ContactsTableProps {
   onFilterActiveChange: (value: boolean | '') => void;
 }
 
-type SortField = 'id' | 'contact_type_id' | 'contact_value' | 'created_at' | 'is_active';
+type SortField = 'contact_type_id' | 'contact_value' | 'created_at' | 'is_active';
 type SortDirection = 'asc' | 'desc' | null;
 
 export default function ContactsTable({
@@ -63,7 +63,7 @@ export default function ContactsTable({
   const [originalData, setOriginalData] = useState<{ contact_type_id: number; contact_value: string; is_active: boolean } | null>(null);
   const [filterContactType, setFilterContactType] = useState<number | ''>('');
   const [filterContactValue, setFilterContactValue] = useState('');
-  const [sortField, setSortField] = useState<SortField>('id');
+  const [sortField, setSortField] = useState<SortField>('contact_type_id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -81,7 +81,7 @@ export default function ContactsTable({
         setSortDirection('desc');
       } else if (sortDirection === 'desc') {
         setSortDirection(null);
-        setSortField('id'); // Reset to default
+        setSortField('contact_type_id'); // Reset to default
       } else {
         setSortDirection('asc');
       }
@@ -225,43 +225,37 @@ export default function ContactsTable({
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('id')}
-              >
-                ID <SortIcon field="id" />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('contact_type_id')}
               >
-                Contact Type <SortIcon field="contact_type_id" />
+                {t('contacts.type')} <SortIcon field="contact_type_id" />
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('contact_value')}
               >
-                Contact Value <SortIcon field="contact_value" />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('is_active')}
-              >
-                Active <SortIcon field="is_active" />
+                {t('contacts.value')} <SortIcon field="contact_value" />
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('created_at')}
               >
-                Created At <SortIcon field="created_at" />
+                {t('common.createdAt')} <SortIcon field="created_at" />
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Actions
+                {t('common.createdBy')}
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('is_active')}
+              >
+                {t('common.active')} <SortIcon field="is_active" />
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t('common.actions')}
               </th>
             </tr>
             {/* Filter Row */}
             <tr className="bg-gray-100 dark:bg-gray-700">
-              <th className="px-6 py-2">
-                {/* No filter for ID */}
-              </th>
               <th className="px-6 py-2">
                 <SelectColumnFilter
                   value={filterContactType}
@@ -281,13 +275,16 @@ export default function ContactsTable({
                 />
               </th>
               <th className="px-6 py-2">
+                {/* No filter for created_at */}
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for created_by */}
+              </th>
+              <th className="px-6 py-2">
                 <CheckboxColumnFilter
                   checked={filterActive === '' ? null : filterActive}
                   onChange={(val) => onFilterActiveChange(val === null ? '' : val)}
                 />
-              </th>
-              <th className="px-6 py-2">
-                {/* No filter for created_at */}
               </th>
               <th className="px-6 py-2">
                 {/* No filter for actions */}
@@ -307,11 +304,6 @@ export default function ContactsTable({
 
                 return (
                   <tr key={contact.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    {/* ID */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {contact.id}
-                    </td>
-
                     {/* Contact Type */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       {isEditing ? (
@@ -343,6 +335,16 @@ export default function ContactsTable({
                       )}
                     </td>
 
+                    {/* Created At */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {formatDateTime(contact.created_at)}
+                    </td>
+
+                    {/* Created By */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {contact.created_by || '-'}
+                    </td>
+
                     {/* Active Status */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span
@@ -352,13 +354,8 @@ export default function ContactsTable({
                             : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                         }`}
                       >
-                        {contact.is_active ? 'Active' : 'Inactive'}
+                        {contact.is_active ? t('common.active') : t('common.inactive')}
                       </span>
-                    </td>
-
-                    {/* Created At */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {formatDateTime(contact.created_at)}
                     </td>
 
                     {/* Actions */}

@@ -135,10 +135,11 @@ export const addressApi = {
 
   /**
    * Update an existing address
-   * Endpoint: PUT /addresses/:id
+   * Endpoint: POST /addresses/:id
+   * IMPORTANT: Uses POST instead of PUT (PUT method not working on n8n webhook)
    */
   update: async (id: number, data: UpdateAddressRequest): Promise<AddressResponse> => {
-    return addressesClient.put(`/addresses/${id}`, data);
+    return addressesClient.post(`/addresses/${id}`, data);
   },
 
   /**

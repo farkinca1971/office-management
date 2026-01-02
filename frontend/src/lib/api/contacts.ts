@@ -135,10 +135,11 @@ export const contactApi = {
 
   /**
    * Update an existing contact
-   * Endpoint: PUT /contacts/:id
+   * Endpoint: POST /contacts/:id
+   * IMPORTANT: Uses POST instead of PUT (PUT method not working on n8n webhook)
    */
   update: async (id: number, data: UpdateContactRequest): Promise<ContactResponse> => {
-    return contactsClient.put(`/contacts/${id}`, data);
+    return contactsClient.post(`/contacts/${id}`, data);
   },
 
   /**

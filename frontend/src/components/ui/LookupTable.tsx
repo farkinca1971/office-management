@@ -59,7 +59,7 @@ export interface LookupTableProps {
   objectCategoryRequired?: boolean; // Whether object category is required (default: false)
 }
 
-type SortField = 'id' | 'code' | 'name' | 'is_active';
+type SortField = 'code' | 'name' | 'is_active';
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortState {
@@ -651,7 +651,6 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               <thead>
                 {/* Sorting headers row */}
                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                  <SortableHeader field="id" className="w-20">{t('lookup.id')}</SortableHeader>
                   <SortableHeader field="code">{t('lookup.code')}</SortableHeader>
                   <SortableHeader field="name">{t('lookup.translation')}</SortableHeader>
                   {showObjectCategory && (
@@ -668,15 +667,6 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                 {/* Filter row */}
                 {showFilters && (
                   <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
-                    <td className="px-3 py-2">
-                      <input
-                        type="text"
-                        value={filters.id}
-                        onChange={(e) => setFilters({ ...filters, id: e.target.value })}
-                        placeholder={t('lookup.filter')}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </td>
                     <td className="px-3 py-2">
                       <input
                         type="text"
@@ -735,7 +725,7 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {processedData.length === 0 ? (
                   <tr>
-                    <td colSpan={showObjectCategory ? 6 : 5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={showObjectCategory ? 5 : 4} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       <div className="flex flex-col items-center gap-2">
                         <Filter className="h-8 w-8 opacity-40" />
                         {hasActiveFilters ? (
@@ -762,9 +752,6 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                     key={item.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-mono">
-                      {item.id}
-                    </td>
                     <td className="px-4 py-3">
                       {editingId === item.id ? (
                         <Input

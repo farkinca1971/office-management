@@ -8,7 +8,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Edit, Trash2, Phone, Mail, Hash, Clock } from 'lucide-react';
+import { Edit, Trash2, Phone, Mail, Clock } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 import type { Contact } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
@@ -42,14 +42,8 @@ export const ContactCard: React.FC<ContactCardProps> = ({
   return (
     <Card className="hover:shadow-lg transition-all">
       <div className="p-4 space-y-3">
-        {/* Header with ID and Status */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <Hash className="h-4 w-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              {contact.id}
-            </span>
-          </div>
+        {/* Header with Status */}
+        <div className="flex items-start justify-end">
           <span
             className={`px-2 py-1 text-xs font-semibold rounded-full ${
               contact.is_active

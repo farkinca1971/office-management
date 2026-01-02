@@ -21,7 +21,7 @@ export interface AuditsTableProps {
   auditActions?: LookupItem[];
 }
 
-type SortField = 'id' | 'created_at' | 'audit_action_id' | 'created_by_username';
+type SortField = 'created_at' | 'audit_action_id' | 'created_by_username';
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortState {
@@ -172,15 +172,6 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('id')}
-              >
-                <div className="flex items-center gap-2">
-                  {t('lookup.id')}
-                  {getSortIcon('id')}
-                </div>
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('audit_action_id')}
               >
                 <div className="flex items-center gap-2">
@@ -218,9 +209,6 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
             </tr>
             {/* Filter Row */}
             <tr className="bg-gray-100 dark:bg-gray-700">
-              <th className="px-6 py-2">
-                {/* No filter for ID */}
-              </th>
               <th className="px-6 py-2">
                 <SelectColumnFilter
                   value={filterAction}
@@ -272,16 +260,13 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedAudits.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                   {t('audits.noAudits')}
                 </td>
               </tr>
             ) : (
               filteredAndSortedAudits.map((audit) => (
                 <tr key={audit.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {audit.id}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200">
                       {getActionName(audit.audit_action_id)}

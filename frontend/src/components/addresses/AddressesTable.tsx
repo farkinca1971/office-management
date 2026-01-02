@@ -58,7 +58,7 @@ interface AddressesTableProps {
   onFilterActiveChange: (value: boolean | '') => void;
 }
 
-type SortField = 'id' | 'address_type_id' | 'city' | 'country_id' | 'created_at' | 'is_active';
+type SortField = 'address_type_id' | 'country_id' | 'city' | 'postal_code' | 'state_province' | 'street_address_1' | 'street_address_2' | 'address_area_type_id' | 'created_at' | 'is_active';
 type SortDirection = 'asc' | 'desc' | null;
 
 interface EditData {
@@ -90,10 +90,15 @@ export default function AddressesTable({
   const [editData, setEditData] = useState<EditData | null>(null);
   const [originalData, setOriginalData] = useState<EditData | null>(null);
   const [filterAddressType, setFilterAddressType] = useState<number | ''>('');
+  const [filterCountry, setFilterCountry] = useState<number | ''>('');
   const [filterCity, setFilterCity] = useState('');
   const [filterPostalCode, setFilterPostalCode] = useState('');
-  const [filterCountry, setFilterCountry] = useState<number | ''>('');
-  const [sortField, setSortField] = useState<SortField>('id');
+  const [filterStateProvince, setFilterStateProvince] = useState('');
+  const [filterStreetAddress1, setFilterStreetAddress1] = useState('');
+  const [filterStreetAddress2, setFilterStreetAddress2] = useState('');
+  const [filterAddressAreaType, setFilterAddressAreaType] = useState<number | ''>('');
+  const [filterCreatedAt, setFilterCreatedAt] = useState('');
+  const [sortField, setSortField] = useState<SortField>('address_type_id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -112,7 +117,7 @@ export default function AddressesTable({
         setSortDirection('desc');
       } else if (sortDirection === 'desc') {
         setSortDirection(null);
-        setSortField('id'); // Reset to default
+        setSortField('address_type_id'); // Reset to default
       } else {
         setSortDirection('asc');
       }
@@ -143,6 +148,9 @@ export default function AddressesTable({
     if (filterAddressType !== '') {
       result = result.filter(a => a.address_type_id === filterAddressType);
     }
+    if (filterCountry !== '') {
+      result = result.filter(a => a.country_id === filterCountry);
+    }
     if (filterCity) {
       result = result.filter(a =>
         a.city?.toLowerCase().includes(filterCity.toLowerCase())
@@ -153,8 +161,28 @@ export default function AddressesTable({
         a.postal_code?.toLowerCase().includes(filterPostalCode.toLowerCase())
       );
     }
-    if (filterCountry !== '') {
-      result = result.filter(a => a.country_id === filterCountry);
+    if (filterStateProvince) {
+      result = result.filter(a =>
+        a.state_province?.toLowerCase().includes(filterStateProvince.toLowerCase())
+      );
+    }
+    if (filterStreetAddress1) {
+      result = result.filter(a =>
+        a.street_address_1?.toLowerCase().includes(filterStreetAddress1.toLowerCase())
+      );
+    }
+    if (filterStreetAddress2) {
+      result = result.filter(a =>
+        a.street_address_2?.toLowerCase().includes(filterStreetAddress2.toLowerCase())
+      );
+    }
+    if (filterAddressAreaType !== '') {
+      result = result.filter(a => a.address_area_type_id === filterAddressAreaType);
+    }
+    if (filterCreatedAt) {
+      result = result.filter(a =>
+        a.created_at?.toLowerCase().includes(filterCreatedAt.toLowerCase())
+      );
     }
 
     // Apply sorting
@@ -170,6 +198,9 @@ export default function AddressesTable({
         } else if (sortField === 'country_id') {
           aValue = getLookupName(countries, a.country_id);
           bValue = getLookupName(countries, b.country_id);
+        } else if (sortField === 'address_area_type_id') {
+          aValue = getLookupName(addressAreaTypes, a.address_area_type_id);
+          bValue = getLookupName(addressAreaTypes, b.address_area_type_id);
         }
 
         // Handle string comparison
@@ -187,7 +218,7 @@ export default function AddressesTable({
     }
 
     return result;
-  }, [addresses, filterAddressType, filterCity, filterPostalCode, filterCountry, sortField, sortDirection, addressTypes, countries]);
+  }, [addresses, filterAddressType, filterCountry, filterCity, filterPostalCode, filterStateProvince, filterStreetAddress1, filterStreetAddress2, filterAddressAreaType, filterCreatedAt, sortField, sortDirection, addressTypes, countries, addressAreaTypes]);
 
   // Handle edit start
   const handleEdit = (address: Address) => {
@@ -282,24 +313,9 @@ export default function AddressesTable({
             <tr>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('id')}
-              >
-                {t('common.id')} <SortIcon field="id" />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('address_type_id')}
               >
                 {t('addresses.type')} <SortIcon field="address_type_id" />
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('addresses.address')}
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('city')}
-              >
-                {t('addresses.city')} <SortIcon field="city" />
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -309,9 +325,42 @@ export default function AddressesTable({
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('is_active')}
+                onClick={() => handleSort('city')}
               >
-                {t('common.active')} <SortIcon field="is_active" />
+                {t('addresses.city')} <SortIcon field="city" />
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('postal_code')}
+              >
+                {t('addresses.postalCode')} <SortIcon field="postal_code" />
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('state_province')}
+              >
+                {t('addresses.stateProvince')} <SortIcon field="state_province" />
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('street_address_1')}
+              >
+                {t('addresses.streetAddress1')} <SortIcon field="street_address_1" />
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('street_address_2')}
+              >
+                {t('addresses.streetAddress2')} <SortIcon field="street_address_2" />
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('address_area_type_id')}
+              >
+                {t('addresses.areaType')} <SortIcon field="address_area_type_id" />
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t('addresses.latLong')}
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -320,14 +369,20 @@ export default function AddressesTable({
                 {t('common.createdAt')} <SortIcon field="created_at" />
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t('common.createdBy')}
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('is_active')}
+              >
+                {t('common.active')} <SortIcon field="is_active" />
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('common.actions')}
               </th>
             </tr>
             {/* Filter Row */}
             <tr className="bg-gray-100 dark:bg-gray-700">
-              <th className="px-6 py-2">
-                {/* No filter for ID */}
-              </th>
               <th className="px-6 py-2">
                 <SelectColumnFilter
                   value={filterAddressType}
@@ -337,20 +392,6 @@ export default function AddressesTable({
                     label: type.name || type.code
                   }))}
                   placeholder={t('addresses.allTypes')}
-                />
-              </th>
-              <th className="px-6 py-2">
-                <TextColumnFilter
-                  value={filterPostalCode}
-                  onChange={setFilterPostalCode}
-                  placeholder="Postal code..."
-                />
-              </th>
-              <th className="px-6 py-2">
-                <TextColumnFilter
-                  value={filterCity}
-                  onChange={setFilterCity}
-                  placeholder="City..."
                 />
               </th>
               <th className="px-6 py-2">
@@ -365,13 +406,69 @@ export default function AddressesTable({
                 />
               </th>
               <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterCity}
+                  onChange={setFilterCity}
+                  placeholder={t('addresses.city')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterPostalCode}
+                  onChange={setFilterPostalCode}
+                  placeholder={t('addresses.postalCode')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterStateProvince}
+                  onChange={setFilterStateProvince}
+                  placeholder={t('addresses.stateProvince')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterStreetAddress1}
+                  onChange={setFilterStreetAddress1}
+                  placeholder={t('addresses.streetAddress1')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterStreetAddress2}
+                  onChange={setFilterStreetAddress2}
+                  placeholder={t('addresses.streetAddress2')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                <SelectColumnFilter
+                  value={filterAddressAreaType}
+                  onChange={(val) => setFilterAddressAreaType(val === '' || val === 0 ? '' : val as number)}
+                  options={addressAreaTypes.map(type => ({
+                    value: type.id,
+                    label: type.name || type.code
+                  }))}
+                  placeholder={t('addresses.allAreaTypes')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for lat/long */}
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterCreatedAt}
+                  onChange={setFilterCreatedAt}
+                  placeholder={t('common.createdAt')}
+                />
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for created_by */}
+              </th>
+              <th className="px-6 py-2">
                 <CheckboxColumnFilter
                   checked={filterActive === '' ? null : filterActive}
                   onChange={(val) => onFilterActiveChange(val === null ? '' : val)}
                 />
-              </th>
-              <th className="px-6 py-2">
-                {/* No filter for created_at */}
               </th>
               <th className="px-6 py-2">
                 {/* No filter for actions */}
@@ -381,27 +478,17 @@ export default function AddressesTable({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedAddresses.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={13} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                   {t('addresses.noAddresses')}
                 </td>
               </tr>
             ) : (
               filteredAndSortedAddresses.map((address) => {
                 const isEditing = editingId === address.id;
-                const fullAddress = [
-                  address.street_address_1,
-                  address.street_address_2,
-                  address.postal_code,
-                ].filter(Boolean).join(', ');
 
                 return (
                   <tr key={address.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    {/* ID */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {address.id}
-                    </td>
-
-                    {/* Address Type */}
+                    {/* 1. Address Type */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       {isEditing ? (
                         <Select
@@ -418,52 +505,7 @@ export default function AddressesTable({
                       )}
                     </td>
 
-                    {/* Address - condensed view in non-edit mode */}
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <Input
-                            type="text"
-                            value={editData?.street_address_1 || ''}
-                            onChange={(e) => setEditData(prev => prev ? { ...prev, street_address_1: e.target.value } : null)}
-                            placeholder="Street Address 1"
-                            className="w-full"
-                          />
-                          <Input
-                            type="text"
-                            value={editData?.street_address_2 || ''}
-                            onChange={(e) => setEditData(prev => prev ? { ...prev, street_address_2: e.target.value } : null)}
-                            placeholder="Street Address 2"
-                            className="w-full"
-                          />
-                          <Input
-                            type="text"
-                            value={editData?.postal_code || ''}
-                            onChange={(e) => setEditData(prev => prev ? { ...prev, postal_code: e.target.value } : null)}
-                            placeholder="Postal Code"
-                            className="w-full"
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-sm">{fullAddress}</span>
-                      )}
-                    </td>
-
-                    {/* City */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {isEditing ? (
-                        <Input
-                          type="text"
-                          value={editData?.city || ''}
-                          onChange={(e) => setEditData(prev => prev ? { ...prev, city: e.target.value } : null)}
-                          className="w-full"
-                        />
-                      ) : (
-                        address.city
-                      )}
-                    </td>
-
-                    {/* Country */}
+                    {/* 2. Country */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       {isEditing ? (
                         <Select
@@ -480,7 +522,109 @@ export default function AddressesTable({
                       )}
                     </td>
 
-                    {/* Active Status */}
+                    {/* 3. City */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {isEditing ? (
+                        <Input
+                          type="text"
+                          value={editData?.city || ''}
+                          onChange={(e) => setEditData(prev => prev ? { ...prev, city: e.target.value } : null)}
+                          className="w-full"
+                        />
+                      ) : (
+                        address.city || '-'
+                      )}
+                    </td>
+
+                    {/* 4. Postal Code */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {isEditing ? (
+                        <Input
+                          type="text"
+                          value={editData?.postal_code || ''}
+                          onChange={(e) => setEditData(prev => prev ? { ...prev, postal_code: e.target.value } : null)}
+                          className="w-full"
+                        />
+                      ) : (
+                        address.postal_code || '-'
+                      )}
+                    </td>
+
+                    {/* 5. State/Province */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {isEditing ? (
+                        <Input
+                          type="text"
+                          value={editData?.state_province || ''}
+                          onChange={(e) => setEditData(prev => prev ? { ...prev, state_province: e.target.value } : null)}
+                          className="w-full"
+                        />
+                      ) : (
+                        address.state_province || '-'
+                      )}
+                    </td>
+
+                    {/* 6. Street Address 1 */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {isEditing ? (
+                        <Input
+                          type="text"
+                          value={editData?.street_address_1 || ''}
+                          onChange={(e) => setEditData(prev => prev ? { ...prev, street_address_1: e.target.value } : null)}
+                          className="w-full"
+                        />
+                      ) : (
+                        address.street_address_1 || '-'
+                      )}
+                    </td>
+
+                    {/* 7. Street Address 2 */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {isEditing ? (
+                        <Input
+                          type="text"
+                          value={editData?.street_address_2 || ''}
+                          onChange={(e) => setEditData(prev => prev ? { ...prev, street_address_2: e.target.value } : null)}
+                          className="w-full"
+                        />
+                      ) : (
+                        address.street_address_2 || '-'
+                      )}
+                    </td>
+
+                    {/* 8. Address Area Type */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {isEditing ? (
+                        <Select
+                          value={editData?.address_area_type_id?.toString() || ''}
+                          onChange={(e) => setEditData(prev => prev ? { ...prev, address_area_type_id: e.target.value ? Number(e.target.value) : undefined } : null)}
+                          className="w-full"
+                          options={addressAreaTypes.map((type) => ({
+                            value: type.id,
+                            label: type.name || type.code
+                          }))}
+                        />
+                      ) : (
+                        address.address_area_type_id ? getLookupName(addressAreaTypes, address.address_area_type_id) : '-'
+                      )}
+                    </td>
+
+                    {/* 9. Latitude/Longitude */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {address.latitude || address.longitude ? `${address.latitude || '-'}, ${address.longitude || '-'}` : '-'}
+                    </td>
+
+                    {/* 10. Created At */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {formatDateTime(address.created_at)}
+                    </td>
+
+                    {/* 11. Created By */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {address.created_by || '-'}
+                    </td>
+
+                    {/* 12. Active Status */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -493,12 +637,7 @@ export default function AddressesTable({
                       </span>
                     </td>
 
-                    {/* Created At */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {formatDateTime(address.created_at)}
-                    </td>
-
-                    {/* Actions */}
+                    {/* 13. Actions */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       {isEditing ? (
                         <>

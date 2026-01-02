@@ -38,7 +38,7 @@ export interface NotesTableProps {
   onFilterActiveChange: (value: boolean | '') => void;
 }
 
-type SortField = 'id' | 'created_at' | 'note_type_id' | 'is_pinned' | 'is_active';
+type SortField = 'created_at' | 'note_type_id' | 'is_pinned' | 'is_active';
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortState {
@@ -235,15 +235,6 @@ export const NotesTable: React.FC<NotesTableProps> = ({
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('id')}
-              >
-                <div className="flex items-center gap-2">
-                  {t('lookup.id')}
-                  {getSortIcon('id')}
-                </div>
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('note_type_id')}
               >
                 <div className="flex items-center gap-2">
@@ -286,9 +277,6 @@ export const NotesTable: React.FC<NotesTableProps> = ({
             <tr className="bg-gray-100 dark:bg-gray-700">
               <th className="px-6 py-2">
                 {/* No filter for pin */}
-              </th>
-              <th className="px-6 py-2">
-                {/* No filter for ID */}
               </th>
               <th className="px-6 py-2">
                 <SelectColumnFilter
@@ -335,7 +323,7 @@ export const NotesTable: React.FC<NotesTableProps> = ({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedNotes.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                   {notes.length === 0 ? t('notes.noNotes') : 'No notes match the current filters'}
                 </td>
               </tr>
@@ -362,9 +350,6 @@ export const NotesTable: React.FC<NotesTableProps> = ({
                           <PinOff className="h-5 w-5" />
                         )}
                       </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {note.id}
                     </td>
 
                     {/* Note Type */}
