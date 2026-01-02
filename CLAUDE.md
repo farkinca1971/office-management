@@ -504,6 +504,30 @@ X-Language-ID: 1
 ```
 ⚠️ **Note**: Use POST method for updates, not PUT.
 
+#### Users API - Separate Webhook Endpoint
+**IMPORTANT**: The users API uses the **same dedicated webhook endpoint** as contacts, identifications, addresses, and notes:
+
+**Users API Webhook:**
+```
+https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1
+```
+Used for: user management (list, get, create, update, delete)
+
+**Users Endpoints:**
+- `GET /users` - List all users
+- `GET /users/:id` - Get single user by ID
+- `POST /users` - Create new user
+- `PUT /users/:id` - Update existing user
+- `DELETE /users/:id` - Soft delete user (sets is_active = false)
+
+**Implementation Note:**
+The users API uses the standard Axios client instance configured with the main API webhook base URL. See `src/lib/api/users.ts` for the implementation pattern.
+
+**Database Table:** `users`
+- Stores application users with authentication and metadata
+- Fields: id, username, email, password_hash, is_active, created_at, updated_at, etc.
+- Supports soft deletes via `is_active` flag
+
 ## Debugging Tips
 
 1. **API Issues**: Check browser DevTools Network tab → inspect request/response payloads

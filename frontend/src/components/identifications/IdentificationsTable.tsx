@@ -21,7 +21,7 @@ import { Alert } from '@/components/ui/Alert';
 import { TextColumnFilter, SelectColumnFilter, CheckboxColumnFilter } from '@/components/ui/ColumnFilters';
 import { formatDateTime } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
-import type { Identification } from '@/types/entities';
+import type { Identification, User } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 interface IdentificationUpdatePayload {
@@ -36,6 +36,7 @@ interface IdentificationUpdatePayload {
 interface IdentificationsTableProps {
   identifications: Identification[];
   identificationTypes: LookupItem[];
+  users?: User[];
   onUpdate: (id: number, data: IdentificationUpdatePayload) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   isLoading?: boolean;
@@ -50,6 +51,7 @@ type SortDirection = 'asc' | 'desc' | null;
 export default function IdentificationsTable({
   identifications,
   identificationTypes,
+  users = [],
   onUpdate,
   onDelete,
   isLoading = false,
@@ -71,6 +73,13 @@ export default function IdentificationsTable({
   const getIdentificationTypeName = (identificationTypeId: number): string => {
     const identificationType = identificationTypes.find(it => it.id === identificationTypeId);
     return identificationType?.name || identificationType?.code || t('identifications.unknown');
+  };
+
+  // Get username by user ID
+  const getUsername = (userId?: number | string): string => {
+    if (!userId) return '-';
+    const user = users.find(u => u.id === Number(userId));
+    return user?.username || '-';
   };
 
   // Handle sort toggle
@@ -237,15 +246,18 @@ export default function IdentificationsTable({
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('is_active')}
-              >
-                {t('table.active')} <SortIcon field="is_active" />
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('created_at')}
               >
                 {t('table.createdAt')} <SortIcon field="created_at" />
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t('common.createdBy')}
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('is_active')}
+              >
+                {t('table.active')} <SortIcon field="is_active" />
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('table.actions')}
@@ -272,13 +284,16 @@ export default function IdentificationsTable({
                 />
               </th>
               <th className="px-6 py-2">
+                {/* No filter for created_at */}
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for created_by */}
+              </th>
+              <th className="px-6 py-2">
                 <CheckboxColumnFilter
                   checked={filterActive === '' ? null : filterActive}
                   onChange={(val) => onFilterActiveChange(val === null ? '' : val)}
                 />
-              </th>
-              <th className="px-6 py-2">
-                {/* No filter for created_at */}
               </th>
               <th className="px-6 py-2">
                 {/* No filter for actions */}
@@ -288,7 +303,7 @@ export default function IdentificationsTable({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedIdentifications.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                   {t('identifications.noIdentifications')}
                 </td>
               </tr>
@@ -329,6 +344,16 @@ export default function IdentificationsTable({
                       )}
                     </td>
 
+                    {/* Created At */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {formatDateTime(identification.created_at)}
+                    </td>
+
+                    {/* Created By */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {getUsername(identification.created_by)}
+                    </td>
+
                     {/* Active Status */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span
@@ -340,11 +365,6 @@ export default function IdentificationsTable({
                       >
                         {identification.is_active ? t('table.active') : t('table.inactive')}
                       </span>
-                    </td>
-
-                    {/* Created At */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {formatDateTime(identification.created_at)}
                     </td>
 
                     {/* Actions */}

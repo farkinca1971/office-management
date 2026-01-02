@@ -22,11 +22,11 @@ import ContactsTable from './ContactsTable';
 import { ContactCard } from './ContactCard';
 import { ContactFormModal } from './ContactFormModal';
 import type { ContactFormData } from './ContactFormModal';
-import { contactApi, lookupApi } from '@/lib/api';
+import { contactApi, lookupApi, userApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
 import { useTranslation } from '@/lib/i18n';
-import type { Contact } from '@/types/entities';
+import type { Contact, User } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 interface ContactsTabProps {
@@ -39,6 +39,7 @@ export default function ContactsTab({ objectId, onDataChange }: ContactsTabProps
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [contactTypes, setContactTypes] = useState<LookupItem[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -72,10 +73,11 @@ export default function ContactsTab({ objectId, onDataChange }: ContactsTabProps
 
       console.log('[ContactsTab] Making API calls with params:', params);
 
-      // Load contacts and contact types in parallel
-      const [contactsResponse, typesResponse] = await Promise.all([
+      // Load contacts, contact types, and users in parallel
+      const [contactsResponse, typesResponse, usersResponse] = await Promise.all([
         contactApi.getByObjectId(objectId, params),
         lookupApi.getContactTypes(language),
+        userApi.getAll(),
       ]);
 
       console.log('[ContactsTab] Contacts response:', contactsResponse);
@@ -85,6 +87,7 @@ export default function ContactsTab({ objectId, onDataChange }: ContactsTabProps
       // Ensure we always set an array, even if the response is undefined or not an array
       const contactsData = contactsResponse?.data;
       const typesData = typesResponse?.data;
+      const usersData = usersResponse?.data;
 
       console.log('[ContactsTab] contactsData:', contactsData);
       console.log('[ContactsTab] contactsData is array?', Array.isArray(contactsData));
@@ -101,6 +104,7 @@ export default function ContactsTab({ objectId, onDataChange }: ContactsTabProps
 
       setContacts(contactsArray);
       setContactTypes(Array.isArray(typesData) ? typesData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
 
       console.log('[ContactsTab] State set - contacts count:', contactsArray.length);
     } catch (err: any) {
@@ -246,6 +250,7 @@ export default function ContactsTab({ objectId, onDataChange }: ContactsTabProps
           <ContactsTable
             contacts={contacts}
             contactTypes={contactTypes}
+            users={users}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
             isLoading={isLoading}

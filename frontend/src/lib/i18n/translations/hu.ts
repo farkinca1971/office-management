@@ -107,6 +107,23 @@ export const hu = {
     transactions: 'Tranzakciók',
   },
 
+  // Companies
+  companies: {
+    subtitle: 'Cégek kezelése',
+    addNew: 'Cég hozzáadása',
+    loadFailed: 'A cégek betöltése sikertelen',
+    selectCompanyToViewDetails: 'Válassz ki egy céget a fenti táblázatból a részletek megtekintéséhez',
+    companyId: 'Cégazonosító',
+    companyName: 'Cégnév',
+    filterByCompanyId: 'Szűrés cégazonosító szerint...',
+    filterByCompanyName: 'Szűrés cégnév szerint...',
+    // Tabs
+    contacts: 'Kapcsolatok',
+    addresses: 'Címek',
+    identifications: 'Azonosítók',
+    notes: 'Megjegyzések',
+  },
+
   // Persons
   persons: {
     subtitle: 'Személyek kezelése',

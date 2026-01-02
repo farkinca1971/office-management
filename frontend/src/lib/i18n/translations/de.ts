@@ -100,6 +100,23 @@ export const de = {
     transactions: 'Transaktionen',
   },
 
+  // Companies
+  companies: {
+    subtitle: 'Unternehmensdatensätze verwalten',
+    addNew: 'Unternehmen hinzufügen',
+    loadFailed: 'Unternehmen konnten nicht geladen werden',
+    selectCompanyToViewDetails: 'Wählen Sie ein Unternehmen aus der obigen Tabelle aus, um Details anzuzeigen',
+    companyId: 'Unternehmens-ID',
+    companyName: 'Unternehmensname',
+    filterByCompanyId: 'Nach Unternehmens-ID filtern...',
+    filterByCompanyName: 'Nach Unternehmensname filtern...',
+    // Tabs
+    contacts: 'Kontakte',
+    addresses: 'Adressen',
+    identifications: 'Ausweise',
+    notes: 'Notizen',
+  },
+
   // Persons
   persons: {
     subtitle: 'Personendatensätze verwalten',

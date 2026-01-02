@@ -22,11 +22,11 @@ import AddressesTable from './AddressesTable';
 import { AddressCard } from './AddressCard';
 import { AddressFormModal } from './AddressFormModal';
 import type { AddressFormData } from './AddressFormModal';
-import { addressApi, lookupApi } from '@/lib/api';
+import { addressApi, lookupApi, userApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
 import { useTranslation } from '@/lib/i18n';
-import type { Address } from '@/types/entities';
+import type { Address, User } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 interface AddressesTabProps {
@@ -42,6 +42,7 @@ export default function AddressesTab({ objectId, onDataChange }: AddressesTabPro
   const [addressTypes, setAddressTypes] = useState<LookupItem[]>([]);
   const [addressAreaTypes, setAddressAreaTypes] = useState<LookupItem[]>([]);
   const [countries, setCountries] = useState<LookupItem[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -74,12 +75,13 @@ export default function AddressesTab({ objectId, onDataChange }: AddressesTabPro
 
       console.log('[AddressesTab] Making API calls with params:', params);
 
-      // Load addresses and lookup data in parallel
-      const [addressesResponse, typesResponse, areaTypesResponse, countriesResponse] = await Promise.all([
+      // Load addresses, lookup data, and users in parallel
+      const [addressesResponse, typesResponse, areaTypesResponse, countriesResponse, usersResponse] = await Promise.all([
         addressApi.getByObjectId(objectId, params),
         lookupApi.getAddressTypes(language),
         lookupApi.getAddressAreaTypes(language),
         lookupApi.getCountries(language),
+        userApi.getAll(),
       ]);
 
       console.log('[AddressesTab] Addresses response:', addressesResponse);
@@ -92,6 +94,7 @@ export default function AddressesTab({ objectId, onDataChange }: AddressesTabPro
       const typesData = typesResponse?.data;
       const areaTypesData = areaTypesResponse?.data;
       const countriesData = countriesResponse?.data;
+      const usersData = usersResponse?.data;
 
       // Handle both array and single object responses
       let addressesArray: Address[] = [];
@@ -106,6 +109,7 @@ export default function AddressesTab({ objectId, onDataChange }: AddressesTabPro
       setAddressTypes(Array.isArray(typesData) ? typesData : []);
       setAddressAreaTypes(Array.isArray(areaTypesData) ? areaTypesData : []);
       setCountries(Array.isArray(countriesData) ? countriesData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
 
       console.log('[AddressesTab] State set - addresses count:', addressesArray.length);
     } catch (err: any) {
@@ -271,6 +275,7 @@ export default function AddressesTab({ objectId, onDataChange }: AddressesTabPro
             addressTypes={addressTypes}
             addressAreaTypes={addressAreaTypes}
             countries={countries}
+            users={users}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
             isLoading={isLoading}

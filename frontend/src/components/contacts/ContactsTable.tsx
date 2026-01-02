@@ -21,7 +21,7 @@ import { Alert } from '@/components/ui/Alert';
 import { TextColumnFilter, SelectColumnFilter, CheckboxColumnFilter } from '@/components/ui/ColumnFilters';
 import { formatDateTime } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
-import type { Contact } from '@/types/entities';
+import type { Contact, User } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 interface ContactUpdatePayload {
@@ -36,6 +36,7 @@ interface ContactUpdatePayload {
 interface ContactsTableProps {
   contacts: Contact[];
   contactTypes: LookupItem[];
+  users?: User[];
   onUpdate: (id: number, data: ContactUpdatePayload) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   isLoading?: boolean;
@@ -50,6 +51,7 @@ type SortDirection = 'asc' | 'desc' | null;
 export default function ContactsTable({
   contacts,
   contactTypes,
+  users = [],
   onUpdate,
   onDelete,
   isLoading = false,
@@ -71,6 +73,13 @@ export default function ContactsTable({
   const getContactTypeName = (contactTypeId: number): string => {
     const contactType = contactTypes.find(ct => ct.id === contactTypeId);
     return contactType?.name || contactType?.code || 'Unknown';
+  };
+
+  // Get username by user ID
+  const getUsername = (userId?: number | string): string => {
+    if (!userId) return '-';
+    const user = users.find(u => u.id === Number(userId));
+    return user?.username || '-';
   };
 
   // Handle sort toggle
@@ -342,7 +351,7 @@ export default function ContactsTable({
 
                     {/* Created By */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {contact.created_by || '-'}
+                      {getUsername(contact.created_by)}
                     </td>
 
                     {/* Active Status */}

@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { TextColumnFilter, SelectColumnFilter, CheckboxColumnFilter } from '@/components/ui/ColumnFilters';
-import { ArrowUp, ArrowDown, ArrowUpDown, Pin, PinOff, Pencil, Trash2, Save, X } from 'lucide-react';
-import type { ObjectNote } from '@/types/entities';
+import { ArrowUp, ArrowDown, ArrowUpDown, Pencil, Trash2, Save, X } from 'lucide-react';
+import type { ObjectNote, User } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 import { useTranslation } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils';
@@ -31,7 +31,7 @@ export interface NotesTableProps {
   isLoading?: boolean;
   error?: string | null;
   noteTypes?: LookupItem[];
-  onTogglePin?: (noteId: number, isPinned: boolean) => void;
+  users?: User[];
   onUpdate?: (noteId: number, data: NoteUpdatePayload) => Promise<void>;
   onDelete?: (noteId: number) => void;
   filterActive: boolean | '';
@@ -57,7 +57,7 @@ export const NotesTable: React.FC<NotesTableProps> = ({
   isLoading = false,
   error = null,
   noteTypes = [],
-  onTogglePin,
+  users = [],
   onUpdate,
   onDelete,
   filterActive,
@@ -67,7 +67,8 @@ export const NotesTable: React.FC<NotesTableProps> = ({
   const [sortState, setSortState] = useState<SortState>({ field: 'created_at', direction: 'desc' });
   const [filterNoteType, setFilterNoteType] = useState<number | ''>('');
   const [filterSubject, setFilterSubject] = useState('');
-  const [filterPinned, setFilterPinned] = useState<boolean | ''>('');
+  const [filterNoteText, setFilterNoteText] = useState('');
+  const [filterCreatedBy, setFilterCreatedBy] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<EditData | null>(null);
@@ -77,6 +78,13 @@ export const NotesTable: React.FC<NotesTableProps> = ({
     if (!typeId) return '-';
     const noteType = noteTypes.find(nt => nt.id === typeId);
     return noteType?.name || noteType?.code || t('notes.unknownType');
+  };
+
+  // Get username by user ID
+  const getUsername = (userId?: number | string): string => {
+    if (!userId) return '-';
+    const user = users.find(u => u.id === Number(userId));
+    return user?.username || '-';
   };
 
   // Sorting logic
@@ -111,8 +119,15 @@ export const NotesTable: React.FC<NotesTableProps> = ({
         n.subject?.toLowerCase().includes(filterSubject.toLowerCase())
       );
     }
-    if (filterPinned !== '') {
-      result = result.filter(n => n.is_pinned === filterPinned);
+    if (filterNoteText) {
+      result = result.filter(n =>
+        n.note_text?.toLowerCase().includes(filterNoteText.toLowerCase())
+      );
+    }
+    if (filterCreatedBy) {
+      result = result.filter(n =>
+        getUsername(n.created_by)?.toLowerCase().includes(filterCreatedBy.toLowerCase())
+      );
     }
 
     // Apply sorting
@@ -126,23 +141,14 @@ export const NotesTable: React.FC<NotesTableProps> = ({
         return sortState.direction === 'asc' ? comparison : -comparison;
       });
     } else {
-      // Default sort: pinned first, then by created_at DESC
+      // Default sort: by created_at DESC
       result.sort((a, b) => {
-        if (a.is_pinned !== b.is_pinned) {
-          return a.is_pinned ? -1 : 1;
-        }
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
     }
 
     return result;
-  }, [notes, sortState, filterNoteType, filterSubject, filterPinned]);
-
-  const handlePinClick = (noteId: number, currentPinStatus: boolean) => {
-    if (onTogglePin) {
-      onTogglePin(noteId, !currentPinStatus);
-    }
-  };
+  }, [notes, sortState, filterNoteType, filterSubject, filterNoteText, filterCreatedBy]);
 
   // Handle edit start
   const handleEdit = (note: ObjectNote) => {
@@ -230,9 +236,6 @@ export const NotesTable: React.FC<NotesTableProps> = ({
           <thead className="bg-gray-50 dark:bg-gray-800">
             {/* Header Row */}
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
-                {t('notes.pin')}
-              </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('note_type_id')}
@@ -250,15 +253,6 @@ export const NotesTable: React.FC<NotesTableProps> = ({
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('is_active')}
-              >
-                <div className="flex items-center gap-2">
-                  Active
-                  {getSortIcon('is_active')}
-                </div>
-              </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('created_at')}
               >
                 <div className="flex items-center gap-2">
@@ -269,15 +263,21 @@ export const NotesTable: React.FC<NotesTableProps> = ({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('notes.createdBy')}
               </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => handleSort('is_active')}
+              >
+                <div className="flex items-center gap-2">
+                  Active
+                  {getSortIcon('is_active')}
+                </div>
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('table.actions')}
               </th>
             </tr>
             {/* Filter Row */}
             <tr className="bg-gray-100 dark:bg-gray-700">
-              <th className="px-6 py-2">
-                {/* No filter for pin */}
-              </th>
               <th className="px-6 py-2">
                 <SelectColumnFilter
                   value={filterNoteType}
@@ -297,7 +297,21 @@ export const NotesTable: React.FC<NotesTableProps> = ({
                 />
               </th>
               <th className="px-6 py-2">
-                {/* No filter for note text */}
+                <TextColumnFilter
+                  value={filterNoteText}
+                  onChange={setFilterNoteText}
+                  placeholder="Note text..."
+                />
+              </th>
+              <th className="px-6 py-2">
+                {/* No filter for created_at */}
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterCreatedBy}
+                  onChange={setFilterCreatedBy}
+                  placeholder="Username..."
+                />
               </th>
               <th className="px-6 py-2">
                 <CheckboxColumnFilter
@@ -306,24 +320,13 @@ export const NotesTable: React.FC<NotesTableProps> = ({
                 />
               </th>
               <th className="px-6 py-2">
-                {/* No filter for created_at */}
-              </th>
-              <th className="px-6 py-2">
-                {/* No filter for created_by */}
-              </th>
-              <th className="px-6 py-2">
-                <CheckboxColumnFilter
-                  checked={filterPinned === '' ? null : filterPinned}
-                  onChange={(val) => setFilterPinned(val === null ? '' : val)}
-                  label="Pinned"
-                />
               </th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedNotes.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                   {notes.length === 0 ? t('notes.noNotes') : 'No notes match the current filters'}
                 </td>
               </tr>
@@ -333,25 +336,8 @@ export const NotesTable: React.FC<NotesTableProps> = ({
                 return (
                   <tr
                     key={note.id}
-                    className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                      note.is_pinned ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''
-                    }`}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handlePinClick(note.id, note.is_pinned)}
-                        className="text-gray-400 hover:text-yellow-500 transition-colors"
-                        title={note.is_pinned ? t('notes.unpin') : t('notes.pin')}
-                        disabled={isEditing}
-                      >
-                        {note.is_pinned ? (
-                          <Pin className="h-5 w-5 fill-yellow-500 text-yellow-500" />
-                        ) : (
-                          <PinOff className="h-5 w-5" />
-                        )}
-                      </button>
-                    </td>
-
                     {/* Note Type */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                       {isEditing ? (
@@ -408,6 +394,16 @@ export const NotesTable: React.FC<NotesTableProps> = ({
                       )}
                     </td>
 
+                    {/* Created At */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                      {formatDateTime(note.created_at)}
+                    </td>
+
+                    {/* Created By */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                      {getUsername(note.created_by)}
+                    </td>
+
                     {/* Active Status */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span
@@ -419,16 +415,6 @@ export const NotesTable: React.FC<NotesTableProps> = ({
                       >
                         {note.is_active ? 'Active' : 'Inactive'}
                       </span>
-                    </td>
-
-                    {/* Created At */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                      {formatDateTime(note.created_at)}
-                    </td>
-
-                    {/* Created By */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                      {note.created_by_username || '-'}
                     </td>
 
                     {/* Actions */}

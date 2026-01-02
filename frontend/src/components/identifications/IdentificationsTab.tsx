@@ -22,11 +22,11 @@ import IdentificationsTable from './IdentificationsTable';
 import { IdentificationCard } from './IdentificationCard';
 import { IdentificationFormModal } from './IdentificationFormModal';
 import type { IdentificationFormData } from './IdentificationFormModal';
-import { identificationApi, lookupApi } from '@/lib/api';
+import { identificationApi, lookupApi, userApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
 import { useTranslation } from '@/lib/i18n';
-import type { Identification } from '@/types/entities';
+import type { Identification, User } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 interface IdentificationsTabProps {
@@ -41,6 +41,7 @@ export default function IdentificationsTab({ objectId, objectTypeId, onDataChang
   const { t } = useTranslation();
   const [identifications, setIdentifications] = useState<Identification[]>([]);
   const [identificationTypes, setIdentificationTypes] = useState<LookupItem[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -72,10 +73,11 @@ export default function IdentificationsTab({ objectId, objectTypeId, onDataChang
 
       console.log('[IdentificationsTab] Making API calls with params:', params);
 
-      // Load identifications and identification types in parallel
-      const [identificationsResponse, typesResponse] = await Promise.all([
+      // Load identifications, identification types, and users in parallel
+      const [identificationsResponse, typesResponse, usersResponse] = await Promise.all([
         identificationApi.getByObjectId(objectId, params),
         lookupApi.getIdentificationTypes(language, objectTypeId),
+        userApi.getAll(),
       ]);
 
       console.log('[IdentificationsTab] Identifications response:', identificationsResponse);
@@ -85,6 +87,7 @@ export default function IdentificationsTab({ objectId, objectTypeId, onDataChang
       // Ensure we always set an array, even if the response is undefined or not an array
       const identificationsData = identificationsResponse?.data;
       const typesData = typesResponse?.data;
+      const usersData = usersResponse?.data;
 
       console.log('[IdentificationsTab] identificationsData:', identificationsData);
       console.log('[IdentificationsTab] identificationsData is array?', Array.isArray(identificationsData));
@@ -101,6 +104,7 @@ export default function IdentificationsTab({ objectId, objectTypeId, onDataChang
 
       setIdentifications(identificationsArray);
       setIdentificationTypes(Array.isArray(typesData) ? typesData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
 
       console.log('[IdentificationsTab] State set - identifications count:', identificationsArray.length);
     } catch (err: any) {
@@ -246,6 +250,7 @@ export default function IdentificationsTab({ objectId, objectTypeId, onDataChang
           <IdentificationsTable
             identifications={identifications}
             identificationTypes={identificationTypes}
+            users={users}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
             isLoading={isLoading}

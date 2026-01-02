@@ -4,35 +4,259 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Plus } from 'lucide-react';
+import { ViewToggle } from '@/components/ui/ViewToggle';
+import { Plus, FileText, Phone, MapPin, CreditCard, StickyNote } from 'lucide-react';
+import { CompaniesView } from '@/components/companies/CompaniesView';
+import { AuditsTable } from '@/components/audits/AuditsTable';
+import NotesTab from '@/components/notes/NotesTab';
+import { Tabs } from '@/components/ui/Tabs';
+import ContactsTab from '@/components/contacts/ContactsTab';
+import IdentificationsTab from '@/components/identifications/IdentificationsTab';
+import AddressesTab from '@/components/addresses/AddressesTab';
+import { companyApi } from '@/lib/api/companies';
+import { auditApi } from '@/lib/api/audits';
+import { lookupApi } from '@/lib/api/lookups';
+import { useTranslation } from '@/lib/i18n';
+import { useLanguageStore } from '@/store/languageStore';
+import { useViewMode } from '@/hooks/useViewMode';
+import type { Company, ObjectAudit } from '@/types/entities';
+import type { LookupItem } from '@/types/common';
 
 export default function CompaniesPage() {
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+
+  // View mode management
+  const { viewMode, toggleViewMode } = useViewMode('companies-view-mode');
+
+  // Companies state
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+  const [companiesError, setCompaniesError] = useState<string | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+
+  // Audits state
+  const [audits, setAudits] = useState<ObjectAudit[]>([]);
+  const [isLoadingAudits, setIsLoadingAudits] = useState(false);
+  const [auditsError, setAuditsError] = useState<string | null>(null);
+
+  // Lookup data
+  const [statuses, setStatuses] = useState<LookupItem[]>([]);
+  const [auditActions, setAuditActions] = useState<LookupItem[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(true);
+
+  // Load lookup data
+  useEffect(() => {
+    const loadLookups = async () => {
+      try {
+        const [statusesRes, auditActionsRes] = await Promise.all([
+          lookupApi.getObjectStatuses(undefined, language),
+          lookupApi.getAuditActions(undefined, language),
+        ]);
+
+        const statusesList = statusesRes?.data || statusesRes || [];
+        const auditActionsList = auditActionsRes?.data || auditActionsRes || [];
+
+        setStatuses(Array.isArray(statusesList) ? statusesList : []);
+        setAuditActions(Array.isArray(auditActionsList) ? auditActionsList : []);
+      } catch (err) {
+        console.error('Failed to load lookup data:', err);
+      } finally {
+        setLoadingLookups(false);
+      }
+    };
+
+    loadLookups();
+  }, [language]);
+
+  // Load companies
+  useEffect(() => {
+    const loadCompanies = async () => {
+      setIsLoadingCompanies(true);
+      setCompaniesError(null);
+
+      try {
+        const response = await companyApi.getAll();
+        const data = response?.data || response || [];
+        setCompanies(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        console.error('Failed to load companies:', err);
+        setCompaniesError(err?.error?.message || err?.message || t('companies.loadFailed'));
+      } finally {
+        setIsLoadingCompanies(false);
+      }
+    };
+
+    loadCompanies();
+  }, [t]);
+
+  // Load audits when company is selected
+  const loadAudits = useCallback(async () => {
+    if (!selectedCompany) {
+      setAudits([]);
+      return;
+    }
+
+    setIsLoadingAudits(true);
+    setAuditsError(null);
+
+    try {
+      const response = await auditApi.getByObjectId(selectedCompany.id);
+      const data = response?.data || response || [];
+      setAudits(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      console.error('Failed to load audits:', err);
+      setAuditsError(err?.error?.message || err?.message || t('audits.loadFailed'));
+    } finally {
+      setIsLoadingAudits(false);
+    }
+  }, [selectedCompany, t]);
+
+  useEffect(() => {
+    loadAudits();
+  }, [loadAudits]);
+
+  const handleCompanySelect = (company: Company) => {
+    setSelectedCompany(company);
+  };
+
+  const handleEdit = (company: Company) => {
+    // TODO: Implement edit functionality
+    console.log('Edit company:', company);
+  };
+
+  const handleDelete = (company: Company) => {
+    // TODO: Implement delete functionality
+    console.log('Delete company:', company);
+  };
+
+  const tabs = [
+    {
+      id: 'contacts',
+      label: t('companies.contacts'),
+      icon: <Phone className="h-5 w-5" />,
+      content: selectedCompany ? (
+        <ContactsTab objectId={selectedCompany.id} onDataChange={loadAudits} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('companies.selectCompanyToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedCompany,
+    },
+    {
+      id: 'addresses',
+      label: t('companies.addresses'),
+      icon: <MapPin className="h-5 w-5" />,
+      content: selectedCompany ? (
+        <AddressesTab objectId={selectedCompany.id} onDataChange={loadAudits} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('companies.selectCompanyToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedCompany,
+    },
+    {
+      id: 'identifications',
+      label: t('companies.identifications'),
+      icon: <CreditCard className="h-5 w-5" />,
+      content: selectedCompany ? (
+        <IdentificationsTab objectId={selectedCompany.id} objectTypeId={selectedCompany.object_type_id} onDataChange={loadAudits} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('companies.selectCompanyToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedCompany,
+    },
+    {
+      id: 'notes',
+      label: t('companies.notes'),
+      icon: <StickyNote className="h-5 w-5" />,
+      content: selectedCompany ? (
+        <NotesTab objectId={selectedCompany.id} onDataChange={loadAudits} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <StickyNote className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('companies.selectCompanyToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedCompany,
+    },
+    {
+      id: 'audits',
+      label: t('audits.title'),
+      icon: <FileText className="h-5 w-5" />,
+      content: (
+        <AuditsTable
+          audits={audits}
+          isLoading={isLoadingAudits}
+          error={auditsError}
+          auditActions={auditActions}
+        />
+      ),
+      disabled: !selectedCompany,
+    },
+  ];
+
   return (
-    <div>
+    <div className="h-full flex flex-col">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Companies</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">Manage company records</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('nav.companies')}</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('companies.subtitle')}</p>
         </div>
-        <Link href="/companies/new">
-          <Button variant="primary" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Company
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <ViewToggle
+            viewMode={viewMode}
+            onToggle={toggleViewMode}
+            gridLabel={t('lookup.gridView') || 'Grid View'}
+            cardLabel={t('lookup.cardView') || 'Card View'}
+          />
+          <Link href="/companies/new">
+            <Button variant="primary" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              {t('companies.addNew')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <Card>
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <p>Company list will be displayed here</p>
-          <p className="text-sm mt-2">API integration pending</p>
-        </div>
-      </Card>
+      {/* Companies View - Upper Half */}
+      <div className="mb-6">
+        <CompaniesView
+          companies={companies}
+          isLoading={isLoadingCompanies || loadingLookups}
+          error={companiesError}
+          viewMode={viewMode}
+          onCompanySelect={handleCompanySelect}
+          selectedCompanyId={selectedCompany?.id}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          statuses={statuses}
+        />
+      </div>
+
+      {/* Tabs - Lower Half */}
+      <div className="flex-1">
+        {!selectedCompany ? (
+          <div className="bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-12 text-center">
+            <p className="text-gray-500 dark:text-gray-400">
+              {t('companies.selectCompanyToViewDetails')}
+            </p>
+          </div>
+        ) : (
+          <Tabs tabs={tabs} defaultTab="contacts" />
+        )}
+      </div>
     </div>
   );
 }
-

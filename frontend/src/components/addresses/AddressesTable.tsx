@@ -21,7 +21,7 @@ import { Alert } from '@/components/ui/Alert';
 import { TextColumnFilter, SelectColumnFilter, CheckboxColumnFilter } from '@/components/ui/ColumnFilters';
 import { formatDateTime } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
-import type { Address } from '@/types/entities';
+import type { Address, User } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 interface AddressUpdatePayload {
@@ -50,6 +50,7 @@ interface AddressesTableProps {
   addressTypes: LookupItem[];
   addressAreaTypes: LookupItem[];
   countries: LookupItem[];
+  users?: User[];
   onUpdate: (id: number, data: AddressUpdatePayload) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   isLoading?: boolean;
@@ -78,6 +79,7 @@ export default function AddressesTable({
   addressTypes,
   addressAreaTypes,
   countries,
+  users = [],
   onUpdate,
   onDelete,
   isLoading = false,
@@ -101,6 +103,13 @@ export default function AddressesTable({
   const [sortField, setSortField] = useState<SortField>('address_type_id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+
+  // Get username by user ID
+  const getUsername = (userId?: number | string): string => {
+    if (!userId) return '-';
+    const user = users.find(u => u.id === Number(userId));
+    return user?.username || '-';
+  };
 
   // Get lookup name by ID
   const getLookupName = (lookupItems: LookupItem[], id?: number): string => {
@@ -621,7 +630,7 @@ export default function AddressesTable({
 
                     {/* 11. Created By */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {address.created_by || '-'}
+                      {getUsername(address.created_by)}
                     </td>
 
                     {/* 12. Active Status */}

@@ -44,6 +44,10 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
   const [filterNewValues, setFilterNewValues] = useState('');
   const [filterNotes, setFilterNotes] = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const getActionName = (actionId: number): string => {
     const action = auditActions.find(a => a.id === actionId);
     return action?.name || action?.code || t('audits.unknownAction');
@@ -133,6 +137,19 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
     return result;
   }, [audits, sortState, filterAction, filterCreatedBy, filterCreatedAt, filterOldValues, filterNewValues, filterNotes]);
 
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedAudits.length / itemsPerPage);
+  const paginatedAudits = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredAndSortedAudits.slice(startIndex, endIndex);
+  }, [filteredAndSortedAudits, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filterAction, filterCreatedBy, filterCreatedAt, filterOldValues, filterNewValues, filterNotes]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -179,6 +196,15 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
                   {getSortIcon('audit_action_id')}
                 </div>
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t('audits.oldValues')}
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t('audits.newValues')}
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {t('audits.notes')}
+              </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 onClick={() => handleSort('created_at')}
@@ -197,15 +223,6 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
                   {getSortIcon('created_by_username')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('audits.oldValues')}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('audits.newValues')}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('audits.notes')}
-              </th>
             </tr>
             {/* Filter Row */}
             <tr className="bg-gray-100 dark:bg-gray-700">
@@ -218,20 +235,6 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
                     label: action.name || action.code
                   }))}
                   placeholder="All Actions"
-                />
-              </th>
-              <th className="px-6 py-2">
-                <DateColumnFilter
-                  value={filterCreatedAt}
-                  onChange={setFilterCreatedAt}
-                  placeholder="YYYY-MM-DD"
-                />
-              </th>
-              <th className="px-6 py-2">
-                <TextColumnFilter
-                  value={filterCreatedBy}
-                  onChange={setFilterCreatedBy}
-                  placeholder="Created by..."
                 />
               </th>
               <th className="px-6 py-2">
@@ -255,28 +258,36 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
                   placeholder="Search notes..."
                 />
               </th>
+              <th className="px-6 py-2">
+                <DateColumnFilter
+                  value={filterCreatedAt}
+                  onChange={setFilterCreatedAt}
+                  placeholder="YYYY-MM-DD"
+                />
+              </th>
+              <th className="px-6 py-2">
+                <TextColumnFilter
+                  value={filterCreatedBy}
+                  onChange={setFilterCreatedBy}
+                  placeholder="Created by..."
+                />
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredAndSortedAudits.length === 0 ? (
+            {paginatedAudits.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                  {t('audits.noAudits')}
+                  {filteredAndSortedAudits.length === 0 ? t('audits.noAudits') : 'No audits on this page'}
                 </td>
               </tr>
             ) : (
-              filteredAndSortedAudits.map((audit) => (
+              paginatedAudits.map((audit) => (
                 <tr key={audit.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200">
                       {getActionName(audit.audit_action_id)}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                    {formatDateTime(audit.created_at)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                    {audit.created_by_username || '-'}
                   </td>
                   <td className="px-4 py-4 text-xs text-gray-700 dark:text-gray-300 max-w-xs">
                     {audit.old_values ? (
@@ -301,12 +312,83 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
                       {audit.notes || '-'}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                    {formatDateTime(audit.created_at)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                    {audit.created_by_username || '-'}
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {filteredAndSortedAudits.length > 0 && (
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="itemsPerPage" className="text-sm text-gray-700 dark:text-gray-300">
+                Rows per page:
+              </label>
+              <select
+                id="itemsPerPage"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSortedAudits.length)} of {filteredAndSortedAudits.length}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <div className="px-3 py-1 text-sm text-gray-700 dark:text-gray-300">
+              Page {currentPage} of {totalPages}
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };

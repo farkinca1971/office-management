@@ -100,6 +100,23 @@ export const en = {
     transactions: 'Transactions',
   },
 
+  // Companies
+  companies: {
+    subtitle: 'Manage company records',
+    addNew: 'Add Company',
+    loadFailed: 'Failed to load companies',
+    selectCompanyToViewDetails: 'Select a company from the table above to view details',
+    companyId: 'Company ID',
+    companyName: 'Company Name',
+    filterByCompanyId: 'Filter by company ID...',
+    filterByCompanyName: 'Filter by company name...',
+    // Tabs
+    contacts: 'Contacts',
+    addresses: 'Addresses',
+    identifications: 'Identifications',
+    notes: 'Notes',
+  },
+
   // Persons
   persons: {
     subtitle: 'Manage person records',

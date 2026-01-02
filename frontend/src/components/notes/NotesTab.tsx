@@ -19,10 +19,10 @@ import { Alert } from '@/components/ui/Alert';
 import { NotesTable } from './NotesTable';
 import { NoteFormModal } from './NoteFormModal';
 import type { NoteFormData } from './NoteFormModal';
-import { notesApi, lookupApi } from '@/lib/api';
+import { notesApi, lookupApi, userApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useTranslation } from '@/lib/i18n';
-import type { ObjectNote } from '@/types/entities';
+import type { ObjectNote, User } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 interface NotesTabProps {
@@ -36,6 +36,7 @@ export default function NotesTab({ objectId, onDataChange }: NotesTabProps) {
   const { t } = useTranslation();
   const [notes, setNotes] = useState<ObjectNote[]>([]);
   const [noteTypes, setNoteTypes] = useState<LookupItem[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -66,10 +67,11 @@ export default function NotesTab({ objectId, onDataChange }: NotesTabProps) {
 
       console.log('[NotesTab] Making API calls with params:', params);
 
-      // Load notes and note types in parallel
-      const [notesResponse, typesResponse] = await Promise.all([
+      // Load notes, note types, and users in parallel
+      const [notesResponse, typesResponse, usersResponse] = await Promise.all([
         notesApi.getByObjectId(objectId, params),
         lookupApi.getNoteTypes(language),
+        userApi.getAll(),
       ]);
 
       console.log('[NotesTab] Notes response:', notesResponse);
@@ -78,6 +80,7 @@ export default function NotesTab({ objectId, onDataChange }: NotesTabProps) {
       // Ensure we always set an array, even if the response is undefined or not an array
       const notesData = notesResponse?.data;
       const typesData = typesResponse?.data;
+      const usersData = usersResponse?.data;
 
       // Handle both array and single object responses
       let notesArray: ObjectNote[] = [];
@@ -90,6 +93,7 @@ export default function NotesTab({ objectId, onDataChange }: NotesTabProps) {
 
       setNotes(notesArray);
       setNoteTypes(Array.isArray(typesData) ? typesData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
 
       console.log('[NotesTab] State set - notes count:', notesArray.length);
     } catch (err: any) {
@@ -309,6 +313,7 @@ export default function NotesTab({ objectId, onDataChange }: NotesTabProps) {
         isLoading={isLoading}
         error={error}
         noteTypes={noteTypes}
+        users={users}
         onTogglePin={handleTogglePin}
         onUpdate={handleUpdateNote}
         onDelete={handleDeleteNote}
