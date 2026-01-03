@@ -309,54 +309,12 @@ export const LookupTable: React.FC<LookupTableProps> = ({
           }
         }
 
-        // If "Translations" checkbox is checked, update translations for all languages (en, de, hu)
-        if (updateAllLanguages && hasTranslationChanged && editingData.name.trim()) {
-          try {
-            const languagesResponse = await lookupApi.getLanguages();
-            if (languagesResponse.success) {
-              // Get only en, de, hu languages
-              const targetLanguages = languagesResponse.data.filter(
-                l => ['en', 'de', 'hu'].includes(l.code.toLowerCase())
-              );
-              
-              // Update translations for all target languages
-              const translationPromises = targetLanguages.map(async (lang) => {
-                try {
-                  // Try to update existing translation
-                  await lookupApi.updateTranslation(editingData.code, lang.id, { text: editingData.name });
-                } catch (updateErr: any) {
-                  // If update fails (translation doesn't exist), create it
-                  if (updateErr?.error?.code === 'NOT_FOUND' || updateErr?.status === 404) {
-                    try {
-                      await lookupApi.createTranslation({
-                        code: editingData.code,
-                        language_id: lang.id,
-                        text: editingData.name
-                      });
-                    } catch (createErr) {
-                      console.error(`Failed to create translation for ${lang.code}:`, createErr);
-                      throw createErr;
-                    }
-                  } else {
-                    console.error(`Failed to update translation for ${lang.code}:`, updateErr);
-                    throw updateErr;
-                  }
-                }
-              });
-              
-              await Promise.all(translationPromises);
-            }
-          } catch (err) {
-            console.error('Failed to update translations for all languages:', err);
-            // Continue with the main update even if translation updates fail
-          }
-        }
-
         // Update the lookup item itself
+        // The backend (n8n) will handle updating translations for all languages if update_all_languages is set
         // This sends to n8n PUT /api/v1/lookups/:lookup_type/:id
         // Request body only includes old/new value pairs, update_all_languages, and language_id
-        await onUpdate(editingId, { 
-          update_all_languages: updateAllLanguages && hasTranslationChanged ? 1 : 0,
+        const updatePayload = {
+          update_all_languages: updateAllLanguages ? 1 : 0,
           language_id: currentLanguageId,
           // Always include old and new values for all editable columns
           old_code: originalValues.code || '',
@@ -367,7 +325,15 @@ export const LookupTable: React.FC<LookupTableProps> = ({
           new_object_type_id: editingData.object_type_id !== undefined ? editingData.object_type_id : 0,
           old_text: originalValues.name || '',
           new_text: editingData.name || ''
+        };
+
+        console.log('LookupTable - Update payload:', {
+          updateAllLanguages,
+          updateAllLanguagesValue: updateAllLanguages ? 1 : 0,
+          payload: updatePayload
         });
+
+        await onUpdate(editingId, updatePayload);
 
         // onUpdate should handle reloading data on success
         // Reset editing state

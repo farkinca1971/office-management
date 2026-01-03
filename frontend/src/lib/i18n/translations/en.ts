@@ -25,6 +25,14 @@ export const en = {
     filter: 'Filter',
     actions: 'Actions',
     noData: 'No data available',
+    id: 'ID',
+    status: 'Status',
+    active: 'Active',
+    inactive: 'Inactive',
+    all: 'All',
+    createdAt: 'Created At',
+    updatedAt: 'Updated At',
+    createdBy: 'Created By',
   },
 
   // Navigation
@@ -142,6 +150,33 @@ export const en = {
     relationships: 'Relationships',
     notes: 'Notes',
     comingSoon: 'Coming soon',
+  },
+
+  // Contacts
+  contacts: {
+    title: 'Contacts',
+    loadFailed: 'Failed to load contacts',
+    noContacts: 'No contacts found',
+    addNew: 'Add New Contact',
+    type: 'Contact Type',
+    value: 'Contact Value',
+    contactType: 'Contact Type',
+    contactValue: 'Contact Value',
+    allTypes: 'All Types',
+    unknown: 'Unknown',
+    loading: 'Loading contacts...',
+    showing: 'Showing',
+    of: 'of',
+    newContact: 'New Contact',
+    createContact: 'Create Contact',
+    creating: 'Creating...',
+    created: 'Contact created successfully',
+    updated: 'Contact updated successfully',
+    deleted: 'Contact deleted successfully',
+    valuePlaceholder: 'Contact value...',
+    valueRequired: 'Contact value is required',
+    tableView: 'Table View',
+    cardView: 'Card View',
   },
 
   // Identifications

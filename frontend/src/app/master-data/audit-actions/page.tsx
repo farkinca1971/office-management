@@ -91,35 +91,10 @@ export default function AuditActionsPage() {
     // Clear any previous errors
     setError(null);
 
-    // Handle update_all_languages if needed (check for both boolean and number)
-    const shouldUpdateAll = item.update_all_languages === true || item.update_all_languages === 1;
-    if (shouldUpdateAll && item.new_text && item.new_code) {
-      // Update translations for all languages
-      try {
-        const languagesResponse = await lookupApi.getLanguages();
-        if (languagesResponse.success) {
-          const languages = languagesResponse.data;
-          // Update translation for all languages - use Promise.allSettled to handle partial failures
-          const updatePromises = languages.map(lang =>
-            lookupApi.updateTranslation(item.new_code!, lang.id, { text: item.new_text! })
-          );
-          const results = await Promise.allSettled(updatePromises);
-          // Log any failures but don't throw
-          results.forEach((result, index) => {
-            if (result.status === 'rejected') {
-              console.warn(`Failed to update translation for language ${languages[index]?.code}:`, result.reason);
-            }
-          });
-        }
-      } catch (err) {
-        console.error('Failed to update translations for all languages:', err);
-        // Continue with the update even if all languages update fails
-      }
-    }
-
     // Request body only includes old/new value pairs, update_all_languages, and language_id
+    // The backend (n8n) will handle updating translations for all languages if update_all_languages is set
     const updatePayload = {
-      update_all_languages: shouldUpdateAll ? 1 : 0,
+      update_all_languages: item.update_all_languages === true || item.update_all_languages === 1 ? 1 : 0,
       language_id: item.language_id,
       old_code: item.old_code !== undefined ? item.old_code : '',
       new_code: item.new_code !== undefined ? item.new_code : '',
@@ -131,13 +106,25 @@ export default function AuditActionsPage() {
       new_text: item.new_text !== undefined ? item.new_text : ''
     };
 
+    console.log('AuditActions - Update payload:', {
+      updateAllLanguagesFromItem: item.update_all_languages,
+      updateAllLanguagesValue: item.update_all_languages === true || item.update_all_languages === 1 ? 1 : 0,
+      payload: updatePayload
+    });
+
     const response = await lookupApi.updateAuditAction(id, updatePayload);
+
+    console.log('AuditActions - API Response:', response);
+    console.log('AuditActions - Response type:', typeof response);
+    console.log('AuditActions - Response.success:', response?.success);
+
     if (response.success) {
       // Clear error state on success
       setError(null);
       await loadData();
     } else {
       const errorMessage = response.error?.message || 'Failed to update audit action';
+      console.error('AuditActions - Update failed:', errorMessage, response);
       setError(errorMessage);
       throw new Error(errorMessage);
     }

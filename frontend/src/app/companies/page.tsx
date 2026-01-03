@@ -4,25 +4,24 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import { Plus, FileText, Phone, MapPin, CreditCard, StickyNote } from 'lucide-react';
 import { CompaniesView } from '@/components/companies/CompaniesView';
-import { AuditsTable } from '@/components/audits/AuditsTable';
-import NotesTab from '@/components/notes/NotesTab';
 import { Tabs } from '@/components/ui/Tabs';
 import ContactsTab from '@/components/contacts/ContactsTab';
-import IdentificationsTab from '@/components/identifications/IdentificationsTab';
 import AddressesTab from '@/components/addresses/AddressesTab';
+import IdentificationsTab from '@/components/identifications/IdentificationsTab';
+import NotesTab from '@/components/notes/NotesTab';
+import AuditsTab from '@/components/audits/AuditsTab';
 import { companyApi } from '@/lib/api/companies';
-import { auditApi } from '@/lib/api/audits';
 import { lookupApi } from '@/lib/api/lookups';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
-import type { Company, ObjectAudit } from '@/types/entities';
+import type { Company } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 export default function CompaniesPage() {
@@ -38,30 +37,17 @@ export default function CompaniesPage() {
   const [companiesError, setCompaniesError] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
-  // Audits state
-  const [audits, setAudits] = useState<ObjectAudit[]>([]);
-  const [isLoadingAudits, setIsLoadingAudits] = useState(false);
-  const [auditsError, setAuditsError] = useState<string | null>(null);
-
-  // Lookup data
+  // Lookup data for companies view
   const [statuses, setStatuses] = useState<LookupItem[]>([]);
-  const [auditActions, setAuditActions] = useState<LookupItem[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
 
   // Load lookup data
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const [statusesRes, auditActionsRes] = await Promise.all([
-          lookupApi.getObjectStatuses(undefined, language),
-          lookupApi.getAuditActions(undefined, language),
-        ]);
-
+        const statusesRes = await lookupApi.getObjectStatuses(undefined, language);
         const statusesList = statusesRes?.data || statusesRes || [];
-        const auditActionsList = auditActionsRes?.data || auditActionsRes || [];
-
         setStatuses(Array.isArray(statusesList) ? statusesList : []);
-        setAuditActions(Array.isArray(auditActionsList) ? auditActionsList : []);
       } catch (err) {
         console.error('Failed to load lookup data:', err);
       } finally {
@@ -79,8 +65,14 @@ export default function CompaniesPage() {
       setCompaniesError(null);
 
       try {
-        const response = await companyApi.getAll();
-        const data = response?.data || response || [];
+        let response = await companyApi.getAll();
+
+        // Handle n8n array wrapper: if response is array, extract first item
+        if (Array.isArray(response) && response.length > 0) {
+          response = response[0];
+        }
+
+        const data = response?.data || [];
         setCompanies(Array.isArray(data) ? data : []);
       } catch (err: any) {
         console.error('Failed to load companies:', err);
@@ -92,32 +84,6 @@ export default function CompaniesPage() {
 
     loadCompanies();
   }, [t]);
-
-  // Load audits when company is selected
-  const loadAudits = useCallback(async () => {
-    if (!selectedCompany) {
-      setAudits([]);
-      return;
-    }
-
-    setIsLoadingAudits(true);
-    setAuditsError(null);
-
-    try {
-      const response = await auditApi.getByObjectId(selectedCompany.id);
-      const data = response?.data || response || [];
-      setAudits(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      console.error('Failed to load audits:', err);
-      setAuditsError(err?.error?.message || err?.message || t('audits.loadFailed'));
-    } finally {
-      setIsLoadingAudits(false);
-    }
-  }, [selectedCompany, t]);
-
-  useEffect(() => {
-    loadAudits();
-  }, [loadAudits]);
 
   const handleCompanySelect = (company: Company) => {
     setSelectedCompany(company);
@@ -139,7 +105,7 @@ export default function CompaniesPage() {
       label: t('companies.contacts'),
       icon: <Phone className="h-5 w-5" />,
       content: selectedCompany ? (
-        <ContactsTab objectId={selectedCompany.id} onDataChange={loadAudits} />
+        <ContactsTab objectId={selectedCompany.id} />
       ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -153,7 +119,7 @@ export default function CompaniesPage() {
       label: t('companies.addresses'),
       icon: <MapPin className="h-5 w-5" />,
       content: selectedCompany ? (
-        <AddressesTab objectId={selectedCompany.id} onDataChange={loadAudits} />
+        <AddressesTab objectId={selectedCompany.id} />
       ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -167,7 +133,7 @@ export default function CompaniesPage() {
       label: t('companies.identifications'),
       icon: <CreditCard className="h-5 w-5" />,
       content: selectedCompany ? (
-        <IdentificationsTab objectId={selectedCompany.id} objectTypeId={selectedCompany.object_type_id} onDataChange={loadAudits} />
+        <IdentificationsTab objectId={selectedCompany.id} objectTypeId={selectedCompany.object_type_id} />
       ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -181,7 +147,7 @@ export default function CompaniesPage() {
       label: t('companies.notes'),
       icon: <StickyNote className="h-5 w-5" />,
       content: selectedCompany ? (
-        <NotesTab objectId={selectedCompany.id} onDataChange={loadAudits} />
+        <NotesTab objectId={selectedCompany.id} />
       ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <StickyNote className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -194,13 +160,13 @@ export default function CompaniesPage() {
       id: 'audits',
       label: t('audits.title'),
       icon: <FileText className="h-5 w-5" />,
-      content: (
-        <AuditsTable
-          audits={audits}
-          isLoading={isLoadingAudits}
-          error={auditsError}
-          auditActions={auditActions}
-        />
+      content: selectedCompany ? (
+        <AuditsTab objectId={selectedCompany.id} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('companies.selectCompanyToViewDetails')}</p>
+        </div>
       ),
       disabled: !selectedCompany,
     },

@@ -66,29 +66,10 @@ export default function ProductCategoriesPage() {
     old_text?: string; 
     new_text?: string;
   }) => {
-    // Handle update_all_languages if needed (check for both boolean and number)
-    const shouldUpdateAll = item.update_all_languages === true || item.update_all_languages === 1;
-    if (shouldUpdateAll && item.new_text && item.new_code) {
-      // Update translations for all languages
-      try {
-        const languagesResponse = await lookupApi.getLanguages();
-        if (languagesResponse.success) {
-          const languages = languagesResponse.data;
-          // Update translation for all languages
-          const updatePromises = languages.map(lang => 
-            lookupApi.updateTranslation(item.new_code!, lang.id, { text: item.new_text! })
-          );
-          await Promise.all(updatePromises);
-        }
-      } catch (err) {
-        console.error('Failed to update translations for all languages:', err);
-        // Continue with the update even if all languages update fails
-      }
-    }
-    
     // Request body only includes old/new value pairs, update_all_languages, and language_id
+    // The backend (n8n) will handle updating translations for all languages if update_all_languages is set
     const updatePayload = {
-      update_all_languages: shouldUpdateAll ? 1 : 0,
+      update_all_languages: item.update_all_languages === true || item.update_all_languages === 1 ? 1 : 0,
       language_id: item.language_id,
       old_code: item.old_code !== undefined ? item.old_code : '',
       new_code: item.new_code !== undefined ? item.new_code : '',

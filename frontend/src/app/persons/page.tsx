@@ -4,26 +4,24 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import { Plus, FileText, Phone, MapPin, Briefcase, CreditCard, Network, StickyNote } from 'lucide-react';
 import { PersonsView } from '@/components/persons/PersonsView';
-import { AuditsTable } from '@/components/audits/AuditsTable';
-import NotesTab from '@/components/notes/NotesTab';
 import { Tabs } from '@/components/ui/Tabs';
 import ContactsTab from '@/components/contacts/ContactsTab';
-import IdentificationsTab from '@/components/identifications/IdentificationsTab';
 import AddressesTab from '@/components/addresses/AddressesTab';
+import IdentificationsTab from '@/components/identifications/IdentificationsTab';
+import NotesTab from '@/components/notes/NotesTab';
+import AuditsTab from '@/components/audits/AuditsTab';
 import { personApi } from '@/lib/api/persons';
-import { auditApi } from '@/lib/api/audits';
 import { lookupApi } from '@/lib/api/lookups';
-import apiClient from '@/lib/api/client';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
-import type { Person, ObjectAudit } from '@/types/entities';
+import type { Person } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 export default function PersonsPage() {
@@ -39,40 +37,29 @@ export default function PersonsPage() {
   const [personsError, setPersonsError] = useState<string | null>(null);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
 
-  // Audits state
-  const [audits, setAudits] = useState<ObjectAudit[]>([]);
-  const [isLoadingAudits, setIsLoadingAudits] = useState(false);
-  const [auditsError, setAuditsError] = useState<string | null>(null);
-
-  // Notes state - now managed by NotesTab component
-
-  // Lookup data
+  // Lookup data for persons view
   const [salutations, setSalutations] = useState<LookupItem[]>([]);
   const [sexes, setSexes] = useState<LookupItem[]>([]);
   const [statuses, setStatuses] = useState<LookupItem[]>([]);
-  const [auditActions, setAuditActions] = useState<LookupItem[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
 
   // Load lookup data
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const [salutationsRes, sexesRes, statusesRes, auditActionsRes] = await Promise.all([
+        const [salutationsRes, sexesRes, statusesRes] = await Promise.all([
           lookupApi.getSalutations(language),
           lookupApi.getSexes(language),
           lookupApi.getObjectStatuses(undefined, language),
-          lookupApi.getAuditActions(undefined, language),
         ]);
 
         const salutationsList = salutationsRes?.data || salutationsRes || [];
         const sexesList = sexesRes?.data || sexesRes || [];
         const statusesList = statusesRes?.data || statusesRes || [];
-        const auditActionsList = auditActionsRes?.data || auditActionsRes || [];
 
         setSalutations(Array.isArray(salutationsList) ? salutationsList : []);
         setSexes(Array.isArray(sexesList) ? sexesList : []);
         setStatuses(Array.isArray(statusesList) ? statusesList : []);
-        setAuditActions(Array.isArray(auditActionsList) ? auditActionsList : []);
       } catch (err) {
         console.error('Failed to load lookup data:', err);
       } finally {
@@ -104,34 +91,6 @@ export default function PersonsPage() {
     loadPersons();
   }, [t]);
 
-  // Load audits when person is selected
-  const loadAudits = useCallback(async () => {
-    if (!selectedPerson) {
-      setAudits([]);
-      return;
-    }
-
-    setIsLoadingAudits(true);
-    setAuditsError(null);
-
-    try {
-      const response = await auditApi.getByObjectId(selectedPerson.id);
-      const data = response?.data || response || [];
-      setAudits(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      console.error('Failed to load audits:', err);
-      setAuditsError(err?.error?.message || err?.message || t('audits.loadFailed'));
-    } finally {
-      setIsLoadingAudits(false);
-    }
-  }, [selectedPerson, t]);
-
-  useEffect(() => {
-    loadAudits();
-  }, [loadAudits]);
-
-  // Notes are now managed by NotesTab component
-
   const handlePersonSelect = (person: Person) => {
     setSelectedPerson(person);
   };
@@ -152,7 +111,7 @@ export default function PersonsPage() {
       label: t('persons.contacts'),
       icon: <Phone className="h-5 w-5" />,
       content: selectedPerson ? (
-        <ContactsTab objectId={selectedPerson.id} onDataChange={loadAudits} />
+        <ContactsTab objectId={selectedPerson.id} />
       ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -166,7 +125,7 @@ export default function PersonsPage() {
       label: t('persons.addresses'),
       icon: <MapPin className="h-5 w-5" />,
       content: selectedPerson ? (
-        <AddressesTab objectId={selectedPerson.id} onDataChange={loadAudits} />
+        <AddressesTab objectId={selectedPerson.id} />
       ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -192,7 +151,7 @@ export default function PersonsPage() {
       label: t('persons.identifications'),
       icon: <CreditCard className="h-5 w-5" />,
       content: selectedPerson ? (
-        <IdentificationsTab objectId={selectedPerson.id} objectTypeId={selectedPerson.object_type_id} onDataChange={loadAudits} />
+        <IdentificationsTab objectId={selectedPerson.id} objectTypeId={selectedPerson.object_type_id} />
       ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -218,7 +177,7 @@ export default function PersonsPage() {
       label: t('persons.notes'),
       icon: <StickyNote className="h-5 w-5" />,
       content: selectedPerson ? (
-        <NotesTab objectId={selectedPerson.id} onDataChange={loadAudits} />
+        <NotesTab objectId={selectedPerson.id} />
       ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <StickyNote className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -231,13 +190,13 @@ export default function PersonsPage() {
       id: 'audits',
       label: t('audits.title'),
       icon: <FileText className="h-5 w-5" />,
-      content: (
-        <AuditsTable
-          audits={audits}
-          isLoading={isLoadingAudits}
-          error={auditsError}
-          auditActions={auditActions}
-        />
+      content: selectedPerson ? (
+        <AuditsTab objectId={selectedPerson.id} />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('persons.selectPersonToViewDetails')}</p>
+        </div>
       ),
       disabled: !selectedPerson,
     },

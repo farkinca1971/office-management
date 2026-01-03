@@ -157,6 +157,8 @@ export const hu = {
     loadFailed: 'A kapcsolatok betöltése sikertelen',
     noContacts: 'Nincsenek kapcsolatok',
     addNew: 'Új kapcsolat hozzáadása',
+    type: 'Kapcsolat típusa',
+    value: 'Kapcsolat értéke',
     contactType: 'Kapcsolat típusa',
     contactValue: 'Kapcsolat értéke',
     allTypes: 'Minden típus',

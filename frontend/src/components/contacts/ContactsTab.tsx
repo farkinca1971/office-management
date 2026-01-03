@@ -189,36 +189,58 @@ export default function ContactsTab({ objectId, onDataChange }: ContactsTabProps
 
   // Handle create new contact
   const handleCreateContact = async (data: ContactFormData) => {
+    console.log('[ContactsTab] handleCreateContact called with data:', data);
+    console.log('[ContactsTab] objectId:', objectId);
+
     setIsCreating(true);
     try {
       setError(null);
       setSuccessMessage(null);
 
-      const response = await contactApi.create(objectId, {
+      const requestData = {
         object_id: objectId,
         contact_type_id: data.contact_type_id,
         contact_value: data.contact_value.trim(),
-      });
+      };
 
-      if (response.success && response.data) {
-        // Close modal
-        setIsModalOpen(false);
+      console.log('[ContactsTab] Creating contact with request data:', requestData);
+      const response = await contactApi.create(objectId, requestData);
 
-        // Reload contacts to get the complete data with proper IDs
-        await loadData();
+      console.log('[ContactsTab] Create contact response:', response);
+      console.log('[ContactsTab] Response type:', typeof response);
+      console.log('[ContactsTab] Response stringified:', JSON.stringify(response));
+      console.log('[ContactsTab] Response.success:', response?.success);
+      console.log('[ContactsTab] Response.data:', response?.data);
+      console.log('[ContactsTab] Response.id:', response?.id);
 
-        // Trigger audit reload on parent
-        if (onDataChange) {
-          await onDataChange();
-        }
-
-        setSuccessMessage(t('contacts.created'));
-
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccessMessage(null), 3000);
+      // Check if response indicates success or has expected data
+      if (!response || (typeof response === 'object' && !response.success && !response.id && !response.data)) {
+        console.error('[ContactsTab] Server did not confirm contact creation');
+        setError(t('contacts.createFailed') || 'Failed to create contact - server did not confirm');
+        return;
       }
+
+      // Close modal after successful creation
+      setIsModalOpen(false);
+
+      // Wait a moment for the database to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Reload contacts to get the complete data with proper IDs
+      console.log('[ContactsTab] Reloading contacts after creation...');
+      await loadData();
+
+      // Trigger audit reload on parent
+      if (onDataChange) {
+        await onDataChange();
+      }
+
+      setSuccessMessage(t('contacts.created'));
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
-      console.error('Error creating contact:', err);
+      console.error('[ContactsTab] Error creating contact:', err);
       setError(err?.error?.message || t('contacts.loadFailed'));
       throw err;
     } finally {
