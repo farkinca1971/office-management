@@ -99,6 +99,7 @@ Where `:lookup_type` can be one of:
 - `address-types`
 - `address-area-types`
 - `contact-types`
+- `document-types`
 - `transaction-types`
 - `currencies`
 - `object-relation-types`
@@ -3614,4 +3615,1088 @@ All endpoints should return responses in this format:
   }
 }
 ```
+
+
+---
+
+# Documents API
+
+**Base URL**: `https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1`
+
+The Documents API uses a **separate dedicated webhook endpoint** (same as contacts, addresses, notes, identifications).
+
+## List All Documents
+
+**GET** `/documents`
+
+Returns a paginated list of all documents.
+
+**Query Parameters**:
+- `document_type_id` (optional): Filter by document type ID
+- `object_status_id` (optional): Filter by object status ID
+- `is_active` (optional): Filter by active status (0 or 1)
+- `date_from` (optional): Filter documents from this date (YYYY-MM-DD)
+- `date_to` (optional): Filter documents until this date (YYYY-MM-DD)
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20)
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}` (automatically added by frontend)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Contract Agreement 2024",
+      "title_code": "document_title_1",
+      "document_type_id": 1,
+      "document_date": "2024-01-15",
+      "document_number": "DOC-2024-001",
+      "expiry_date": "2025-01-14",
+      "object_type_id": 10,
+      "object_status_id": 1,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "created_by": 1
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 45,
+    "total_pages": 3
+  }
+}
+```
+
+**SQL Implementation**:
+```sql
+  SELECT
+    d.id,
+    d.title_code,
+    t.text as title,
+    d.document_type_id,
+    d.document_date,
+    d.document_number,
+    d.expiry_date,
+    o.object_type_id,
+    o.object_status_id,
+    d.is_active,
+    d.created_at,
+    d.updated_at,
+    d.created_by
+  FROM documents d
+  INNER JOIN objects o ON o.id = d.id
+  LEFT JOIN translations t ON t.code = d.title_code AND t.language_id = {{ $headers['x-language-id'] }}
+  WHERE 1=1
+    AND ({{ $json.query.document_type_id }} IS NULL OR d.document_type_id = {{ $json.query.document_type_id }})
+    AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+    AND ({{ $json.query.is_active }} IS NULL OR d.is_active = {{ $json.query.is_active }})
+    AND ({{ $json.query.date_from }} IS NULL OR d.document_date >= {{ $json.query.date_from }})
+    AND ({{ $json.query.date_to }} IS NULL OR d.document_date <= {{ $json.query.date_to }})
+  ORDER BY d.created_at DESC
+  LIMIT {{ $json.query.per_page || 20 }} OFFSET {{ ($json.query.page - 1) * ($json.query.per_page || 20) }};
+```
+
+---
+
+## Get Single Document
+
+**GET** `/documents/:id`
+
+Returns a single document by ID.
+
+**Path Parameters**:
+- `id`: Document ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Response**: Same as single item in list above
+
+**SQL Implementation**:
+```sql
+SELECT
+  d.id,
+  d.title_code,
+  t.text as title,
+  d.document_type_id,
+  d.document_date,
+  d.document_number,
+  d.expiry_date,
+  o.object_type_id,
+  o.object_status_id,
+  d.is_active,
+  d.created_at,
+  d.updated_at,
+  d.created_by
+FROM documents d
+INNER JOIN objects o ON o.id = d.id
+LEFT JOIN translations t ON t.code = d.title_code AND t.language_id = {{ $headers['x-language-id'] }}
+WHERE d.id = {{ $json.params.id }};
+```
+
+---
+
+## Create Document
+
+**POST** `/documents`
+
+Creates a new document.
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body**:
+```json
+{
+  "object_type_id": 10,
+  "object_status_id": 1,
+  "title": "Contract Agreement 2024",
+  "document_type_id": 1,
+  "document_date": "2024-01-15",
+  "document_number": "DOC-2024-001",
+  "expiry_date": "2025-01-14",
+  "language_id": 1
+}
+```
+
+**Response**: Returns the created document with translated title
+
+**SQL Implementation** (use transaction):
+```sql
+-- Step 1: Create object record
+INSERT INTO objects (object_type_id, object_status_id, is_active, created_at, updated_at)
+VALUES ({{ $json.body.object_type_id }}, {{ $json.body.object_status_id }}, 1, NOW(), NOW());
+
+SET @new_id = LAST_INSERT_ID();
+
+-- Step 2: Generate unique translation code for title
+SET @title_code = CONCAT('document_title_', @new_id);
+
+-- Step 3: Insert translation for title
+INSERT INTO translations (code, language_id, text)
+VALUES (@title_code, {{ $json.body.language_id }}, {{ $json.body.title }});
+
+-- Step 4: Create document record
+INSERT INTO documents (
+  id, title_code, document_type_id, document_date,
+  document_number, expiry_date, created_at, updated_at, created_by
+)
+VALUES (
+  @new_id,
+  @title_code,
+  {{ $json.body.document_type_id }},
+  {{ $json.body.document_date }},
+  {{ $json.body.document_number }},
+  {{ $json.body.expiry_date }},
+  NOW(),
+  NOW(),
+  {{ $json.body.created_by || $json.user_id }}
+);
+
+-- Step 5: Return created document with translated title
+SELECT
+  d.*,
+  o.object_type_id,
+  o.object_status_id,
+  t.text as title
+FROM documents d
+INNER JOIN objects o ON o.id = d.id
+LEFT JOIN translations t ON t.code = d.title_code AND t.language_id = {{ $json.body.language_id }}
+WHERE d.id = @new_id;
+```
+
+---
+
+## Update Document
+
+**POST** `/documents/:id`
+
+Updates an existing document. Uses POST method (not PUT) due to n8n webhook limitations.
+
+**Path Parameters**:
+- `id`: Document ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body** (old/new pattern for audit trail):
+```json
+{
+  "title_old": "Contract Agreement 2023",
+  "title_new": "Contract Agreement 2024",
+  "document_type_id_old": 1,
+  "document_type_id_new": 1,
+  "document_date_old": "2023-01-15",
+  "document_date_new": "2024-01-15",
+  "document_number_old": "DOC-2023-001",
+  "document_number_new": "DOC-2024-001",
+  "expiry_date_old": "2024-01-14",
+  "expiry_date_new": "2025-01-14",
+  "language_id": 1
+}
+```
+
+**Response**: Returns the updated document with translated title
+
+**SQL Implementation**:
+```sql
+-- Update translation for title (if title changed)
+UPDATE translations
+SET text = {{ $json.body.title_new }}
+WHERE code = (SELECT title_code FROM documents WHERE id = {{ $json.params.id }})
+  AND language_id = {{ $json.body.language_id }};
+
+-- Update document
+UPDATE documents
+SET
+  document_type_id = {{ $json.body.document_type_id_new }},
+  document_date = {{ $json.body.document_date_new }},
+  document_number = {{ $json.body.document_number_new }},
+  expiry_date = {{ $json.body.expiry_date_new }},
+  updated_at = NOW()
+WHERE id = {{ $json.params.id }};
+
+-- Return updated document with translated title
+SELECT
+  d.*,
+  o.object_type_id,
+  o.object_status_id,
+  t.text as title
+FROM documents d
+INNER JOIN objects o ON o.id = d.id
+LEFT JOIN translations t ON t.code = d.title_code AND t.language_id = {{ $json.body.language_id }}
+WHERE d.id = {{ $json.params.id }};
+```
+
+---
+
+## Delete Document
+
+**DELETE** `/documents/:id`
+
+Soft deletes a document by setting `is_active = false`.
+
+**Path Parameters**:
+- `id`: Document ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "message": "Document deleted successfully"
+  }
+}
+```
+
+**SQL Implementation**:
+```sql
+UPDATE objects
+SET is_active = 0, updated_at = NOW()
+WHERE id = {{ $json.params.id }};
+```
+
+---
+
+## Get Document Files
+
+**GET** `/documents/:id/files`
+
+Returns all files linked to a document.
+
+**Path Parameters**:
+- `id`: Document ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 5,
+      "filename": "contract_signed.pdf",
+      "original_filename": "Contract Agreement 2024 - Signed.pdf",
+      "file_path": "/storage/documents/2024/contract_signed.pdf",
+      "mime_type": "application/pdf",
+      "file_size": 245678,
+      "upload_date": "2024-01-15T14:30:00Z",
+      "checksum": "a3d5f6e7b8c9d0e1f2a3b4c5d6e7f8a9",
+      "storage_type": "local",
+      "bucket_name": null,
+      "storage_key": null,
+      "object_type_id": 11,
+      "object_status_id": 1,
+      "is_active": true
+    }
+  ]
+}
+```
+
+**SQL Implementation**:
+```sql
+SELECT f.*, o.object_type_id, o.object_status_id
+FROM files f
+INNER JOIN objects o ON o.id = f.id
+INNER JOIN object_relations r ON r.object_to_id = f.id
+WHERE r.object_from_id = {{ $json.params.id }}
+  AND r.object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+  AND o.is_active = 1
+ORDER BY f.created_at DESC;
+```
+
+---
+
+## Link File to Document
+
+**POST** `/documents/:id/files`
+
+Links an existing file to a document.
+
+**Path Parameters**:
+- `id`: Document ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body**:
+```json
+{
+  "file_id": 5,
+  "language_id": 1
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "message": "File linked to document successfully"
+  }
+}
+```
+
+**SQL Implementation**:
+```sql
+INSERT INTO object_relations (
+  object_from_id, object_to_id, object_relation_type_id, 
+  is_active, created_by, created_at, updated_at
+)
+VALUES (
+  {{ $json.params.id }},
+  {{ $json.body.file_id }},
+  (SELECT id FROM object_relation_types WHERE code = 'document_file'),
+  1,
+  {{ $json.user_id }},
+  NOW(),
+  NOW()
+);
+```
+
+---
+
+## Unlink File from Document
+
+**DELETE** `/documents/:document_id/files/:file_id`
+
+Unlinks a file from a document. **CRITICAL**: This will fail if the file has no other parent documents.
+
+**Path Parameters**:
+- `document_id`: Document ID
+- `file_id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "message": "File unlinked from document successfully"
+  }
+}
+```
+
+**SQL Implementation** (with constraint check):
+```sql
+-- Check if file has other parent documents
+SET @parent_count = (
+  SELECT COUNT(*)
+  FROM object_relations
+  WHERE object_to_id = {{ $json.params.file_id }}
+    AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+    AND is_active = 1
+);
+
+-- Fail if this is the only parent
+IF @parent_count <= 1 THEN
+  SIGNAL SQLSTATE '45000' 
+  SET MESSAGE_TEXT = 'Cannot unlink file - file must have at least one parent document';
+END IF;
+
+-- Delete the relation
+DELETE FROM object_relations
+WHERE object_from_id = {{ $json.params.document_id }}
+  AND object_to_id = {{ $json.params.file_id }}
+  AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file');
+```
+
+---
+
+## Get Document Relations
+
+**GET** `/documents/:id/relations`
+
+Returns all object relations for a document.
+
+**Path Parameters**:
+- `id`: Document ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 10,
+      "object_from_id": 1,
+      "object_to_id": 25,
+      "object_relation_type_id": 3,
+      "note": "Related to project contract",
+      "is_active": true,
+      "created_by": 1,
+      "created_at": "2024-01-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+**SQL Implementation**:
+```sql
+SELECT *
+FROM object_relations
+WHERE object_from_id = {{ $json.params.id }}
+  AND is_active = 1
+ORDER BY created_at DESC;
+```
+
+---
+
+## Add Document Relation
+
+**POST** `/documents/:id/relations`
+
+Creates a relation between a document and another object.
+
+**Path Parameters**:
+- `id`: Document ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body**:
+```json
+{
+  "object_to_id": 25,
+  "object_relation_type_id": 3,
+  "note": "Related to project contract",
+  "language_id": 1
+}
+```
+
+**Response**: Returns the created relation
+
+**SQL Implementation**:
+```sql
+INSERT INTO object_relations (
+  object_from_id, object_to_id, object_relation_type_id,
+  note, is_active, created_by, created_at, updated_at
+)
+VALUES (
+  {{ $json.params.id }},
+  {{ $json.body.object_to_id }},
+  {{ $json.body.object_relation_type_id }},
+  {{ $json.body.note }},
+  1,
+  {{ $json.user_id }},
+  NOW(),
+  NOW()
+);
+```
+
+---
+
+## Remove Document Relation
+
+**DELETE** `/documents/:document_id/relations/:relation_id`
+
+Removes a relation from a document.
+
+**Path Parameters**:
+- `document_id`: Document ID
+- `relation_id`: Relation ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "success": true
+  }
+}
+```
+
+**SQL Implementation**:
+```sql
+DELETE FROM object_relations
+WHERE id = {{ $json.params.relation_id }}
+  AND object_from_id = {{ $json.params.document_id }};
+```
+
+---
+
+# Files API
+
+**Base URL**: `https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1`
+
+The Files API uses the **same dedicated webhook endpoint** as documents, contacts, addresses, and notes.
+
+**CRITICAL CONSTRAINT**: Files MUST have at least one parent document at all times. Deletion is only allowed if the file has more than one parent document.
+
+## List All Files
+
+**GET** `/files`
+
+Returns a paginated list of all files.
+
+**Query Parameters**:
+- `mime_type` (optional): Filter by MIME type
+- `storage_type` (optional): Filter by storage type (local, s3, azure, gcs)
+- `is_active` (optional): Filter by active status (0 or 1)
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20)
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 5,
+      "filename": "contract_signed.pdf",
+      "original_filename": "Contract Agreement 2024 - Signed.pdf",
+      "file_path": "/storage/documents/2024/contract_signed.pdf",
+      "mime_type": "application/pdf",
+      "file_size": 245678,
+      "upload_date": "2024-01-15T14:30:00Z",
+      "checksum": "a3d5f6e7b8c9d0e1f2a3b4c5d6e7f8a9",
+      "storage_type": "local",
+      "bucket_name": null,
+      "storage_key": null,
+      "object_type_id": 11,
+      "object_status_id": 1,
+      "is_active": true,
+      "created_at": "2024-01-15T14:30:00Z",
+      "updated_at": "2024-01-15T14:30:00Z",
+      "created_by": 1
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 120,
+    "total_pages": 6
+  }
+}
+```
+
+**SQL Implementation**:
+```sql
+SELECT f.*, o.object_type_id, o.object_status_id
+FROM files f
+INNER JOIN objects o ON o.id = f.id
+WHERE 1=1
+  AND ({{ $json.query.mime_type }} IS NULL OR f.mime_type = {{ $json.query.mime_type }})
+  AND ({{ $json.query.storage_type }} IS NULL OR f.storage_type = {{ $json.query.storage_type }})
+  AND ({{ $json.query.is_active }} IS NULL OR o.is_active = {{ $json.query.is_active }})
+ORDER BY f.created_at DESC
+LIMIT {{ $json.query.per_page || 20 }} OFFSET {{ ($json.query.page - 1) * ($json.query.per_page || 20) }};
+```
+
+---
+
+## Get Single File
+
+**GET** `/files/:id`
+
+Returns a single file by ID.
+
+**Path Parameters**:
+- `id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Response**: Same as single item in list above
+
+**SQL Implementation**:
+```sql
+SELECT f.*, o.object_type_id, o.object_status_id
+FROM files f
+INNER JOIN objects o ON o.id = f.id
+WHERE f.id = {{ $json.params.id }};
+```
+
+---
+
+## Create File
+
+**POST** `/files`
+
+Creates a new file. **CRITICAL**: `parent_document_id` is required.
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body**:
+```json
+{
+  "object_type_id": 11,
+  "object_status_id": 1,
+  "filename": "contract_signed.pdf",
+  "original_filename": "Contract Agreement 2024 - Signed.pdf",
+  "file_path": "/storage/documents/2024/contract_signed.pdf",
+  "mime_type": "application/pdf",
+  "file_size": 245678,
+  "checksum": "a3d5f6e7b8c9d0e1f2a3b4c5d6e7f8a9",
+  "storage_type": "local",
+  "bucket_name": null,
+  "storage_key": null,
+  "parent_document_id": 1,
+  "language_id": 1
+}
+```
+
+**Response**: Returns the created file
+
+**SQL Implementation** (use transaction):
+```sql
+-- Step 1: Create object record
+INSERT INTO objects (object_type_id, object_status_id, is_active, created_at, updated_at)
+VALUES ({{ $json.body.object_type_id }}, {{ $json.body.object_status_id }}, 1, NOW(), NOW());
+
+SET @new_id = LAST_INSERT_ID();
+
+-- Step 2: Create file record
+INSERT INTO files (
+  id, filename, original_filename, file_path, mime_type, file_size,
+  upload_date, checksum, storage_type, bucket_name, storage_key,
+  created_at, updated_at, created_by
+)
+VALUES (
+  @new_id,
+  {{ $json.body.filename }},
+  {{ $json.body.original_filename }},
+  {{ $json.body.file_path }},
+  {{ $json.body.mime_type }},
+  {{ $json.body.file_size }},
+  NOW(),
+  {{ $json.body.checksum }},
+  {{ $json.body.storage_type }},
+  {{ $json.body.bucket_name }},
+  {{ $json.body.storage_key }},
+  NOW(),
+  NOW(),
+  {{ $json.body.created_by || $json.user_id }}
+);
+
+-- Step 3: Link to parent document (REQUIRED)
+INSERT INTO object_relations (
+  object_from_id, object_to_id, object_relation_type_id,
+  is_active, created_by, created_at, updated_at
+)
+VALUES (
+  {{ $json.body.parent_document_id }},
+  @new_id,
+  (SELECT id FROM object_relation_types WHERE code = 'document_file'),
+  1,
+  {{ $json.user_id }},
+  NOW(),
+  NOW()
+);
+
+-- Step 4: Return created file
+SELECT f.*, o.object_type_id, o.object_status_id
+FROM files f
+INNER JOIN objects o ON o.id = f.id
+WHERE f.id = @new_id;
+```
+
+---
+
+## Update File
+
+**POST** `/files/:id`
+
+Updates an existing file. Uses POST method (not PUT) due to n8n webhook limitations.
+
+**Path Parameters**:
+- `id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body** (old/new pattern):
+```json
+{
+  "filename_old": "contract_draft.pdf",
+  "filename_new": "contract_signed.pdf",
+  "original_filename_old": "Contract 2024 - Draft.pdf",
+  "original_filename_new": "Contract 2024 - Signed.pdf",
+  "file_path_old": "/storage/documents/2024/contract_draft.pdf",
+  "file_path_new": "/storage/documents/2024/contract_signed.pdf",
+  "mime_type_old": "application/pdf",
+  "mime_type_new": "application/pdf",
+  "storage_type_old": "local",
+  "storage_type_new": "s3",
+  "bucket_name_old": null,
+  "bucket_name_new": "my-documents-bucket",
+  "storage_key_old": null,
+  "storage_key_new": "2024/contracts/contract_signed.pdf",
+  "language_id": 1
+}
+```
+
+**Response**: Returns the updated file
+
+**SQL Implementation**:
+```sql
+-- Create version snapshot BEFORE updating
+INSERT INTO file_versions (
+  file_id, version_number, filename, original_filename, file_path,
+  mime_type, file_size, checksum, storage_type, bucket_name, storage_key,
+  changed_by, changed_at, change_reason
+)
+SELECT 
+  f.id,
+  COALESCE((SELECT MAX(version_number) FROM file_versions WHERE file_id = f.id), 0) + 1,
+  f.filename, f.original_filename, f.file_path, f.mime_type, f.file_size,
+  f.checksum, f.storage_type, f.bucket_name, f.storage_key,
+  {{ $json.user_id }},
+  NOW(),
+  'Auto-snapshot before update'
+FROM files f
+WHERE f.id = {{ $json.params.id }};
+
+-- Update file
+UPDATE files
+SET 
+  filename = {{ $json.body.filename_new }},
+  original_filename = {{ $json.body.original_filename_new }},
+  file_path = {{ $json.body.file_path_new }},
+  mime_type = {{ $json.body.mime_type_new }},
+  storage_type = {{ $json.body.storage_type_new }},
+  bucket_name = {{ $json.body.bucket_name_new }},
+  storage_key = {{ $json.body.storage_key_new }},
+  updated_at = NOW()
+WHERE id = {{ $json.params.id }};
+
+-- Return updated file
+SELECT f.*, o.object_type_id, o.object_status_id
+FROM files f
+INNER JOIN objects o ON o.id = f.id
+WHERE f.id = {{ $json.params.id }};
+```
+
+---
+
+## Delete File
+
+**DELETE** `/files/:id`
+
+Soft deletes a file. **CRITICAL**: This will fail if the file has only one parent document.
+
+**Path Parameters**:
+- `id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "message": "File deleted successfully"
+  }
+}
+```
+
+**Error Response** (if file has only one parent):
+```json
+{
+  "success": false,
+  "error": {
+    "code": "DELETE_CONSTRAINT_VIOLATION",
+    "message": "Cannot delete file - file must have at least one parent document"
+  }
+}
+```
+
+**SQL Implementation**:
+```sql
+-- Check parent document count
+SET @parent_count = (
+  SELECT COUNT(*)
+  FROM object_relations
+  WHERE object_to_id = {{ $json.params.id }}
+    AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+    AND is_active = 1
+);
+
+-- Fail if only one parent
+IF @parent_count <= 1 THEN
+  SIGNAL SQLSTATE '45000' 
+  SET MESSAGE_TEXT = 'Cannot delete file - file must have at least one parent document';
+END IF;
+
+-- Soft delete
+UPDATE objects
+SET is_active = 0, updated_at = NOW()
+WHERE id = {{ $json.params.id }};
+```
+
+---
+
+## Get File Documents
+
+**GET** `/files/:id/documents`
+
+Returns all parent documents for a file.
+
+**Path Parameters**:
+- `id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Contract Agreement 2024",
+      "description": "Annual service contract",
+      "document_type_id": 1,
+      "document_date": "2024-01-15",
+      "document_number": "DOC-2024-001",
+      "object_type_id": 10,
+      "object_status_id": 1
+    }
+  ]
+}
+```
+
+**SQL Implementation**:
+```sql
+SELECT d.*, o.object_type_id, o.object_status_id
+FROM documents d
+INNER JOIN objects o ON o.id = d.id
+INNER JOIN object_relations r ON r.object_from_id = d.id
+WHERE r.object_to_id = {{ $json.params.id }}
+  AND r.object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+  AND o.is_active = 1
+ORDER BY d.created_at DESC;
+```
+
+---
+
+## Get File Document Count
+
+**GET** `/files/:id/documents/count`
+
+Returns the count of parent documents for a file. Useful for checking if file can be deleted.
+
+**Path Parameters**:
+- `id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "count": 2
+  }
+}
+```
+
+**SQL Implementation**:
+```sql
+SELECT COUNT(*) as count
+FROM object_relations
+WHERE object_to_id = {{ $json.params.id }}
+  AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+  AND is_active = 1;
+```
+
+---
+
+## Get File Versions
+
+**GET** `/files/:id/versions`
+
+Returns version history for a file.
+
+**Path Parameters**:
+- `id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 25,
+      "file_id": 5,
+      "version_number": 2,
+      "filename": "contract_signed.pdf",
+      "original_filename": "Contract 2024 - Signed.pdf",
+      "file_path": "/storage/documents/2024/contract_signed.pdf",
+      "mime_type": "application/pdf",
+      "file_size": 245678,
+      "checksum": "a3d5f6e7b8c9d0e1f2a3b4c5d6e7f8a9",
+      "storage_type": "local",
+      "bucket_name": null,
+      "storage_key": null,
+      "changed_by": 1,
+      "changed_by_username": "admin",
+      "changed_at": "2024-02-01T10:15:00Z",
+      "change_reason": "Updated to signed version"
+    }
+  ]
+}
+```
+
+**SQL Implementation**:
+```sql
+SELECT 
+  v.*,
+  u.username as changed_by_username
+FROM file_versions v
+LEFT JOIN users u ON u.id = v.changed_by
+WHERE v.file_id = {{ $json.params.id }}
+ORDER BY v.version_number DESC;
+```
+
+---
+
+## Create File Version
+
+**POST** `/files/:id/versions`
+
+Creates a manual version snapshot of the current file state.
+
+**Path Parameters**:
+- `id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body**:
+```json
+{
+  "change_reason": "Backup before migration to cloud storage",
+  "language_id": 1
+}
+```
+
+**Response**: Returns the created version
+
+**SQL Implementation**:
+```sql
+INSERT INTO file_versions (
+  file_id, version_number, filename, original_filename, file_path,
+  mime_type, file_size, checksum, storage_type, bucket_name, storage_key,
+  changed_by, changed_at, change_reason
+)
+SELECT 
+  f.id,
+  COALESCE((SELECT MAX(version_number) FROM file_versions WHERE file_id = f.id), 0) + 1,
+  f.filename, f.original_filename, f.file_path, f.mime_type, f.file_size,
+  f.checksum, f.storage_type, f.bucket_name, f.storage_key,
+  {{ $json.user_id }},
+  NOW(),
+  {{ $json.body.change_reason }}
+FROM files f
+WHERE f.id = {{ $json.params.id }};
+
+-- Return the created version
+SELECT v.*, u.username as changed_by_username
+FROM file_versions v
+LEFT JOIN users u ON u.id = v.changed_by
+WHERE v.file_id = {{ $json.params.id }}
+ORDER BY v.version_number DESC
+LIMIT 1;
+```
+
+---
+
+## Documents & Files Key Constraints
+
+1. **File Parent Constraint**: Files MUST have at least one parent document at all times
+2. **Deletion Rule**: Files can only be deleted if they have more than one parent document
+3. **Unlinking Rule**: Files can only be unlinked from a document if they have other parent documents
+4. **Version Snapshots**: Automatically created before every update operation
+5. **Soft Deletes**: All deletes are soft deletes (is_active = 0)
+6. **Document-File Relation**: Uses 'document_file' relation type in object_relation_types
+7. **Object Types**: Documents use object_type_id = 10, Files use object_type_id = 11 (placeholder values)
 

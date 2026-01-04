@@ -47,19 +47,32 @@ export default function PersonsPage() {
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const [salutationsRes, sexesRes, statusesRes] = await Promise.all([
+        let [salutationsRes, sexesRes, statusesRes] = await Promise.all([
           lookupApi.getSalutations(language),
           lookupApi.getSexes(language),
           lookupApi.getObjectStatuses(undefined, language),
         ]);
 
-        const salutationsList = salutationsRes?.data || salutationsRes || [];
-        const sexesList = sexesRes?.data || sexesRes || [];
-        const statusesList = statusesRes?.data || statusesRes || [];
+        // IMPORTANT: n8n sometimes wraps the response in an array
+        // If response is an array, take the first element
+        if (Array.isArray(salutationsRes) && salutationsRes.length > 0 && !salutationsRes[0]?.id) {
+          salutationsRes = salutationsRes[0];
+        }
+        if (Array.isArray(sexesRes) && sexesRes.length > 0 && !sexesRes[0]?.id) {
+          sexesRes = sexesRes[0];
+        }
+        if (Array.isArray(statusesRes) && statusesRes.length > 0 && !statusesRes[0]?.id) {
+          statusesRes = statusesRes[0];
+        }
 
-        setSalutations(Array.isArray(salutationsList) ? salutationsList : []);
-        setSexes(Array.isArray(sexesList) ? sexesList : []);
-        setStatuses(Array.isArray(statusesList) ? statusesList : []);
+        // Response structure: { success: true, data: LookupItem[], pagination?: {...} }
+        const salutationsList = Array.isArray(salutationsRes?.data) ? salutationsRes.data : [];
+        const sexesList = Array.isArray(sexesRes?.data) ? sexesRes.data : [];
+        const statusesList = Array.isArray(statusesRes?.data) ? statusesRes.data : [];
+
+        setSalutations(salutationsList);
+        setSexes(sexesList);
+        setStatuses(statusesList);
       } catch (err) {
         console.error('Failed to load lookup data:', err);
       } finally {
@@ -77,9 +90,17 @@ export default function PersonsPage() {
       setPersonsError(null);
 
       try {
-        const response = await personApi.getAll();
-        const data = response?.data || response || [];
-        setPersons(Array.isArray(data) ? data : []);
+        let response = await personApi.getAll();
+
+        // IMPORTANT: n8n sometimes wraps the response in an array
+        // If response is an array, take the first element
+        if (Array.isArray(response) && response.length > 0) {
+          response = response[0];
+        }
+
+        // Response structure: { success: true, data: Person[], pagination?: {...} }
+        const personsData = Array.isArray(response?.data) ? response.data : [];
+        setPersons(personsData);
       } catch (err: any) {
         console.error('Failed to load persons:', err);
         setPersonsError(err?.error?.message || err?.message || t('persons.loadFailed'));

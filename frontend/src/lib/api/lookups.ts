@@ -350,5 +350,23 @@ export const lookupApi = {
     if (languageCode) params.language_code = languageCode;
     return apiClient.get(lookupPath('note_types'), { params });
   },
+
+  // Document Types
+  getDocumentTypes: async (languageCode?: string): Promise<LookupListResponse<LookupItem>> => {
+    const params = languageCode ? { language_code: languageCode } : {};
+    return apiClient.get(lookupPath('document-types'), { params });
+  },
+  getDocumentType: async (id: number): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.get(lookupPath('document-types', id));
+  },
+  createDocumentType: async (data: CreateLookupRequest): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.post(lookupPath('document-types'), data);
+  },
+  updateDocumentType: async (id: number, data: UpdateLookupRequest): Promise<ApiResponse<LookupItem>> => {
+    return apiClient.put(lookupPath('document-types', id), data);
+  },
+  deleteDocumentType: async (id: number): Promise<ApiResponse<{ success: true }>> => {
+    return apiClient.delete(lookupPath('document-types', id));
+  },
 };
 

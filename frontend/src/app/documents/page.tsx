@@ -1,0 +1,298 @@
+/**
+ * Documents List Page
+ */
+
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
+import { ViewToggle } from '@/components/ui/ViewToggle';
+import { Plus, FileText, Files, Network, CreditCard, StickyNote } from 'lucide-react';
+import { DocumentsView } from '@/components/documents/DocumentsView';
+import { DocumentFormModal, DocumentFormData } from '@/components/documents/DocumentFormModal';
+import { Tabs } from '@/components/ui/Tabs';
+import DocumentFilesTab from '@/components/documents/DocumentFilesTab';
+import DocumentRelationsTab from '@/components/documents/DocumentRelationsTab';
+import IdentificationsTab from '@/components/identifications/IdentificationsTab';
+import NotesTab from '@/components/notes/NotesTab';
+import AuditsTab from '@/components/audits/AuditsTab';
+import { documentsApi } from '@/lib/api/documents';
+import { lookupApi } from '@/lib/api/lookups';
+import { useTranslation } from '@/lib/i18n';
+import { useLanguageStore } from '@/store/languageStore';
+import { useViewMode } from '@/hooks/useViewMode';
+import type { Document, UpdateDocumentRequest } from '@/types/entities';
+import type { LookupItem } from '@/types/common';
+
+export default function DocumentsPage() {
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+
+  // View mode management
+  const { viewMode, toggleViewMode } = useViewMode('documents-view-mode');
+
+  // Documents state
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+
+  // Lookup data for documents view
+  const [documentTypes, setDocumentTypes] = useState<LookupItem[]>([]);
+  const [statuses, setStatuses] = useState<LookupItem[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(true);
+
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load lookup data
+  useEffect(() => {
+    const loadLookups = async () => {
+      try {
+        let [typesRes, statusesRes] = await Promise.all([
+          lookupApi.getDocumentTypes(language),
+          lookupApi.getObjectStatuses(undefined, language),
+        ]);
+
+        // IMPORTANT: n8n sometimes wraps the response in an array
+        // If response is an array, take the first element
+        if (Array.isArray(typesRes) && typesRes.length > 0 && !typesRes[0]?.id) {
+          typesRes = typesRes[0];
+        }
+        if (Array.isArray(statusesRes) && statusesRes.length > 0 && !statusesRes[0]?.id) {
+          statusesRes = statusesRes[0];
+        }
+
+        // Response structure: { success: true, data: LookupItem[], pagination?: {...} }
+        const typesList = Array.isArray(typesRes?.data) ? typesRes.data : [];
+        const statusesList = Array.isArray(statusesRes?.data) ? statusesRes.data : [];
+
+        setDocumentTypes(typesList);
+        setStatuses(statusesList);
+      } catch (err) {
+        console.error('Failed to load lookup data:', err);
+      } finally {
+        setLoadingLookups(false);
+      }
+    };
+
+    loadLookups();
+  }, [language]);
+
+  // Load documents
+  const loadDocuments = async () => {
+    setIsLoadingDocuments(true);
+    setDocumentsError(null);
+
+    try {
+      let response: any = await documentsApi.getAll();
+
+      // IMPORTANT: n8n sometimes wraps the response in an array
+      // If response is an array, take the first element
+      if (Array.isArray(response) && response.length > 0) {
+        response = response[0];
+      }
+
+      // Response structure: { success: true, data: Document[], pagination?: {...} }
+      const documentsData = Array.isArray(response?.data) ? response.data : [];
+      setDocuments(documentsData);
+    } catch (err: any) {
+      console.error('Failed to load documents:', err);
+      setDocumentsError(err?.error?.message || err?.message || t('documents.loadFailed'));
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDocuments();
+  }, [t]);
+
+  const handleDocumentSelect = (document: Document) => {
+    setSelectedDocument(document);
+  };
+
+  const handleEdit = (document: Document) => {
+    // TODO: Implement edit functionality
+    console.log('Edit document:', document);
+  };
+
+  const handleUpdate = async (id: number, data: UpdateDocumentRequest) => {
+    try {
+      await documentsApi.update(id, data);
+      await loadDocuments();
+    } catch (err: any) {
+      console.error('Failed to update document:', err);
+      throw err;
+    }
+  };
+
+  const handleDelete = async (document: Document) => {
+    if (confirm(t('documents.confirmDelete'))) {
+      try {
+        await documentsApi.delete(document.id);
+        if (selectedDocument?.id === document.id) {
+          setSelectedDocument(null);
+        }
+        await loadDocuments();
+      } catch (err: any) {
+        console.error('Failed to delete document:', err);
+      }
+    }
+  };
+
+  const handleCreateDocument = async (formData: DocumentFormData) => {
+    setIsSubmitting(true);
+    try {
+      // Get default object type and status for documents
+      // TODO: Get actual document object type ID from lookups
+      const documentObjectTypeId = 10; // Placeholder - should be fetched from object_types
+      const defaultStatusId = 1; // Placeholder - should be fetched from object_statuses
+
+      await documentsApi.create({
+        object_type_id: documentObjectTypeId,
+        object_status_id: defaultStatusId,
+        title: formData.title,
+        description: formData.description,
+        document_type_id: formData.document_type_id,
+        document_date: formData.document_date,
+        document_number: formData.document_number,
+        expiry_date: formData.expiry_date,
+        issuer: formData.issuer,
+        reference_number: formData.reference_number,
+        external_reference: formData.external_reference,
+      });
+
+      setIsModalOpen(false);
+      await loadDocuments();
+    } catch (err: any) {
+      console.error('Failed to create document:', err);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const placeholderContent = (icon: React.ReactNode) => (
+    <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+      {icon}
+      <p className="mt-4">{t('documents.selectToViewDetails')}</p>
+    </div>
+  );
+
+  const tabs = [
+    {
+      id: 'files',
+      label: t('documents.files'),
+      icon: <Files className="h-5 w-5" />,
+      content: selectedDocument ? (
+        <DocumentFilesTab documentId={selectedDocument.id} onDataChange={loadDocuments} />
+      ) : placeholderContent(<Files className="h-12 w-12 mx-auto opacity-50" />),
+      disabled: !selectedDocument,
+    },
+    {
+      id: 'relations',
+      label: t('documents.relatedObjects'),
+      icon: <Network className="h-5 w-5" />,
+      content: selectedDocument ? (
+        <DocumentRelationsTab documentId={selectedDocument.id} onDataChange={loadDocuments} />
+      ) : placeholderContent(<Network className="h-12 w-12 mx-auto opacity-50" />),
+      disabled: !selectedDocument,
+    },
+    {
+      id: 'identifications',
+      label: t('persons.identifications'),
+      icon: <CreditCard className="h-5 w-5" />,
+      content: selectedDocument ? (
+        <IdentificationsTab objectId={selectedDocument.id} objectTypeId={selectedDocument.object_type_id} />
+      ) : placeholderContent(<CreditCard className="h-12 w-12 mx-auto opacity-50" />),
+      disabled: !selectedDocument,
+    },
+    {
+      id: 'notes',
+      label: t('persons.notes'),
+      icon: <StickyNote className="h-5 w-5" />,
+      content: selectedDocument ? (
+        <NotesTab objectId={selectedDocument.id} onDataChange={loadDocuments} />
+      ) : placeholderContent(<StickyNote className="h-12 w-12 mx-auto opacity-50" />),
+      disabled: !selectedDocument,
+    },
+    {
+      id: 'audits',
+      label: t('audits.title'),
+      icon: <FileText className="h-5 w-5" />,
+      content: selectedDocument ? (
+        <AuditsTab objectId={selectedDocument.id} />
+      ) : placeholderContent(<FileText className="h-12 w-12 mx-auto opacity-50" />),
+      disabled: !selectedDocument,
+    },
+  ];
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('nav.documents')}</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('documents.subtitle')}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <ViewToggle
+            viewMode={viewMode}
+            onToggle={toggleViewMode}
+            gridLabel={t('lookup.gridView') || 'Grid View'}
+            cardLabel={t('lookup.cardView') || 'Card View'}
+          />
+          <Button
+            variant="primary"
+            className="flex items-center gap-2"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            {t('documents.addNew')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Documents View - Upper Half */}
+      <div className="mb-6">
+        <DocumentsView
+          documents={documents}
+          isLoading={isLoadingDocuments || loadingLookups}
+          error={documentsError}
+          viewMode={viewMode}
+          onDocumentSelect={handleDocumentSelect}
+          selectedDocumentId={selectedDocument?.id}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          documentTypes={documentTypes}
+          statuses={statuses}
+        />
+      </div>
+
+      {/* Tabs - Lower Half */}
+      <div className="flex-1">
+        {!selectedDocument ? (
+          <div className="bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-12 text-center">
+            <p className="text-gray-500 dark:text-gray-400">
+              {t('documents.selectToViewDetails')}
+            </p>
+          </div>
+        ) : (
+          <Tabs tabs={tabs} defaultTab="files" />
+        )}
+      </div>
+
+      {/* Create Document Modal */}
+      <DocumentFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateDocument}
+        documentTypes={documentTypes}
+        isSubmitting={isSubmitting}
+      />
+    </div>
+  );
+}

@@ -234,42 +234,42 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
                     value: action.id,
                     label: action.name || action.code
                   }))}
-                  placeholder="All Actions"
+                  placeholder={t('audits.filterAllActions')}
                 />
               </th>
               <th className="px-6 py-2">
                 <TextColumnFilter
                   value={filterOldValues}
                   onChange={setFilterOldValues}
-                  placeholder="Search old values..."
+                  placeholder={t('audits.filterOldValues')}
                 />
               </th>
               <th className="px-6 py-2">
                 <TextColumnFilter
                   value={filterNewValues}
                   onChange={setFilterNewValues}
-                  placeholder="Search new values..."
+                  placeholder={t('audits.filterNewValues')}
                 />
               </th>
               <th className="px-6 py-2">
                 <TextColumnFilter
                   value={filterNotes}
                   onChange={setFilterNotes}
-                  placeholder="Search notes..."
+                  placeholder={t('audits.filterNotes')}
                 />
               </th>
               <th className="px-6 py-2">
                 <DateColumnFilter
                   value={filterCreatedAt}
                   onChange={setFilterCreatedAt}
-                  placeholder="YYYY-MM-DD"
+                  placeholder={t('audits.filterDate')}
                 />
               </th>
               <th className="px-6 py-2">
                 <TextColumnFilter
                   value={filterCreatedBy}
                   onChange={setFilterCreatedBy}
-                  placeholder="Created by..."
+                  placeholder={t('audits.filterCreatedBy')}
                 />
               </th>
             </tr>
@@ -278,7 +278,7 @@ export const AuditsTable: React.FC<AuditsTableProps> = ({
             {paginatedAudits.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                  {filteredAndSortedAudits.length === 0 ? t('audits.noAudits') : 'No audits on this page'}
+                  {filteredAndSortedAudits.length === 0 ? t('audits.noAudits') : t('audits.noAuditsOnPage')}
                 </td>
               </tr>
             ) : (

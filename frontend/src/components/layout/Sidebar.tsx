@@ -21,6 +21,8 @@ import {
   Database,
   ChevronDown,
   ChevronRight,
+  File,
+  FolderOpen,
 } from 'lucide-react';
 
 interface NavSubItem {
@@ -40,6 +42,8 @@ const navItems: NavItem[] = [
   { href: '/persons', labelKey: 'nav.persons', icon: <Users className="h-5 w-5" /> },
   { href: '/companies', labelKey: 'nav.companies', icon: <Building2 className="h-5 w-5" /> },
   { href: '/employees', labelKey: 'nav.employees', icon: <Briefcase className="h-5 w-5" /> },
+  { href: '/documents', labelKey: 'nav.documents', icon: <FolderOpen className="h-5 w-5" /> },
+  { href: '/files', labelKey: 'nav.files', icon: <File className="h-5 w-5" /> },
   {
     labelKey: 'nav.masterData',
     icon: <Database className="h-5 w-5" />,
@@ -54,6 +58,7 @@ const navItems: NavItem[] = [
       { href: '/master-data/address-types', labelKey: 'nav.addressTypes' },
       { href: '/master-data/address-area-types', labelKey: 'nav.addressAreaTypes' },
       { href: '/master-data/contact-types', labelKey: 'nav.contactTypes' },
+      { href: '/master-data/document-types', labelKey: 'nav.documentTypes' },
       { href: '/master-data/transaction-types', labelKey: 'nav.transactionTypes' },
       { href: '/master-data/currencies', labelKey: 'nav.currencies' },
       { href: '/master-data/audit-actions', labelKey: 'nav.auditActions' },

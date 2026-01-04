@@ -367,3 +367,124 @@ export interface UpdateObjectNoteRequest {
   language_id?: number; // Optional - automatically added by API interceptor
 }
 
+// Document
+export interface Document extends BaseEntity {
+  id: number; // References objects.id
+  title: string; // From translations table
+  title_code: string; // Translation code
+  document_type_id?: number;
+  document_date?: string; // ISO date string (YYYY-MM-DD)
+  document_number?: string;
+  expiry_date?: string; // ISO date string (YYYY-MM-DD)
+  object_type_id?: number;
+  object_status_id?: number;
+  is_active: boolean;
+  created_by?: number;
+}
+
+export interface CreateDocumentRequest {
+  object_type_id: number;
+  object_status_id: number;
+  title: string;
+  document_type_id?: number;
+  document_date?: string;
+  document_number?: string;
+  expiry_date?: string;
+}
+
+export interface UpdateDocumentRequest {
+  // Old/new pattern for inline editing
+  title_old: string;
+  title_new: string;
+  document_type_id_old?: number;
+  document_type_id_new?: number;
+  document_date_old?: string;
+  document_date_new?: string;
+  document_number_old?: string;
+  document_number_new?: string;
+  expiry_date_old?: string;
+  expiry_date_new?: string;
+  is_active_old?: boolean;
+  is_active_new?: boolean;
+}
+
+// File (renamed to avoid conflict with native File type)
+export interface FileEntity extends BaseEntity {
+  id: number; // References objects.id
+  filename: string;
+  original_filename?: string;
+  file_path: string;
+  mime_type?: string;
+  file_size?: number; // Bytes
+  upload_date?: string; // ISO timestamp
+  checksum?: string; // Hash for integrity
+  storage_type?: string; // local, s3, azure, gcs
+  bucket_name?: string;
+  storage_key?: string;
+  object_type_id?: number;
+  object_status_id?: number;
+  is_active: boolean;
+  created_by?: number;
+}
+
+export interface CreateFileRequest {
+  object_type_id: number;
+  object_status_id: number;
+  filename: string;
+  original_filename?: string;
+  file_path: string;
+  mime_type?: string;
+  file_size?: number;
+  checksum?: string;
+  storage_type?: string;
+  bucket_name?: string;
+  storage_key?: string;
+  parent_document_id: number; // Required - must link to at least one document
+}
+
+export interface UpdateFileRequest {
+  // Old/new pattern for inline editing
+  filename_old: string;
+  filename_new: string;
+  original_filename_old?: string;
+  original_filename_new?: string;
+  file_path_old: string;
+  file_path_new: string;
+  mime_type_old?: string;
+  mime_type_new?: string;
+  storage_type_old?: string;
+  storage_type_new?: string;
+  bucket_name_old?: string;
+  bucket_name_new?: string;
+  storage_key_old?: string;
+  storage_key_new?: string;
+  is_active_old?: boolean;
+  is_active_new?: boolean;
+}
+
+// File Version
+export interface FileVersion extends BaseEntity {
+  id: number;
+  file_id: number;
+  version_number: number;
+  filename: string;
+  original_filename?: string;
+  file_path: string;
+  mime_type?: string;
+  file_size?: number;
+  checksum?: string;
+  storage_type?: string;
+  bucket_name?: string;
+  storage_key?: string;
+  changed_by?: number;
+  changed_by_username?: string;
+  changed_at: string;
+  change_reason?: string;
+}
+
+// Document-File Relation (for typed access to document-file relationships)
+export interface DocumentFileRelation extends ObjectRelation {
+  document_id: number; // Alias for object_from_id
+  file_id: number; // Alias for object_to_id
+}
+

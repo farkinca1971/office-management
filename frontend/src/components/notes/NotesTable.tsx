@@ -286,21 +286,21 @@ export const NotesTable: React.FC<NotesTableProps> = ({
                     value: type.id,
                     label: type.name || type.code
                   }))}
-                  placeholder="All Types"
+                  placeholder={t('notes.filterAllTypes')}
                 />
               </th>
               <th className="px-6 py-2">
                 <TextColumnFilter
                   value={filterSubject}
                   onChange={setFilterSubject}
-                  placeholder="Subject..."
+                  placeholder={t('notes.filterSubject')}
                 />
               </th>
               <th className="px-6 py-2">
                 <TextColumnFilter
                   value={filterNoteText}
                   onChange={setFilterNoteText}
-                  placeholder="Note text..."
+                  placeholder={t('notes.filterNoteText')}
                 />
               </th>
               <th className="px-6 py-2">
@@ -310,7 +310,7 @@ export const NotesTable: React.FC<NotesTableProps> = ({
                 <TextColumnFilter
                   value={filterCreatedBy}
                   onChange={setFilterCreatedBy}
-                  placeholder="Username..."
+                  placeholder={t('notes.filterUsername')}
                 />
               </th>
               <th className="px-6 py-2">
@@ -327,7 +327,7 @@ export const NotesTable: React.FC<NotesTableProps> = ({
             {filteredAndSortedNotes.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                  {notes.length === 0 ? t('notes.noNotes') : 'No notes match the current filters'}
+                  {notes.length === 0 ? t('notes.noNotes') : t('notes.noNotesMatch')}
                 </td>
               </tr>
             ) : (

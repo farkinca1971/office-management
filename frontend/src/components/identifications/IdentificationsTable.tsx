@@ -280,7 +280,7 @@ export default function IdentificationsTable({
                 <TextColumnFilter
                   value={filterIdentificationValue}
                   onChange={setFilterIdentificationValue}
-                  placeholder="ID number..."
+                  placeholder={t('identifications.filterValue')}
                 />
               </th>
               <th className="px-6 py-2">

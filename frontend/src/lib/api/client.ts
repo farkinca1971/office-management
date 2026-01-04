@@ -93,7 +93,9 @@ apiClient.interceptors.request.use(
  */
 apiClient.interceptors.response.use(
   (response) => {
-    // Return data directly (axios wraps it in data property)
+    // Return the response data as-is (axios wraps it in data property)
+    // n8n returns: { success, data, pagination? }
+    // We return the full structure so components receive proper typing
     return response.data;
   },
   (error: AxiosError<ApiErrorResponse>) => {

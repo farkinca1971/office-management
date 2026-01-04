@@ -19,4 +19,6 @@ export * from './transactions';
 export * from './objectRelations';
 export * from './audits';
 export * from './notes';
+export * from './documents';
+export * from './files';
 

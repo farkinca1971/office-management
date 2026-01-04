@@ -146,6 +146,16 @@ CREATE TABLE note_types (
     FOREIGN KEY (code) REFERENCES translations(code) ON DELETE RESTRICT
 );
 
+-- ----------------------------------------------------------------------------
+-- Document Types: Types of documents
+-- ----------------------------------------------------------------------------
+CREATE TABLE document_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL COMMENT 'Document type code (e.g., contract, invoice, report)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this document type is currently active',
+    FOREIGN KEY (code) REFERENCES translations(code) ON DELETE RESTRICT
+);
+
 -- ============================================================================
 -- SECTION 2: TRANSLATIONS TABLE
 -- ============================================================================
@@ -298,28 +308,23 @@ CREATE TABLE user_passwords (
 -- ----------------------------------------------------------------------------
 CREATE TABLE documents (
     id BIGINT PRIMARY KEY COMMENT 'References objects.id (shared primary key)',
-    document_type VARCHAR(100) COMMENT 'Document type code (references translations)',
-    document_name VARCHAR(30) UNIQUE NOT NULL COMMENT 'Unique document name/identifier',
+    title_code VARCHAR(100) NOT NULL COMMENT 'Translation code for title - references translations(code)',
+    document_type_id INT COMMENT 'Document type ID (references document_types lookup)',
+    document_date DATE COMMENT 'Document date',
+    document_number VARCHAR(100) COMMENT 'Document number/identifier',
+    expiry_date DATE COMMENT 'Document expiry date',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this document is currently active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When document was created',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'When document was last updated',
+    created_by BIGINT COMMENT 'User/object who created this document',
     FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE,
-    FOREIGN KEY (document_type) REFERENCES translations(code) ON DELETE RESTRICT,
-    INDEX idx_document_name (document_name)
-);
-
--- ----------------------------------------------------------------------------
--- Document Versions: Version history for documents
--- ----------------------------------------------------------------------------
-CREATE TABLE document_versions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    document_id BIGINT NOT NULL COMMENT 'References documents.id',
-    version_number INT NOT NULL COMMENT 'Version number (1, 2, 3, ...)',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When this version was created',
-    created_by BIGINT COMMENT 'User/object who created this version',
-    description VARCHAR(100) NOT NULL COMMENT 'Description of changes in this version',
-    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+    FOREIGN KEY (title_code) REFERENCES translations(code) ON DELETE RESTRICT,
     FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL,
-    UNIQUE KEY unique_document_version (document_id, version_number),
-    INDEX idx_document_id (document_id),
-    INDEX idx_created_at (created_at)
+    INDEX idx_title_code (title_code),
+    INDEX idx_document_number (document_number),
+    INDEX idx_document_type_id (document_type_id),
+    INDEX idx_document_date (document_date),
+    INDEX idx_is_active (is_active)
 );
 
 -- ----------------------------------------------------------------------------
@@ -327,9 +332,27 @@ CREATE TABLE document_versions (
 -- ----------------------------------------------------------------------------
 CREATE TABLE files (
     id BIGINT PRIMARY KEY COMMENT 'References objects.id (shared primary key)',
-    file_name VARCHAR(255) NOT NULL COMMENT 'File name',
+    filename VARCHAR(255) NOT NULL COMMENT 'Current filename (without path)',
+    original_filename VARCHAR(255) COMMENT 'Original filename when uploaded',
+    file_path TEXT COMMENT 'Path to physical file (file system or storage service)',
+    mime_type VARCHAR(100) COMMENT 'MIME type of the file',
+    file_size BIGINT COMMENT 'File size in bytes',
+    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When file was originally uploaded',
+    checksum VARCHAR(64) COMMENT 'File checksum (MD5, SHA256, etc.) for integrity verification',
+    storage_type VARCHAR(50) DEFAULT 'local' COMMENT 'Storage type (local, s3, azure, gcp, etc.)',
+    bucket_name VARCHAR(255) COMMENT 'Cloud storage bucket name (if applicable)',
+    storage_key VARCHAR(500) COMMENT 'Cloud storage key/path (if applicable)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this file is currently active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When file record was created',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'When file record was last updated',
+    created_by BIGINT COMMENT 'User/object who created this file',
     FOREIGN KEY (id) REFERENCES objects(id) ON DELETE CASCADE,
-    INDEX idx_file_name (file_name)
+    FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL,
+    INDEX idx_filename (filename),
+    INDEX idx_mime_type (mime_type),
+    INDEX idx_storage_type (storage_type),
+    INDEX idx_checksum (checksum),
+    INDEX idx_is_active (is_active)
 );
 
 -- ----------------------------------------------------------------------------
@@ -339,17 +362,23 @@ CREATE TABLE file_versions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     file_id BIGINT NOT NULL COMMENT 'References files.id',
     version_number INT NOT NULL COMMENT 'Version number (1, 2, 3, ...)',
-    file_name VARCHAR(255) NOT NULL COMMENT 'File name for this version',
-    file_size INT COMMENT 'File size in bytes',
-    file_path TEXT COMMENT 'Path to physical file (file system or storage service)',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When this version was created',
-    created_by BIGINT COMMENT 'User/object who created this version',
-    description VARCHAR(100) NOT NULL COMMENT 'Description of changes in this version',
+    filename VARCHAR(255) NOT NULL COMMENT 'Filename at this version',
+    original_filename VARCHAR(255) COMMENT 'Original filename at this version',
+    file_path TEXT COMMENT 'File path at this version',
+    mime_type VARCHAR(100) COMMENT 'MIME type at this version',
+    file_size BIGINT COMMENT 'File size in bytes at this version',
+    checksum VARCHAR(64) COMMENT 'File checksum at this version',
+    storage_type VARCHAR(50) COMMENT 'Storage type at this version',
+    bucket_name VARCHAR(255) COMMENT 'Cloud storage bucket name at this version',
+    storage_key VARCHAR(500) COMMENT 'Cloud storage key at this version',
+    changed_by BIGINT COMMENT 'User/object who created this version',
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When this version was created',
+    change_reason VARCHAR(255) COMMENT 'Reason for creating this version',
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES objects(id) ON DELETE SET NULL,
+    FOREIGN KEY (changed_by) REFERENCES objects(id) ON DELETE SET NULL,
     UNIQUE KEY unique_file_version (file_id, version_number),
     INDEX idx_file_id (file_id),
-    INDEX idx_created_at (created_at)
+    INDEX idx_changed_at (changed_at)
 );
 
 -- ----------------------------------------------------------------------------
