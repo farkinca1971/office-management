@@ -3621,9 +3621,9 @@ All endpoints should return responses in this format:
 
 # Documents API
 
-**Base URL**: `https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1`
+**Base URL**: `https://n8n.wolfitlab.duckdns.org/webhook/08659efd-89f5-440f-96de-10512fda25f0/api/v1`
 
-The Documents API uses a **separate dedicated webhook endpoint** (same as contacts, addresses, notes, identifications).
+The Documents API uses a **separate dedicated webhook endpoint**.
 
 ## List All Documents
 

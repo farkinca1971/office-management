@@ -504,6 +504,49 @@ X-Language-ID: 1
 ```
 ⚠️ **Note**: Use POST method for updates, not PUT.
 
+#### Documents API - Separate Webhook Endpoint
+**IMPORTANT**: The documents API uses a **dedicated webhook endpoint**:
+
+**Documents API Webhook:**
+```
+https://n8n.wolfitlab.duckdns.org/webhook/08659efd-89f5-440f-96de-10512fda25f0/api/v1
+```
+Used for: document management (list, get, create, update, delete) and document files
+
+**Documents Endpoints:**
+- `GET /documents` - List all documents with optional filtering
+- `GET /documents/:id` - Get single document by ID
+- `POST /documents` - Create new document
+- `POST /documents/:id` - Update existing document (USE POST, not PUT)
+- `DELETE /documents/:id` - Soft delete document (sets is_active = false)
+- `GET /documents/:id/files` - Get all files linked to a document
+- `POST /documents/:id/files` - Link an existing file to a document
+- `DELETE /documents/:id/files/:file_id` - Unlink a file from a document
+- `GET /documents/:id/relations` - Get all objects related to a document
+- `POST /documents/:id/relations` - Add a relation between document and another object
+- `DELETE /documents/:id/relations/:relation_id` - Remove a relation
+
+**CRITICAL - Use POST for Updates:**
+⚠️ **IMPORTANT**: For document updates, use **POST method** instead of PUT. The PUT method is not working on the n8n webhook endpoint. The POST method with the document ID in the URL path will handle updates correctly.
+
+**Implementation Note:**
+The documents API requires a separate Axios client instance configured with the documents webhook base URL. See [src/lib/api/documents.ts](src/lib/api/documents.ts) for the implementation pattern.
+
+**Database Tables:**
+- `objects` - Documents are stored as objects with `object_type_id` corresponding to document types
+- `object_relations` - Links files and other objects to documents via relation types
+- `files` - File metadata stored in files table, linked to documents via object_relations
+
+**Frontend Implementation:**
+- **API Client**: [src/lib/api/documents.ts](src/lib/api/documents.ts) - Dedicated Axios instance with documents webhook URL
+- **Components**: Document management components in [src/components/documents/](src/components/documents/)
+- **Types**: [src/types/entities.ts](src/types/entities.ts) - Document, CreateDocumentRequest, UpdateDocumentRequest, FileEntity
+- **Features**:
+  - Document CRUD operations
+  - File linking/unlinking
+  - Document relations management
+  - Multi-language support via language_id header/body
+
 #### Users API - Separate Webhook Endpoint
 **IMPORTANT**: The users API uses the **same dedicated webhook endpoint** as contacts, identifications, addresses, and notes:
 

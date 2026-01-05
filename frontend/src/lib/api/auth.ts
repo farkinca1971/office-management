@@ -3,6 +3,7 @@
  */
 
 import apiClient from './client';
+import { ENDPOINTS } from './endpoints';
 import type { LoginRequest, LoginResponse, SignupRequest, SignupResponse, AuthErrorResponse } from '@/types/api';
 import type { User } from '@/types/entities';
 
@@ -11,14 +12,14 @@ export const authApi = {
    * Login user
    */
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    return apiClient.post('/auth/login', credentials);
+    return apiClient.post(ENDPOINTS.AUTH_LOGIN, credentials);
   },
 
   /**
    * Signup/Register new user
    */
   signup: async (credentials: SignupRequest): Promise<SignupResponse> => {
-    return apiClient.post('/auth/signup', credentials);
+    return apiClient.post(ENDPOINTS.AUTH_SIGNUP, credentials);
   },
 
   /**
@@ -36,7 +37,7 @@ export const authApi = {
    * Calls /auth/me endpoint which validates token and returns user data
    */
   getCurrentUser: async (): Promise<{ success: true; data: User }> => {
-    const response: any = await apiClient.get('/auth/me');
+    const response: any = await apiClient.get(ENDPOINTS.AUTH_ME);
     // Handle various response formats
     if (response && response.success && response.data) {
       return { success: true, data: response.data as User };

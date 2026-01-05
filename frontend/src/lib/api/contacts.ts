@@ -7,6 +7,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   Contact,
   CreateContactRequest,
@@ -114,7 +115,7 @@ export const contactApi = {
    * Endpoint: GET /objects/:object_id/contacts
    */
   getByObjectId: async (objectId: number, params?: ContactListParams): Promise<ContactListResponse> => {
-    return contactsClient.get(`/objects/${objectId}/contacts`, { params });
+    return contactsClient.get(replaceParams(ENDPOINTS.CONTACTS_BY_OBJECT_ID, { id: objectId }), { params });
   },
 
   /**
@@ -122,7 +123,7 @@ export const contactApi = {
    * Endpoint: GET /contacts/:id
    */
   getById: async (id: number): Promise<ContactResponse> => {
-    return contactsClient.get(`/contacts/${id}`);
+    return contactsClient.get(replaceParams(ENDPOINTS.CONTACT_BY_ID, { id }));
   },
 
   /**
@@ -130,7 +131,7 @@ export const contactApi = {
    * Endpoint: POST /objects/:object_id/contacts
    */
   create: async (objectId: number, data: CreateContactRequest): Promise<ContactResponse> => {
-    return contactsClient.post(`/objects/${objectId}/contacts`, data);
+    return contactsClient.post(replaceParams(ENDPOINTS.CONTACTS_BY_OBJECT_ID, { id: objectId }), data);
   },
 
   /**
@@ -139,7 +140,7 @@ export const contactApi = {
    * IMPORTANT: Uses POST instead of PUT (PUT method not working on n8n webhook)
    */
   update: async (id: number, data: UpdateContactRequest): Promise<ContactResponse> => {
-    return contactsClient.post(`/contacts/${id}`, data);
+    return contactsClient.post(replaceParams(ENDPOINTS.CONTACT_BY_ID, { id }), data);
   },
 
   /**
@@ -147,7 +148,7 @@ export const contactApi = {
    * Endpoint: DELETE /contacts/:id
    */
   delete: async (id: number): Promise<{ success: true }> => {
-    return contactsClient.delete(`/contacts/${id}`);
+    return contactsClient.delete(replaceParams(ENDPOINTS.CONTACT_BY_ID, { id }));
   },
 };
 

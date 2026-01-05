@@ -41,10 +41,14 @@ export interface UpdateLookupRequest {
   new_text?: string;
 }
 
-// Helper function to build lookup endpoint paths
+import { ENDPOINTS, replaceParams } from './endpoints';
+
+// Helper function to build lookup endpoint URLs
 const lookupPath = (lookupType: string, id?: number): string => {
-  const base = `/lookups/${lookupType}`;
-  return id ? `${base}/${id}` : base;
+  if (id) {
+    return replaceParams(ENDPOINTS.LOOKUP_BY_ID, { lookup_type: lookupType, id });
+  }
+  return replaceParams(ENDPOINTS.LOOKUPS, { lookup_type: lookupType });
 };
 
 export const lookupApi = {
@@ -329,19 +333,19 @@ export const lookupApi = {
     const params: Record<string, any> = {};
     if (code) params.code = code;
     if (languageId) params.language_id = languageId;
-    return apiClient.get(lookupPath('translations'), { params });
+    return apiClient.get(ENDPOINTS.TRANSLATIONS, { params });
   },
   getTranslation: async (code: string, languageId: number): Promise<ApiResponse<Translation>> => {
-    return apiClient.get(`${lookupPath('translations')}/${code}/${languageId}`);
+    return apiClient.get(replaceParams(ENDPOINTS.TRANSLATION_BY_CODE_AND_LANGUAGE, { code, language_id: languageId }));
   },
   createTranslation: async (data: { code: string; language_id: number; text: string }): Promise<ApiResponse<Translation>> => {
-    return apiClient.post(lookupPath('translations'), data);
+    return apiClient.post(ENDPOINTS.TRANSLATIONS, data);
   },
   updateTranslation: async (code: string, languageId: number, data: { text: string }): Promise<ApiResponse<Translation>> => {
-    return apiClient.put(`${lookupPath('translations')}/${code}/${languageId}`, data);
+    return apiClient.put(replaceParams(ENDPOINTS.TRANSLATION_BY_CODE_AND_LANGUAGE, { code, language_id: languageId }), data);
   },
   deleteTranslation: async (code: string, languageId: number): Promise<ApiResponse<{ success: true }>> => {
-    return apiClient.delete(`${lookupPath('translations')}/${code}/${languageId}`);
+    return apiClient.delete(replaceParams(ENDPOINTS.TRANSLATION_BY_CODE_AND_LANGUAGE, { code, language_id: languageId }));
   },
 
   // Note Types

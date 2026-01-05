@@ -89,33 +89,35 @@ auditClient.interceptors.response.use(
   }
 );
 
+import { ENDPOINTS, replaceParams } from './endpoints';
+
 export const auditApi = {
   /**
    * Get all audit records with pagination and filtering
    */
   getAll: async (params?: ObjectAuditListParams): Promise<ObjectAuditListResponse> => {
-    return auditClient.get('/object-audits', { params });
+    return auditClient.get(ENDPOINTS.OBJECT_AUDITS, { params });
   },
 
   /**
    * Get single audit record by ID
    */
   getById: async (id: number): Promise<ObjectAuditResponse> => {
-    return auditClient.get(`/object-audits/${id}`);
+    return auditClient.get(replaceParams(ENDPOINTS.OBJECT_AUDIT_BY_ID, { id }));
   },
 
   /**
    * Get audit records for a specific object
    */
   getByObjectId: async (objectId: number, params?: Omit<ObjectAuditListParams, 'object_id'>): Promise<ObjectAuditListResponse> => {
-    return auditClient.get(`/object-audits/object/${objectId}`, { params });
+    return auditClient.get(replaceParams(ENDPOINTS.OBJECT_AUDITS_BY_OBJECT_ID, { id: objectId }), { params });
   },
 
   /**
    * Create a new audit record
    */
   create: async (data: CreateObjectAuditRequest): Promise<ObjectAuditResponse> => {
-    return auditClient.post('/object-audits', data);
+    return auditClient.post(ENDPOINTS.OBJECT_AUDITS, data);
   },
 };
 

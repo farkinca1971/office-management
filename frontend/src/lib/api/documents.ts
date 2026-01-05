@@ -2,11 +2,12 @@
  * Documents API - CRUD operations for documents
  *
  * IMPORTANT: This API uses a separate n8n webhook endpoint dedicated to documents
- * Base URL: https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1
+ * Base URL: https://n8n.wolfitlab.duckdns.org/webhook/08659efd-89f5-440f-96de-10512fda25f0/api/v1
  */
 
 import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   Document,
   CreateDocumentRequest,
@@ -32,7 +33,7 @@ export type DocumentResponse = ApiResponse<Document>;
  * Uses a separate webhook endpoint from the main API
  */
 const documentsClient: AxiosInstance = axios.create({
-  baseURL: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1',
+  baseURL: 'https://n8n.wolfitlab.duckdns.org/webhook/08659efd-89f5-440f-96de-10512fda25f0/api/v1',
   headers: {
     ...getWebhookHeaders(),
   },
@@ -147,7 +148,7 @@ export const documentsApi = {
    * Get all documents with optional filtering
    */
   getAll: async (params?: DocumentListParams): Promise<DocumentListResponse> => {
-    return documentsClient.get('/documents', {
+    return documentsClient.get(ENDPOINTS.DOCUMENTS, {
       params: params || {},
       headers: {},
     });
@@ -157,14 +158,14 @@ export const documentsApi = {
    * Get single document by ID
    */
   getById: async (id: number): Promise<DocumentResponse> => {
-    return documentsClient.get(`/documents/${id}`, { headers: {} });
+    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_BY_ID, { id }), { headers: {} });
   },
 
   /**
    * Create a new document
    */
   create: async (data: CreateDocumentRequest): Promise<DocumentResponse> => {
-    return documentsClient.post('/documents', data);
+    return documentsClient.post(ENDPOINTS.DOCUMENTS, data);
   },
 
   /**
@@ -172,28 +173,28 @@ export const documentsApi = {
    * IMPORTANT: Uses POST instead of PUT because PUT method is not working on n8n webhook
    */
   update: async (id: number, data: UpdateDocumentRequest): Promise<DocumentResponse> => {
-    return documentsClient.post(`/documents/${id}`, data);
+    return documentsClient.post(replaceParams(ENDPOINTS.DOCUMENT_BY_ID, { id }), data);
   },
 
   /**
    * Soft delete a document
    */
   delete: async (id: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return documentsClient.delete(`/documents/${id}`);
+    return documentsClient.delete(replaceParams(ENDPOINTS.DOCUMENT_BY_ID, { id }));
   },
 
   /**
    * Get all files linked to a document
    */
   getFiles: async (documentId: number): Promise<ApiResponse<FileEntity[]>> => {
-    return documentsClient.get(`/documents/${documentId}/files`, { headers: {} });
+    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_FILES, { id: documentId }), { headers: {} });
   },
 
   /**
    * Link an existing file to a document
    */
   linkFile: async (documentId: number, fileId: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return documentsClient.post(`/documents/${documentId}/files`, { file_id: fileId });
+    return documentsClient.post(replaceParams(ENDPOINTS.DOCUMENT_FILES, { id: documentId }), { file_id: fileId });
   },
 
   /**
@@ -201,14 +202,14 @@ export const documentsApi = {
    * Note: This will fail if the file has no other parent documents
    */
   unlinkFile: async (documentId: number, fileId: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return documentsClient.delete(`/documents/${documentId}/files/${fileId}`);
+    return documentsClient.delete(replaceParams(ENDPOINTS.DOCUMENT_FILE_BY_ID, { id: documentId, file_id: fileId }));
   },
 
   /**
    * Get all objects related to a document
    */
   getRelations: async (documentId: number): Promise<ApiResponse<ObjectRelation[]>> => {
-    return documentsClient.get(`/documents/${documentId}/relations`, { headers: {} });
+    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_RELATIONS, { id: documentId }), { headers: {} });
   },
 
   /**
@@ -220,7 +221,7 @@ export const documentsApi = {
     relationTypeId: number,
     note?: string
   ): Promise<ApiResponse<ObjectRelation>> => {
-    return documentsClient.post(`/documents/${documentId}/relations`, {
+    return documentsClient.post(replaceParams(ENDPOINTS.DOCUMENT_RELATIONS, { id: documentId }), {
       object_to_id: objectId,
       object_relation_type_id: relationTypeId,
       note,
@@ -231,6 +232,6 @@ export const documentsApi = {
    * Remove a relation
    */
   removeRelation: async (documentId: number, relationId: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return documentsClient.delete(`/documents/${documentId}/relations/${relationId}`);
+    return documentsClient.delete(replaceParams(ENDPOINTS.DOCUMENT_RELATION_BY_ID, { id: documentId, relation_id: relationId }));
   },
 };

@@ -5,6 +5,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   CreateUserRequest,
   UpdateUserRequest,
@@ -122,42 +123,42 @@ export const userApi = {
    * Get all users with pagination and filtering
    */
   getAll: async (params?: UserListParams): Promise<UserListResponse> => {
-    return usersClient.get('/users', { params });
+    return usersClient.get(ENDPOINTS.USERS, { params });
   },
 
   /**
    * Get single user by ID
    */
   getById: async (id: number): Promise<UserResponse> => {
-    return usersClient.get(`/users/${id}`);
+    return usersClient.get(replaceParams(ENDPOINTS.USER_BY_ID, { id }));
   },
 
   /**
    * Create a new user
    */
   create: async (data: CreateUserRequest): Promise<UserResponse> => {
-    return usersClient.post('/users', data);
+    return usersClient.post(ENDPOINTS.USERS, data);
   },
 
   /**
    * Update an existing user
    */
   update: async (id: number, data: UpdateUserRequest): Promise<UserResponse> => {
-    return usersClient.put(`/users/${id}`, data);
+    return usersClient.put(replaceParams(ENDPOINTS.USER_BY_ID, { id }), data);
   },
 
   /**
    * Change user password
    */
   changePassword: async (id: number, data: ChangePasswordRequest): Promise<{ success: true }> => {
-    return usersClient.post(`/users/${id}/password`, data);
+    return usersClient.post(replaceParams(ENDPOINTS.USER_PASSWORD, { id }), data);
   },
 
   /**
    * Delete a user
    */
   delete: async (id: number): Promise<{ success: true }> => {
-    return usersClient.delete(`/users/${id}`);
+    return usersClient.delete(replaceParams(ENDPOINTS.USER_BY_ID, { id }));
   },
 };
 

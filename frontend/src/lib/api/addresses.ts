@@ -7,6 +7,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   Address,
   CreateAddressRequest,
@@ -114,7 +115,7 @@ export const addressApi = {
    * Endpoint: GET /objects/:object_id/addresses
    */
   getByObjectId: async (objectId: number, params?: AddressListParams): Promise<AddressListResponse> => {
-    return addressesClient.get(`/objects/${objectId}/addresses`, { params });
+    return addressesClient.get(replaceParams(ENDPOINTS.ADDRESSES_BY_OBJECT_ID, { id: objectId }), { params });
   },
 
   /**
@@ -122,7 +123,7 @@ export const addressApi = {
    * Endpoint: GET /addresses/:id
    */
   getById: async (id: number): Promise<AddressResponse> => {
-    return addressesClient.get(`/addresses/${id}`);
+    return addressesClient.get(replaceParams(ENDPOINTS.ADDRESS_BY_ID, { id }));
   },
 
   /**
@@ -130,7 +131,7 @@ export const addressApi = {
    * Endpoint: POST /objects/:object_id/addresses
    */
   create: async (objectId: number, data: CreateAddressRequest): Promise<AddressResponse> => {
-    return addressesClient.post(`/objects/${objectId}/addresses`, data);
+    return addressesClient.post(replaceParams(ENDPOINTS.ADDRESSES_BY_OBJECT_ID, { id: objectId }), data);
   },
 
   /**
@@ -139,7 +140,7 @@ export const addressApi = {
    * IMPORTANT: Uses POST instead of PUT (PUT method not working on n8n webhook)
    */
   update: async (id: number, data: UpdateAddressRequest): Promise<AddressResponse> => {
-    return addressesClient.post(`/addresses/${id}`, data);
+    return addressesClient.post(replaceParams(ENDPOINTS.ADDRESS_BY_ID, { id }), data);
   },
 
   /**
@@ -147,7 +148,7 @@ export const addressApi = {
    * Endpoint: DELETE /addresses/:id
    */
   delete: async (id: number): Promise<{ success: true }> => {
-    return addressesClient.delete(`/addresses/${id}`);
+    return addressesClient.delete(replaceParams(ENDPOINTS.ADDRESS_BY_ID, { id }));
   },
 };
 

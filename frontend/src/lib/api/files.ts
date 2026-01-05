@@ -10,6 +10,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   FileEntity,
   CreateFileRequest,
@@ -150,7 +151,7 @@ export const filesApi = {
    * Get all files with optional filtering
    */
   getAll: async (params?: FileListParams): Promise<FileListResponse> => {
-    return filesClient.get('/files', {
+    return filesClient.get(ENDPOINTS.FILES, {
       params: params || {},
       headers: {},
     });
@@ -160,7 +161,7 @@ export const filesApi = {
    * Get single file by ID
    */
   getById: async (id: number): Promise<FileResponse> => {
-    return filesClient.get(`/files/${id}`, { headers: {} });
+    return filesClient.get(replaceParams(ENDPOINTS.FILE_BY_ID, { id }), { headers: {} });
   },
 
   /**
@@ -168,7 +169,7 @@ export const filesApi = {
    * Note: parent_document_id is required - files must have at least one parent document
    */
   create: async (data: CreateFileRequest): Promise<FileResponse> => {
-    return filesClient.post('/files', data);
+    return filesClient.post(ENDPOINTS.FILES, data);
   },
 
   /**
@@ -176,7 +177,7 @@ export const filesApi = {
    * IMPORTANT: Uses POST instead of PUT because PUT method is not working on n8n webhook
    */
   update: async (id: number, data: UpdateFileRequest): Promise<FileResponse> => {
-    return filesClient.post(`/files/${id}`, data);
+    return filesClient.post(replaceParams(ENDPOINTS.FILE_BY_ID, { id }), data);
   },
 
   /**
@@ -185,14 +186,14 @@ export const filesApi = {
    * Files must maintain at least one parent document relationship.
    */
   delete: async (id: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return filesClient.delete(`/files/${id}`);
+    return filesClient.delete(replaceParams(ENDPOINTS.FILE_BY_ID, { id }));
   },
 
   /**
    * Get all parent documents for a file
    */
   getDocuments: async (fileId: number): Promise<ApiResponse<Document[]>> => {
-    return filesClient.get(`/files/${fileId}/documents`, { headers: {} });
+    return filesClient.get(replaceParams(ENDPOINTS.FILE_DOCUMENTS, { id: fileId }), { headers: {} });
   },
 
   /**
@@ -200,21 +201,21 @@ export const filesApi = {
    * Useful for checking if file can be deleted or unlinked
    */
   getDocumentCount: async (fileId: number): Promise<ApiResponse<{ count: number }>> => {
-    return filesClient.get(`/files/${fileId}/documents/count`, { headers: {} });
+    return filesClient.get(replaceParams(ENDPOINTS.FILE_DOCUMENT_COUNT, { id: fileId }), { headers: {} });
   },
 
   /**
    * Get version history for a file
    */
   getVersions: async (fileId: number): Promise<FileVersionListResponse> => {
-    return filesClient.get(`/files/${fileId}/versions`, { headers: {} });
+    return filesClient.get(replaceParams(ENDPOINTS.FILE_VERSIONS, { id: fileId }), { headers: {} });
   },
 
   /**
    * Create a version snapshot of the current file state
    */
   createVersion: async (fileId: number, changeReason?: string): Promise<FileVersionResponse> => {
-    return filesClient.post(`/files/${fileId}/versions`, { change_reason: changeReason });
+    return filesClient.post(replaceParams(ENDPOINTS.FILE_VERSIONS, { id: fileId }), { change_reason: changeReason });
   },
 
   /**
@@ -222,21 +223,39 @@ export const filesApi = {
    * These are physical files stored in n8n that can be linked to new documents
    */
   getUnattachedFiles: async (): Promise<ApiResponse<FileEntity[]>> => {
-    return filesClient.get('/files/unattached', { headers: {} });
+    return filesClient.get(ENDPOINTS.FILES_UNATTACHED, { headers: {} });
   },
 
   /**
    * Upload a physical file to n8n
    * Returns the file metadata after successful upload
    * @param file - The file to upload
-   * @param documentId - The document ID to link the file to
+   * @param documentId - The document ID to link the file to (also the object ID since documents.id references objects.id)
    */
   uploadPhysicalFile: async (file: File, documentId: number): Promise<FileResponse> => {
+    // Get current language ID from localStorage
+    let currentLanguageId: number = 1; // Default to English
+    if (typeof window !== 'undefined') {
+      try {
+        const storedLanguage = localStorage.getItem('language-storage');
+        if (storedLanguage) {
+          const languageData = JSON.parse(storedLanguage);
+          // Convert language code to ID (en=1, de=2, hu=3)
+          const languageMap: Record<string, number> = { en: 1, de: 2, hu: 3 };
+          currentLanguageId = languageMap[languageData.state?.language || 'en'] || 1;
+        }
+      } catch (error) {
+        console.error('Error reading language from localStorage:', error);
+      }
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('document_id', documentId.toString());
+    formData.append('object_id', documentId.toString()); // Document ID is the same as object ID
+    formData.append('language_id', currentLanguageId.toString());
 
-    return filesClient.post('/files/upload', formData, {
+    return filesClient.post(ENDPOINTS.FILES_UPLOAD, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -3,6 +3,7 @@
  */
 
 import apiClient from './client';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   Company,
   CreateCompanyRequest,
@@ -19,35 +20,35 @@ export const companyApi = {
    * Get all companies with pagination and filtering
    */
   getAll: async (params?: CompanyListParams): Promise<CompanyListResponse> => {
-    return apiClient.get('/companies', { params });
+    return apiClient.get(ENDPOINTS.COMPANIES, { params });
   },
 
   /**
    * Get single company by ID
    */
   getById: async (id: number): Promise<CompanyResponse> => {
-    return apiClient.get(`/companies/${id}`);
+    return apiClient.get(replaceParams(ENDPOINTS.COMPANY_BY_ID, { id }));
   },
 
   /**
    * Create a new company
    */
   create: async (data: CreateCompanyRequest): Promise<CompanyResponse> => {
-    return apiClient.post('/companies', data);
+    return apiClient.post(ENDPOINTS.COMPANIES, data);
   },
 
   /**
    * Update an existing company
    */
   update: async (id: number, data: UpdateCompanyRequest): Promise<CompanyResponse> => {
-    return apiClient.put(`/companies/${id}`, data);
+    return apiClient.put(replaceParams(ENDPOINTS.COMPANY_BY_ID, { id }), data);
   },
 
   /**
    * Delete a company
    */
   delete: async (id: number): Promise<{ success: true }> => {
-    return apiClient.delete(`/companies/${id}`);
+    return apiClient.delete(replaceParams(ENDPOINTS.COMPANY_BY_ID, { id }));
   },
 };
 

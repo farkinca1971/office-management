@@ -3,6 +3,7 @@
  */
 
 import apiClient from './client';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   Transaction,
   CreateTransactionRequest,
@@ -19,35 +20,35 @@ export const transactionApi = {
    * Get all transactions with pagination and filtering
    */
   getAll: async (params?: TransactionListParams): Promise<TransactionListResponse> => {
-    return apiClient.get('/transactions', { params });
+    return apiClient.get(ENDPOINTS.TRANSACTIONS, { params });
   },
 
   /**
    * Get single transaction by ID
    */
   getById: async (id: number): Promise<TransactionResponse> => {
-    return apiClient.get(`/transactions/${id}`);
+    return apiClient.get(replaceParams(ENDPOINTS.TRANSACTION_BY_ID, { id }));
   },
 
   /**
    * Create a new transaction
    */
   create: async (data: CreateTransactionRequest): Promise<TransactionResponse> => {
-    return apiClient.post('/transactions', data);
+    return apiClient.post(ENDPOINTS.TRANSACTIONS, data);
   },
 
   /**
    * Update an existing transaction
    */
   update: async (id: number, data: UpdateTransactionRequest): Promise<TransactionResponse> => {
-    return apiClient.put(`/transactions/${id}`, data);
+    return apiClient.put(replaceParams(ENDPOINTS.TRANSACTION_BY_ID, { id }), data);
   },
 
   /**
    * Delete a transaction
    */
   delete: async (id: number): Promise<{ success: true }> => {
-    return apiClient.delete(`/transactions/${id}`);
+    return apiClient.delete(replaceParams(ENDPOINTS.TRANSACTION_BY_ID, { id }));
   },
 };
 

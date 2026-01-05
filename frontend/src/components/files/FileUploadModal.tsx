@@ -241,7 +241,7 @@ export const FileUploadModal: React.FC<FileUploadModalProps> = ({
         fileId = selectedExistingFile.id;
       } else if (uploadedFile) {
         // Upload new file
-        const fileResponse = await filesApi.uploadPhysicalFile(uploadedFile);
+        const fileResponse = await filesApi.uploadPhysicalFile(uploadedFile, documentId);
 
         if (!fileResponse.success || !fileResponse.data) {
           throw new Error(t('files.uploadFileFailed'));

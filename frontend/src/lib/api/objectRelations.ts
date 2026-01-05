@@ -3,6 +3,7 @@
  */
 
 import apiClient from './client';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   ObjectRelation,
   CreateObjectRelationRequest,
@@ -22,42 +23,42 @@ export const objectRelationApi = {
    * Get all object relations with pagination and filtering
    */
   getAll: async (params?: ObjectRelationListParams): Promise<ApiListResponse<ObjectRelation>> => {
-    return apiClient.get('/object-relations', { params });
+    return apiClient.get(ENDPOINTS.OBJECT_RELATIONS, { params });
   },
 
   /**
    * Get relations for a specific object (from or to)
    */
   getByObjectId: async (objectId: number, params?: ObjectRelationListParams): Promise<ApiListResponse<ObjectRelation>> => {
-    return apiClient.get(`/objects/${objectId}/relations`, { params });
+    return apiClient.get(replaceParams(ENDPOINTS.OBJECT_RELATIONS_BY_OBJECT_ID, { id: objectId }), { params });
   },
 
   /**
    * Get single object relation by ID
    */
   getById: async (id: number): Promise<ApiResponse<ObjectRelation>> => {
-    return apiClient.get(`/object-relations/${id}`);
+    return apiClient.get(replaceParams(ENDPOINTS.OBJECT_RELATION_BY_ID, { id }));
   },
 
   /**
    * Create a new object relation
    */
   create: async (data: CreateObjectRelationRequest): Promise<ApiResponse<ObjectRelation>> => {
-    return apiClient.post('/object-relations', data);
+    return apiClient.post(ENDPOINTS.OBJECT_RELATIONS, data);
   },
 
   /**
    * Update an existing object relation
    */
   update: async (id: number, data: UpdateObjectRelationRequest): Promise<ApiResponse<ObjectRelation>> => {
-    return apiClient.put(`/object-relations/${id}`, data);
+    return apiClient.put(replaceParams(ENDPOINTS.OBJECT_RELATION_BY_ID, { id }), data);
   },
 
   /**
    * Delete (soft delete) an object relation
    */
   delete: async (id: number): Promise<{ success: true }> => {
-    return apiClient.delete(`/object-relations/${id}`);
+    return apiClient.delete(replaceParams(ENDPOINTS.OBJECT_RELATION_BY_ID, { id }));
   },
 };
 

@@ -7,6 +7,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   ObjectNote,
   CreateObjectNoteRequest,
@@ -146,7 +147,7 @@ export const notesApi = {
   getByObjectId: async (objectId: number, params?: ObjectNoteListParams): Promise<any> => {
     console.log('[notesApi] getByObjectId called:', { objectId, params });
     // Explicitly set empty object for params to ensure axios config is created
-    const result = await notesClient.get(`/objects/${objectId}/notes`, {
+    const result = await notesClient.get(replaceParams(ENDPOINTS.NOTES_BY_OBJECT_ID, { id: objectId }), {
       params: params || {},
       // Ensure headers object exists for interceptor
       headers: {}
@@ -159,14 +160,14 @@ export const notesApi = {
    * Get single note by ID
    */
   getById: async (id: number, language_id?: number): Promise<ObjectNoteResponse> => {
-    return notesClient.get(`/notes/${id}`, { params: { language_id } });
+    return notesClient.get(replaceParams(ENDPOINTS.NOTE_BY_ID, { id }), { params: { language_id } });
   },
 
   /**
    * Create a new note for an object
    */
   create: async (objectId: number, data: CreateObjectNoteRequest): Promise<ObjectNoteResponse> => {
-    return notesClient.post(`/objects/${objectId}/notes`, data);
+    return notesClient.post(replaceParams(ENDPOINTS.NOTES_BY_OBJECT_ID, { id: objectId }), data);
   },
 
   /**
@@ -175,20 +176,20 @@ export const notesApi = {
    * IMPORTANT: Uses POST instead of PUT because PUT method is not working on n8n webhook
    */
   update: async (id: number, data: UpdateObjectNoteRequest): Promise<ObjectNoteResponse> => {
-    return notesClient.post(`/notes/${id}`, data);
+    return notesClient.post(replaceParams(ENDPOINTS.NOTE_BY_ID, { id }), data);
   },
 
   /**
    * Toggle note pin status
    */
   togglePin: async (id: number, is_pinned: boolean): Promise<ObjectNoteResponse> => {
-    return notesClient.patch(`/notes/${id}/pin`, { is_pinned });
+    return notesClient.patch(replaceParams(ENDPOINTS.NOTE_PIN, { id }), { is_pinned });
   },
 
   /**
    * Soft delete a note
    */
   delete: async (id: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return notesClient.delete(`/notes/${id}`);
+    return notesClient.delete(replaceParams(ENDPOINTS.NOTE_BY_ID, { id }));
   },
 };

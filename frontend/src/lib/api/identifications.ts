@@ -7,6 +7,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
+import { ENDPOINTS, replaceParams } from './endpoints';
 import type {
   Identification,
   CreateIdentificationRequest,
@@ -114,7 +115,7 @@ export const identificationApi = {
    * Endpoint: GET /objects/:object_id/identifications
    */
   getByObjectId: async (objectId: number, params?: IdentificationListParams): Promise<IdentificationListResponse> => {
-    return identificationsClient.get(`/objects/${objectId}/identifications`, { params });
+    return identificationsClient.get(replaceParams(ENDPOINTS.IDENTIFICATIONS_BY_OBJECT_ID, { id: objectId }), { params });
   },
 
   /**
@@ -122,7 +123,7 @@ export const identificationApi = {
    * Endpoint: GET /identifications/:id
    */
   getById: async (id: number): Promise<IdentificationResponse> => {
-    return identificationsClient.get(`/identifications/${id}`);
+    return identificationsClient.get(replaceParams(ENDPOINTS.IDENTIFICATION_BY_ID, { id }));
   },
 
   /**
@@ -130,7 +131,7 @@ export const identificationApi = {
    * Endpoint: POST /objects/:object_id/identifications
    */
   create: async (objectId: number, data: CreateIdentificationRequest): Promise<IdentificationResponse> => {
-    return identificationsClient.post(`/objects/${objectId}/identifications`, data);
+    return identificationsClient.post(replaceParams(ENDPOINTS.IDENTIFICATIONS_BY_OBJECT_ID, { id: objectId }), data);
   },
 
   /**
@@ -138,7 +139,7 @@ export const identificationApi = {
    * Endpoint: POST /identifications/:id
    */
   update: async (id: number, data: UpdateIdentificationRequest): Promise<IdentificationResponse> => {
-    return identificationsClient.post(`/identifications/${id}`, data);
+    return identificationsClient.post(replaceParams(ENDPOINTS.IDENTIFICATION_BY_ID, { id }), data);
   },
 
   /**
@@ -146,6 +147,6 @@ export const identificationApi = {
    * Endpoint: DELETE /identifications/:id
    */
   delete: async (id: number): Promise<{ success: true }> => {
-    return identificationsClient.delete(`/identifications/${id}`);
+    return identificationsClient.delete(replaceParams(ENDPOINTS.IDENTIFICATION_BY_ID, { id }));
   },
 };
