@@ -12,6 +12,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, Link2, Unlink, File, Download, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
@@ -29,6 +30,7 @@ interface DocumentFilesTabProps {
 
 export default function DocumentFilesTab({ documentId, onDataChange }: DocumentFilesTabProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [files, setFiles] = useState<FileEntity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +83,11 @@ export default function DocumentFilesTab({ documentId, onDataChange }: DocumentF
       console.error('[DocumentFilesTab] Error unlinking file:', err);
       setError(err?.error?.message || t('files.unlinkFailed'));
     }
+  };
+
+  const handleFileClick = (file: FileEntity) => {
+    // Navigate to files page with the file ID as a query parameter
+    router.push(`/files?fileId=${file.id}`);
   };
 
   const formatFileSize = (bytes?: number): string => {
@@ -149,7 +156,11 @@ export default function DocumentFilesTab({ documentId, onDataChange }: DocumentF
                 </tr>
               ) : (
                 files.map((file) => (
-                  <tr key={file.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr 
+                    key={file.id} 
+                    onClick={() => handleFileClick(file)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         {getFileIcon(file.mime_type)}
@@ -181,6 +192,7 @@ export default function DocumentFilesTab({ documentId, onDataChange }: DocumentF
                             href={file.file_path}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
                             title={t('files.openFile')}
                           >
@@ -188,7 +200,10 @@ export default function DocumentFilesTab({ documentId, onDataChange }: DocumentF
                           </a>
                         )}
                         <button
-                          onClick={() => handleUnlinkFile(file.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnlinkFile(file.id);
+                          }}
                           className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                           title={t('files.unlink')}
                         >

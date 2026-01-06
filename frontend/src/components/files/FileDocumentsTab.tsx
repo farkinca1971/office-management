@@ -12,6 +12,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, FileText, Calendar, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
@@ -32,6 +33,7 @@ interface FileDocumentsTabProps {
 export default function FileDocumentsTab({ fileId, onDataChange }: FileDocumentsTabProps) {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
+  const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [documentTypes, setDocumentTypes] = useState<LookupItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,6 +82,11 @@ export default function FileDocumentsTab({ fileId, onDataChange }: FileDocuments
 
   // Check if we can remove documents (need more than one)
   const canRemoveDocuments = documents.length > 1;
+
+  const handleDocumentClick = (document: Document) => {
+    // Navigate to documents page with the document ID as a query parameter
+    router.push(`/documents?documentId=${document.id}`);
+  };
 
   if (isLoading) {
     return (
@@ -139,7 +146,11 @@ export default function FileDocumentsTab({ fileId, onDataChange }: FileDocuments
                 </tr>
               ) : (
                 documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr 
+                    key={doc.id} 
+                    onClick={() => handleDocumentClick(doc)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <FileText className="h-5 w-5 text-primary-500" />
@@ -166,7 +177,8 @@ export default function FileDocumentsTab({ fileId, onDataChange }: FileDocuments
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <a
-                        href={`/documents?id=${doc.id}`}
+                        href={`/documents?documentId=${doc.id}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
                         title={t('documents.viewDocument')}
                       >

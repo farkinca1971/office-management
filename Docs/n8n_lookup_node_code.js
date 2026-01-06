@@ -60,8 +60,9 @@ if (languageId) {
   translationLanguageId = parseInt(languageId);
   // We'll use language_id directly in the query
 } else if (languageCode) {
+  // Normalize language code to lowercase to ensure case-insensitive matching
   // Use the provided language code (from user's language preference)
-  translationLanguageCode = languageCode;
+  translationLanguageCode = String(languageCode).toLowerCase().trim();
 } else {
   // Default to 'en' if no language specified
   translationLanguageCode = 'en';
@@ -119,7 +120,9 @@ const buildTranslationJoin = (tableAlias, isActiveFilter = true) => {
   if (translationLanguageId) {
     languageCondition = `t.language_id = ${translationLanguageId}`;
   } else {
-    languageCondition = `t.language_id = (SELECT id FROM languages WHERE code = '${translationLanguageCode}')`;
+    // Escape single quotes in language code and use LOWER() for case-insensitive matching
+    const escapedLanguageCode = String(translationLanguageCode).replace(/'/g, "''");
+    languageCondition = `t.language_id = (SELECT id FROM languages WHERE LOWER(code) = LOWER('${escapedLanguageCode}') LIMIT 1)`;
   }
   
   const activeFilter = isActiveFilter ? `${tableAlias}.is_active = 1` : '';

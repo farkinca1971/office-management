@@ -1,7 +1,7 @@
 /**
- * n8n Code Node - Dynamic Lookup Table Query Handler (Updated with audit_actions)
+ * n8n Code Node - Dynamic Lookup Table Query Handler (Updated with audit_actions and identification_types)
  *
- * This single node can handle all lookup/reference data queries including audit_actions
+ * This single node can handle all lookup/reference data queries including audit_actions and identification_types
  *
  * Setup:
  * 1. Add a Code node in n8n
@@ -15,12 +15,12 @@
  *   Options: 'languages', 'object_types' (or 'object-types'), 'object_statuses' (or 'object-statuses'),
  *            'sexes', 'salutations', 'product_categories' (or 'product-categories'), 'countries',
  *            'address_types' (or 'address-types'), 'address_area_types' (or 'address-area-types'),
- *            'contact_types' (or 'contact-types'), 'transaction_types' (or 'transaction-types'),
- *            'currencies', 'audit_actions' (or 'audit-actions'),
- *            'object_relation_types' (or 'object-relation-types'), 'translations'
+ *            'contact_types' (or 'contact-types'), 'identification_types' (or 'identification-types'),
+ *            'transaction_types' (or 'transaction-types'), 'currencies', 'audit_actions' (or 'audit-actions'),
+ *            'object_relation_types' (or 'object-relation-types'), 'document_types' (or 'document-types'), 'translations'
  *   Note: Hyphens are automatically converted to underscores (e.g., "object-types" -> "object_types")
  *
- * - object_type_id: Filter for object_statuses and audit_actions (optional)
+ * - object_type_id: Filter for object_statuses, identification_types, and audit_actions (optional)
  * - code: Filter for translations (optional)
  * - language_id: Filter for translations (optional)
  * - is_active: Filter by active status (optional, default: true)
@@ -60,8 +60,9 @@ if (languageId) {
   translationLanguageId = parseInt(languageId);
   // We'll use language_id directly in the query
 } else if (languageCode) {
+  // Normalize language code to lowercase to ensure case-insensitive matching
   // Use the provided language code (from user's language preference)
-  translationLanguageCode = languageCode;
+  translationLanguageCode = String(languageCode).toLowerCase().trim();
 } else {
   // Default to 'en' if no language specified
   translationLanguageCode = 'en';
@@ -79,10 +80,12 @@ const validLookupTypes = [
   'address_types',
   'address_area_types',
   'contact_types',
+  'identification_types',
   'transaction_types',
   'currencies',
   'audit_actions',
   'object_relation_types',
+  'document_types',
   'translations'
 ];
 
@@ -117,7 +120,9 @@ const buildTranslationJoin = (tableAlias, isActiveFilter = true) => {
   if (translationLanguageId) {
     languageCondition = `t.language_id = ${translationLanguageId}`;
   } else {
-    languageCondition = `t.language_id = (SELECT id FROM languages WHERE code = '${translationLanguageCode}')`;
+    // Escape single quotes in language code and use LOWER() for case-insensitive matching
+    const escapedLanguageCode = String(translationLanguageCode).replace(/'/g, "''");
+    languageCondition = `t.language_id = (SELECT id FROM languages WHERE LOWER(code) = LOWER('${escapedLanguageCode}') LIMIT 1)`;
   }
 
   const activeFilter = isActiveFilter ? `${tableAlias}.is_active = 1` : '';
@@ -179,6 +184,30 @@ FROM object_statuses os
 ${statusJoin.join}
 WHERE ${statusWhere.join(' AND ')}
 ORDER BY os.code;
+    `;
+    break;
+
+  case 'identification_types':
+    // Identification Types: similar to object_statuses, includes optional object_type_id filter
+    // This lookup is scoped by object type (person, company, employee, etc.)
+    const idTypeWhere = [];
+    idTypeWhere.push('it.is_active = 1');
+    if (objectTypeId) {
+      idTypeWhere.push(`it.object_type_id = ${parseInt(objectTypeId)}`);
+    }
+    const idTypeJoin = buildTranslationJoin('it');
+    
+    sqlQuery = `
+SELECT
+    it.id,
+    it.code,
+    it.is_active,
+    it.object_type_id,
+    t.text as name
+FROM identification_types it
+${idTypeJoin.join}
+WHERE ${idTypeWhere.join(' AND ')}
+ORDER BY t.text;
     `;
     break;
 
@@ -356,6 +385,21 @@ FROM object_relation_types ort
 ${ortJoin.join}
 WHERE ort.is_active = 1
 ORDER BY ort.code;
+    `;
+    break;
+
+  case 'document_types':
+    const dtJoin = buildTranslationJoin('dt');
+    sqlQuery = `
+SELECT
+    dt.id,
+    dt.code,
+    dt.is_active,
+    t.text as name
+FROM document_types dt
+${dtJoin.join}
+WHERE dt.is_active = 1
+ORDER BY dt.code;
     `;
     break;
 

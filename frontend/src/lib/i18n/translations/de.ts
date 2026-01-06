@@ -54,6 +54,7 @@ export const de = {
     addressTypes: 'Adresstypen',
     addressAreaTypes: 'Adressbereichstypen',
     contactTypes: 'Kontakttypen',
+    identificationTypes: 'Ausweistypen',
     documentTypes: 'Dokumenttypen',
     transactionTypes: 'Transaktionstypen',
     currencies: 'Währungen',

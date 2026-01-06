@@ -76,8 +76,8 @@ export const ENDPOINTS = {
   // Files (secondary webhook: 244d0b91-6c2c-482b-8119-59ac282fba4f)
   FILES: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files',
   FILE_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/:id',
-  FILE_VERSIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/:id/versions',
-  FILE_DOCUMENTS: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/:id/documents',
+  FILE_VERSIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/a59f6c3c-94e4-4972-9569-1606afbb1ca8/files/:id/versions',
+  FILE_DOCUMENTS: 'https://n8n.wolfitlab.duckdns.org/webhook/f124ecad-b97e-4bb0-818d-cb065a52b229/v1/files/:id/documents',
   FILE_DOCUMENT_COUNT: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/:id/documents/count',
   FILES_UNATTACHED: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/unattached',
   FILES_UPLOAD: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/upload',

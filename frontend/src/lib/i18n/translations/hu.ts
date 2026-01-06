@@ -53,6 +53,7 @@ export const hu = {
     addressTypes: 'Címtípusok',
     addressAreaTypes: 'Címterülettípusok',
     contactTypes: 'Kapcsolattípusok',
+    identificationTypes: 'Azonosítótípusok',
     documentTypes: 'Dokumentumtípusok',
     transactionTypes: 'Tranzakciótípusok',
     currencies: 'Pénznemek',

@@ -5,6 +5,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
@@ -28,6 +29,7 @@ import type { LookupItem } from '@/types/common';
 export default function DocumentsPage() {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
+  const searchParams = useSearchParams();
 
   // View mode management
   const { viewMode, toggleViewMode } = useViewMode('documents-view-mode');
@@ -109,6 +111,19 @@ export default function DocumentsPage() {
   useEffect(() => {
     loadDocuments();
   }, [t]);
+
+  // Auto-select document from URL parameter
+  useEffect(() => {
+    const documentIdParam = searchParams.get('documentId');
+    if (documentIdParam && documents.length > 0) {
+      const documentId = parseInt(documentIdParam, 10);
+      const document = documents.find(d => d.id === documentId);
+      // Only set if not already selected or if it's a different document
+      if (document && (!selectedDocument || selectedDocument.id !== documentId)) {
+        setSelectedDocument(document);
+      }
+    }
+  }, [searchParams, documents]);
 
   const handleDocumentSelect = (document: Document) => {
     setSelectedDocument(document);

@@ -5,6 +5,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import { Plus, FileText, Files, StickyNote, History, Upload } from 'lucide-react';
@@ -26,6 +27,7 @@ import type { LookupItem } from '@/types/common';
 export default function FilesPage() {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
+  const searchParams = useSearchParams();
 
   // View mode management
   const { viewMode, toggleViewMode } = useViewMode('files-view-mode');
@@ -97,6 +99,19 @@ export default function FilesPage() {
   useEffect(() => {
     loadFiles();
   }, [t]);
+
+  // Auto-select file from URL parameter
+  useEffect(() => {
+    const fileIdParam = searchParams.get('fileId');
+    if (fileIdParam && files.length > 0) {
+      const fileId = parseInt(fileIdParam, 10);
+      const file = files.find(f => f.id === fileId);
+      // Only set if not already selected or if it's a different file
+      if (file && (!selectedFile || selectedFile.id !== fileId)) {
+        setSelectedFile(file);
+      }
+    }
+  }, [searchParams, files]);
 
   const handleFileSelect = (file: FileEntity) => {
     setSelectedFile(file);

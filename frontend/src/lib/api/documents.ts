@@ -23,6 +23,8 @@ export type DocumentListParams = {
   is_active?: number; // 0 = false, 1 = true
   date_from?: string;
   date_to?: string;
+  language_code?: string; // Language code for translations (e.g., 'en', 'de', 'hu')
+  language_id?: number; // Alternative: Language ID for translations
 };
 
 export type DocumentListResponse = ApiResponse<Document[]>;
@@ -41,7 +43,7 @@ const documentsClient: AxiosInstance = axios.create({
 });
 
 /**
- * Request Interceptor: Add authentication token and language_id
+ * Request Interceptor: Add authentication token and language_code
  */
 documentsClient.interceptors.request.use(
   (config) => {
@@ -52,35 +54,37 @@ documentsClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // Get current language ID
-      let currentLanguageId: number = 1; // Default to English
+      // Get current language code from localStorage
+      let currentLanguageCode: string = 'en'; // Default to English
       try {
         const storedLanguage = localStorage.getItem('language-storage');
         if (storedLanguage) {
           const languageData = JSON.parse(storedLanguage);
-          // Convert language code to ID (en=1, de=2, hu=3)
-          const languageMap: Record<string, number> = { en: 1, de: 2, hu: 3 };
-          currentLanguageId = languageMap[languageData.state?.language || 'en'] || 1;
+          currentLanguageCode = languageData.state?.language || 'en';
         }
       } catch (error) {
         console.error('Error reading language from localStorage:', error);
       }
 
-      // Add language_id to ALL request methods
+      // Add language_code to ALL request methods
       // For POST/PUT/PATCH: Add to request body
-      // For GET/DELETE: Add to custom header
+      // For GET/DELETE: Add to query params
       if (config.method && ['post', 'put', 'patch'].includes(config.method.toLowerCase())) {
-        // Add language_id to request body if not already present
+        // Add language_code to request body if not already present
         if (!config.data) {
           config.data = {};
         }
-        if (!config.data.language_id) {
-          config.data.language_id = currentLanguageId;
+        if (!config.data.language_code && !config.data.language_id) {
+          config.data.language_code = currentLanguageCode;
         }
       } else {
-        // For GET/DELETE: Send language_id in a custom header
-        if (config.headers) {
-          config.headers['X-Language-ID'] = currentLanguageId.toString();
+        // For GET/DELETE: Add language_code to query params
+        if (!config.params) {
+          config.params = {};
+        }
+        // Only add if not already set (allow explicit override)
+        if (!config.params.language_code && !config.params.language_id) {
+          config.params.language_code = currentLanguageCode;
         }
       }
     }
@@ -146,19 +150,22 @@ documentsClient.interceptors.response.use(
 export const documentsApi = {
   /**
    * Get all documents with optional filtering
+   * Language code is automatically added from user preferences via interceptor
    */
   getAll: async (params?: DocumentListParams): Promise<DocumentListResponse> => {
     return documentsClient.get(ENDPOINTS.DOCUMENTS, {
       params: params || {},
-      headers: {},
     });
   },
 
   /**
    * Get single document by ID
+   * Language code is automatically added from user preferences via interceptor
    */
-  getById: async (id: number): Promise<DocumentResponse> => {
-    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_BY_ID, { id }), { headers: {} });
+  getById: async (id: number, params?: { language_code?: string; language_id?: number }): Promise<DocumentResponse> => {
+    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_BY_ID, { id }), {
+      params: params || {},
+    });
   },
 
   /**
@@ -187,7 +194,7 @@ export const documentsApi = {
    * Get all files linked to a document
    */
   getFiles: async (documentId: number): Promise<ApiResponse<FileEntity[]>> => {
-    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_FILES, { id: documentId }), { headers: {} });
+    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_FILES, { id: documentId }));
   },
 
   /**
@@ -209,7 +216,7 @@ export const documentsApi = {
    * Get all objects related to a document
    */
   getRelations: async (documentId: number): Promise<ApiResponse<ObjectRelation[]>> => {
-    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_RELATIONS, { id: documentId }), { headers: {} });
+    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_RELATIONS, { id: documentId }));
   },
 
   /**
