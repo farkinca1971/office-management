@@ -3882,7 +3882,7 @@ WHERE d.id = {{ $json.params.id }};
 
 ## Delete Document
 
-**DELETE** `/documents/:id`
+**POST** `/documents/:id/delete`
 
 Soft deletes a document by setting `is_active = false`.
 
@@ -3891,6 +3891,15 @@ Soft deletes a document by setting `is_active = false`.
 
 **Headers**:
 - `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body** (optional):
+```json
+{
+  "language_code": "en",
+  "language_id": 1
+}
+```
 
 **Response**:
 ```json
@@ -3902,6 +3911,8 @@ Soft deletes a document by setting `is_active = false`.
   }
 }
 ```
+
+**n8n Webhook URL**: `https://n8n.wolfitlab.duckdns.org/webhook/6054a8bf-9bcc-44c9-8e22-e78704ac2e58/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/documents/:id/delete`
 
 **SQL Implementation**:
 ```sql

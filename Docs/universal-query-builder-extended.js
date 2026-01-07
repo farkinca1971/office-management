@@ -197,6 +197,35 @@
       usesObjectDelete: true,
     },
 
+    file_versions: {
+      tableName: 'file_versions',
+      tableAlias: 'fv',
+      objectTypeCode: 'file_version',
+      usesSharedPrimaryKey: false,
+      columns: [
+        { name: 'id', type: 'int', isPrimaryKey: true },
+        { name: 'file_id', type: 'bigint' },
+        { name: 'version_number', type: 'int' },
+        { name: 'filename', type: 'varchar', searchable: true, trackChanges: true },
+        { name: 'original_filename', type: 'varchar', nullable: true, searchable: true, trackChanges: true },
+        { name: 'file_path', type: 'text', nullable: true, trackChanges: true },
+        { name: 'mime_type', type: 'varchar', nullable: true, trackChanges: true },
+        { name: 'file_size', type: 'bigint', nullable: true, trackChanges: true },
+        { name: 'checksum', type: 'varchar', nullable: true },
+        { name: 'storage_type', type: 'varchar', nullable: true, trackChanges: true },
+        { name: 'bucket_name', type: 'varchar', nullable: true, trackChanges: true },
+        { name: 'storage_key', type: 'varchar', nullable: true, trackChanges: true },
+        { name: 'changed_by', type: 'bigint', nullable: true },
+        { name: 'changed_at', type: 'timestamp' },
+        { name: 'change_reason', type: 'varchar', nullable: true, searchable: true, trackChanges: true },
+      ],
+      defaultSelectColumns: ['id', 'file_id', 'version_number', 'filename', 'original_filename', 'file_path', 'mime_type', 'file_size', 'checksum', 'storage_type', 'bucket_name', 'storage_key', 'changed_by', 'changed_at', 'change_reason'],
+      searchColumns: ['filename', 'original_filename', 'change_reason'],
+      defaultSortColumn: 'changed_at',
+      defaultSortDirection: 'DESC',
+      supportsSoftDelete: false,
+    },
+
     object_addresses: {
       tableName: 'object_addresses',
       tableAlias: 'a',
@@ -724,11 +753,11 @@
       }
 
       if (supportsSoftDelete) {
+        // Only filter by is_active if explicitly provided in params
+        // This allows the datagrid to handle filtering instead
         if (params.is_active !== undefined) {
           conditions.push(`${tableAlias}.is_active = ${params.is_active ? 1 : 0}`);
           whereParams.is_active = params.is_active;
-        } else {
-          conditions.push(`${tableAlias}.is_active = 1`);
         }
       }
 
@@ -740,6 +769,11 @@
       if (params.object_id !== undefined) {
         conditions.push(`${tableAlias}.object_id = ${this._formatValue(params.object_id)}`);
         whereParams.object_id = params.object_id;
+      }
+
+      if (params.file_id !== undefined) {
+        conditions.push(`${tableAlias}.file_id = ${this._formatValue(params.file_id)}`);
+        whereParams.file_id = params.file_id;
       }
 
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join('\n    AND ')}` : '';
@@ -805,6 +839,21 @@
       const languageId = params.language_id || 1;
 
       let query;
+      // Build WHERE clause conditions
+      const whereConditions = [];
+      
+      // Only filter by is_active if explicitly provided in params
+      // This allows the datagrid to handle filtering instead
+      if (params.is_active !== undefined) {
+        whereConditions.push(`lt.is_active = ${params.is_active ? 1 : 0}`);
+      }
+      
+      if (this.tableName === 'object_statuses' && params.object_type_id) {
+        whereConditions.push(`lt.object_type_id = ${params.object_type_id}`);
+      }
+      
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      
       if (hasTranslation) {
         query = `
   SELECT
@@ -818,14 +867,13 @@
       t.text as name
   FROM ${this.tableName} lt
   LEFT JOIN translations t ON t.code = lt.code AND t.language_id = ${languageId}
-  WHERE lt.is_active = ${params.is_active !== undefined ? (params.is_active ? 1 : 0) : 1}
-      ${this.tableName === 'object_statuses' && params.object_type_id ? `AND lt.object_type_id = ${params.object_type_id}` : ''}
+  ${whereClause}
   ORDER BY lt.code`.trim();
       } else {
         query = `
   SELECT id, code, is_active
   FROM ${this.tableName}
-  WHERE is_active = ${params.is_active !== undefined ? (params.is_active ? 1 : 0) : 1}
+  ${whereClause}
   ORDER BY code`.trim();
       }
 

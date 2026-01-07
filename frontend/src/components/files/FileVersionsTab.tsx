@@ -42,8 +42,28 @@ export default function FileVersionsTab({ fileId, onDataChange }: FileVersionsTa
       setError(null);
 
       const versionsResponse = await filesApi.getVersions(fileId);
-      const versionsData = versionsResponse?.data;
-
+      
+      // Handle case where response is wrapped in an array (n8n webhook sometimes returns arrays)
+      let actualResponse = versionsResponse;
+      if (Array.isArray(versionsResponse) && versionsResponse.length > 0) {
+        // If response is an array, get the first element
+        actualResponse = versionsResponse[0];
+      }
+      
+      // Check if response indicates success
+      if (actualResponse && typeof actualResponse === 'object' && 'success' in actualResponse) {
+        const response = actualResponse as { success: boolean; data?: any; error?: any };
+        if (!response.success) {
+          console.error('[FileVersionsTab] API returned error:', response.error);
+          setError(response.error?.message || t('versions.loadFailed'));
+          setVersions([]);
+          return;
+        }
+      }
+      
+      // Extract data - handle both direct response and wrapped response
+      const versionsData = actualResponse?.data;
+      
       let versionsArray: FileVersion[] = [];
       if (Array.isArray(versionsData)) {
         versionsArray = versionsData;
@@ -52,12 +72,15 @@ export default function FileVersionsTab({ fileId, onDataChange }: FileVersionsTa
       }
 
       // Sort by version number descending (newest first)
-      versionsArray.sort((a, b) => b.version_number - a.version_number);
+      if (versionsArray.length > 0) {
+        versionsArray.sort((a, b) => b.version_number - a.version_number);
+      }
 
       setVersions(versionsArray);
     } catch (err: any) {
       console.error('[FileVersionsTab] Error loading versions:', err);
       setError(err?.error?.message || t('versions.loadFailed'));
+      setVersions([]); // Clear versions on error
     } finally {
       setIsLoading(false);
     }
@@ -66,6 +89,12 @@ export default function FileVersionsTab({ fileId, onDataChange }: FileVersionsTa
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Debug: Log when versions state changes
+  useEffect(() => {
+    console.log('[FileVersionsTab] Versions state changed:', versions);
+    console.log('[FileVersionsTab] Versions length:', versions.length);
+  }, [versions]);
 
   const handleCreateVersion = async () => {
     try {

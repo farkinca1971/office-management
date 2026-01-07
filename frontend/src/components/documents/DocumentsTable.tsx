@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { ArrowUp, ArrowDown, ArrowUpDown, Filter, XCircle, Edit, Trash2, Save, X } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpDown, Filter, XCircle, Edit, Trash2, Save, X, Loader2 } from 'lucide-react';
 import type { Document, UpdateDocumentRequest } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 import { useTranslation } from '@/lib/i18n';
@@ -28,7 +28,7 @@ export interface DocumentsTableProps {
   statuses?: LookupItem[];
 }
 
-type SortField = 'title' | 'document_number' | 'document_date' | 'expiry_date' | 'issuer';
+type SortField = 'title' | 'document_number' | 'document_date' | 'expiry_date';
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortState {
@@ -40,20 +40,16 @@ interface FilterState {
   title: string;
   documentType: string;
   documentNumber: string;
-  issuer: string;
   status: string;
 }
 
 interface EditFormData {
   title: string;
-  description: string;
+  title_code: string;
   document_type_id?: number;
   document_date: string;
   document_number: string;
   expiry_date: string;
-  issuer: string;
-  reference_number: string;
-  external_reference: string;
 }
 
 export const DocumentsTable: React.FC<DocumentsTableProps> = ({
@@ -74,26 +70,23 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
     title: '',
     documentType: '',
     documentNumber: '',
-    issuer: '',
     status: '',
   });
   const [showFilters, setShowFilters] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditFormData | null>(null);
   const [originalData, setOriginalData] = useState<EditFormData | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Start editing a row
   const handleStartEdit = (document: Document) => {
     const formData: EditFormData = {
       title: document.title,
-      description: document.description || '',
+      title_code: document.title_code,
       document_type_id: document.document_type_id,
       document_date: document.document_date || '',
       document_number: document.document_number || '',
       expiry_date: document.expiry_date || '',
-      issuer: document.issuer || '',
-      reference_number: document.reference_number || '',
-      external_reference: document.external_reference || '',
     };
     setEditingId(document.id);
     setEditForm(formData);
@@ -110,31 +103,32 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
   // Save changes
   const handleSaveEdit = async () => {
     if (editingId && editForm && originalData && onUpdate) {
-      const updatePayload: UpdateDocumentRequest = {
-        title_old: originalData.title,
-        title_new: editForm.title,
-        description_old: originalData.description,
-        description_new: editForm.description,
-        document_type_id_old: originalData.document_type_id,
-        document_type_id_new: editForm.document_type_id,
-        document_date_old: originalData.document_date,
-        document_date_new: editForm.document_date,
-        document_number_old: originalData.document_number,
-        document_number_new: editForm.document_number,
-        expiry_date_old: originalData.expiry_date,
-        expiry_date_new: editForm.expiry_date,
-        issuer_old: originalData.issuer,
-        issuer_new: editForm.issuer,
-        reference_number_old: originalData.reference_number,
-        reference_number_new: editForm.reference_number,
-        external_reference_old: originalData.external_reference,
-        external_reference_new: editForm.external_reference,
-      };
-      await onUpdate(editingId, updatePayload);
+      setIsSaving(true);
+      try {
+        const updatePayload: UpdateDocumentRequest = {
+          title_old: originalData.title,
+          title_new: editForm.title,
+          title_code: editForm.title_code, // Send title_code in the API call
+          document_type_id_old: originalData.document_type_id,
+          document_type_id_new: editForm.document_type_id,
+          document_date_old: originalData.document_date,
+          document_date_new: editForm.document_date,
+          document_number_old: originalData.document_number,
+          document_number_new: editForm.document_number,
+          expiry_date_old: originalData.expiry_date,
+          expiry_date_new: editForm.expiry_date,
+        };
+        await onUpdate(editingId, updatePayload);
+        setEditingId(null);
+        setEditForm(null);
+        setOriginalData(null);
+      } catch (error) {
+        // Error is handled by parent component
+        console.error('Failed to save document:', error);
+      } finally {
+        setIsSaving(false);
+      }
     }
-    setEditingId(null);
-    setEditForm(null);
-    setOriginalData(null);
   };
 
   // Helper functions
@@ -147,7 +141,7 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
   const getStatusName = (statusId?: number): string => {
     if (!statusId) return '-';
     const status = statuses.find(s => s.id === statusId);
-    return status?.name || status?.code || '-';
+    return status?.name || status?.code || `Status #${statusId}`;
   };
 
   // Sorting logic
@@ -189,11 +183,6 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
         (d.document_number || '').toLowerCase().includes(filters.documentNumber.toLowerCase())
       );
     }
-    if (filters.issuer) {
-      result = result.filter(d =>
-        (d.issuer || '').toLowerCase().includes(filters.issuer.toLowerCase())
-      );
-    }
     if (filters.status) {
       result = result.filter(d => {
         const statusName = getStatusName(d.object_status_id).toLowerCase();
@@ -221,13 +210,12 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
       title: '',
       documentType: '',
       documentNumber: '',
-      issuer: '',
       status: '',
     });
   };
 
   const hasActiveFilters = filters.title || filters.documentType || filters.documentNumber ||
-    filters.issuer || filters.status;
+    filters.status;
 
   if (isLoading) {
     return (
@@ -281,7 +269,7 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
       {/* Filters */}
       {showFilters && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Input
               type="text"
               placeholder={`${t('documents.title')}...`}
@@ -299,12 +287,6 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
               placeholder={`${t('documents.documentNumber')}...`}
               value={filters.documentNumber}
               onChange={(e) => setFilters(prev => ({ ...prev, documentNumber: e.target.value }))}
-            />
-            <Input
-              type="text"
-              placeholder={`${t('documents.issuer')}...`}
-              value={filters.issuer}
-              onChange={(e) => setFilters(prev => ({ ...prev, issuer: e.target.value }))}
             />
             <Input
               type="text"
@@ -360,15 +342,6 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
                   {getSortIcon('expiry_date')}
                 </div>
               </th>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleSort('issuer')}
-              >
-                <div className="flex items-center gap-2">
-                  {t('documents.issuer')}
-                  {getSortIcon('issuer')}
-                </div>
-              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('forms.status')}
               </th>
@@ -380,7 +353,7 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedDocuments.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                   {hasActiveFilters ? t('lookup.noResultsMatch') : t('lookup.noDataAvailable')}
                 </td>
               </tr>
@@ -464,20 +437,9 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
                       )}
                     </td>
                     <td className="px-2 py-2 whitespace-nowrap text-sm">
-                      {isEditing ? (
-                        <Input
-                          type="text"
-                          value={editForm?.issuer || ''}
-                          onChange={(e) => setEditForm(prev => prev ? { ...prev, issuer: e.target.value } : null)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="min-w-[120px]"
-                        />
-                      ) : (
-                        <span className="text-gray-700 dark:text-gray-300">{document.issuer || '-'}</span>
-                      )}
-                    </td>
-                    <td className="px-2 py-2 whitespace-nowrap text-sm">
-                      <span className="text-gray-700 dark:text-gray-300">{getStatusName(document.object_status_id)}</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                        {getStatusName(document.object_status_id)}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
@@ -488,17 +450,23 @@ export const DocumentsTable: React.FC<DocumentsTableProps> = ({
                                 e.stopPropagation();
                                 handleSaveEdit();
                               }}
-                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                              disabled={isSaving}
+                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Save"
                             >
-                              <Save className="h-4 w-4" />
+                              {isSaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Save className="h-4 w-4" />
+                              )}
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleCancelEdit();
                               }}
-                              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                              disabled={isSaving}
+                              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Cancel"
                             >
                               <X className="h-4 w-4" />

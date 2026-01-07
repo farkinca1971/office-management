@@ -191,9 +191,18 @@ export const filesApi = {
 
   /**
    * Get all parent documents for a file
+   * @param fileId - The file ID
+   * @param languageCode - Optional language code (en, hu, de)
+   * @param languageId - Optional language ID (1=en, 2=de, 3=hu)
    */
-  getDocuments: async (fileId: number): Promise<ApiResponse<Document[]>> => {
-    return filesClient.get(replaceParams(ENDPOINTS.FILE_DOCUMENTS, { id: fileId }), { headers: {} });
+  getDocuments: async (fileId: number, languageCode?: string, languageId?: number): Promise<ApiResponse<Document[]>> => {
+    const params: Record<string, any> = {};
+    if (languageCode) params.language_code = languageCode;
+    if (languageId) params.language_id = languageId;
+    return filesClient.get(replaceParams(ENDPOINTS.FILE_DOCUMENTS, { id: fileId }), { 
+      params,
+      headers: {} 
+    });
   },
 
   /**

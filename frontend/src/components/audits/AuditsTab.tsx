@@ -22,10 +22,11 @@ import type { LookupItem } from '@/types/common';
 
 interface AuditsTabProps {
   objectId: number;
+  reloadTrigger?: number; // When this changes, reload the data
 }
 
-export default function AuditsTab({ objectId }: AuditsTabProps) {
-  console.log('🔵 AuditsTab component rendered with objectId:', objectId);
+export default function AuditsTab({ objectId, reloadTrigger }: AuditsTabProps) {
+  console.log('🔵 AuditsTab component rendered with objectId:', objectId, 'reloadTrigger:', reloadTrigger);
 
   const { t } = useTranslation();
   const [audits, setAudits] = useState<ObjectAudit[]>([]);
@@ -79,7 +80,7 @@ export default function AuditsTab({ objectId }: AuditsTabProps) {
   useEffect(() => {
     console.log('[AuditsTab] useEffect triggered');
     loadData();
-  }, [loadData]);
+  }, [loadData, reloadTrigger]); // Reload when reloadTrigger changes
 
   return (
     <div className="space-y-6">

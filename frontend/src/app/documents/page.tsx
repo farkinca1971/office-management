@@ -49,13 +49,30 @@ export default function DocumentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Audit tab reload trigger
+  const [auditReloadTrigger, setAuditReloadTrigger] = useState(0);
+
   // Load lookup data
   useEffect(() => {
     const loadLookups = async () => {
       try {
+        // First, load object types to find the document object type ID
+        const objectTypesRes = await lookupApi.getObjectTypes(language);
+        let objectTypesData = objectTypesRes;
+        
+        // IMPORTANT: n8n sometimes wraps the response in an array
+        if (Array.isArray(objectTypesRes) && objectTypesRes.length > 0 && !objectTypesRes[0]?.id) {
+          objectTypesData = objectTypesRes[0];
+        }
+        
+        const objectTypesList = Array.isArray(objectTypesData?.data) ? objectTypesData.data : [];
+        const documentObjectType = objectTypesList.find(ot => ot.code === 'document');
+        const documentObjectTypeId = documentObjectType?.id;
+
+        // Load document types and statuses (filtered by document object type)
         let [typesRes, statusesRes] = await Promise.all([
           lookupApi.getDocumentTypes(language),
-          lookupApi.getObjectStatuses(undefined, language),
+          lookupApi.getObjectStatuses(documentObjectTypeId, language),
         ]);
 
         // IMPORTANT: n8n sometimes wraps the response in an array
@@ -138,6 +155,20 @@ export default function DocumentsPage() {
     try {
       await documentsApi.update(id, data);
       await loadDocuments();
+      // Update selected document if it's the one being edited
+      if (selectedDocument && selectedDocument.id === id) {
+        // Reload the selected document to get latest data
+        try {
+          const updatedDoc = await documentsApi.getById(id);
+          if (updatedDoc?.data) {
+            setSelectedDocument(updatedDoc.data);
+          }
+        } catch (err) {
+          console.error('Failed to reload selected document:', err);
+        }
+      }
+      // Reload audit tab after successful update
+      setAuditReloadTrigger(prev => prev + 1);
     } catch (err: any) {
       console.error('Failed to update document:', err);
       throw err;
@@ -161,23 +192,35 @@ export default function DocumentsPage() {
   const handleCreateDocument = async (formData: DocumentFormData) => {
     setIsSubmitting(true);
     try {
-      // Get default object type and status for documents
-      // TODO: Get actual document object type ID from lookups
-      const documentObjectTypeId = 10; // Placeholder - should be fetched from object_types
-      const defaultStatusId = 1; // Placeholder - should be fetched from object_statuses
+      // Get document object type ID from lookups
+      const objectTypesRes = await lookupApi.getObjectTypes(language);
+      let objectTypesData = objectTypesRes;
+      
+      // IMPORTANT: n8n sometimes wraps the response in an array
+      if (Array.isArray(objectTypesRes) && objectTypesRes.length > 0 && !objectTypesRes[0]?.id) {
+        objectTypesData = objectTypesRes[0];
+      }
+      
+      const objectTypesList = Array.isArray(objectTypesData?.data) ? objectTypesData.data : [];
+      const documentObjectType = objectTypesList.find(ot => ot.code === 'document');
+      const documentObjectTypeId = documentObjectType?.id;
+
+      if (!documentObjectTypeId) {
+        throw new Error('Document object type not found');
+      }
+
+      if (!formData.object_status_id) {
+        throw new Error('Status is required');
+      }
 
       await documentsApi.create({
         object_type_id: documentObjectTypeId,
-        object_status_id: defaultStatusId,
+        object_status_id: formData.object_status_id,
         title: formData.title,
-        description: formData.description,
         document_type_id: formData.document_type_id,
         document_date: formData.document_date,
         document_number: formData.document_number,
         expiry_date: formData.expiry_date,
-        issuer: formData.issuer,
-        reference_number: formData.reference_number,
-        external_reference: formData.external_reference,
       });
 
       setIsModalOpen(false);
@@ -239,7 +282,7 @@ export default function DocumentsPage() {
       label: t('audits.title'),
       icon: <FileText className="h-5 w-5" />,
       content: selectedDocument ? (
-        <AuditsTab objectId={selectedDocument.id} />
+        <AuditsTab objectId={selectedDocument.id} reloadTrigger={auditReloadTrigger} />
       ) : placeholderContent(<FileText className="h-12 w-12 mx-auto opacity-50" />),
       disabled: !selectedDocument,
     },
@@ -281,6 +324,7 @@ export default function DocumentsPage() {
           onDocumentSelect={handleDocumentSelect}
           selectedDocumentId={selectedDocument?.id}
           onEdit={handleEdit}
+          onUpdate={handleUpdate}
           onDelete={handleDelete}
           documentTypes={documentTypes}
           statuses={statuses}
@@ -306,6 +350,7 @@ export default function DocumentsPage() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateDocument}
         documentTypes={documentTypes}
+        statuses={statuses}
         isSubmitting={isSubmitting}
       />
     </div>

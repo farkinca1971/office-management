@@ -8,6 +8,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
 import { ENDPOINTS, replaceParams } from './endpoints';
+import { getLanguageId } from '@/lib/utils';
 import type {
   Document,
   CreateDocumentRequest,
@@ -43,7 +44,7 @@ const documentsClient: AxiosInstance = axios.create({
 });
 
 /**
- * Request Interceptor: Add authentication token and language_code
+ * Request Interceptor: Add authentication token, language_code, and language_id
  */
 documentsClient.interceptors.request.use(
   (config) => {
@@ -66,25 +67,39 @@ documentsClient.interceptors.request.use(
         console.error('Error reading language from localStorage:', error);
       }
 
-      // Add language_code to ALL request methods
+      // Convert language code to language_id (en=1, de=2, hu=3)
+      const currentLanguageId = getLanguageId(currentLanguageCode);
+
+      // Add X-Language-ID header to ALL requests
+      if (config.headers) {
+        config.headers['X-Language-ID'] = currentLanguageId.toString();
+      }
+
+      // Add language_code and language_id to ALL request methods
       // For POST/PUT/PATCH: Add to request body
       // For GET/DELETE: Add to query params
       if (config.method && ['post', 'put', 'patch'].includes(config.method.toLowerCase())) {
-        // Add language_code to request body if not already present
+        // Add language_code and language_id to request body if not already present
         if (!config.data) {
           config.data = {};
         }
         if (!config.data.language_code && !config.data.language_id) {
           config.data.language_code = currentLanguageCode;
         }
+        if (!config.data.language_id) {
+          config.data.language_id = currentLanguageId;
+        }
       } else {
-        // For GET/DELETE: Add language_code to query params
+        // For GET/DELETE: Add language_code and language_id to query params
         if (!config.params) {
           config.params = {};
         }
         // Only add if not already set (allow explicit override)
         if (!config.params.language_code && !config.params.language_id) {
           config.params.language_code = currentLanguageCode;
+        }
+        if (!config.params.language_id) {
+          config.params.language_id = currentLanguageId;
         }
       }
     }
@@ -185,9 +200,10 @@ export const documentsApi = {
 
   /**
    * Soft delete a document
+   * Uses POST method to the dedicated delete endpoint
    */
   delete: async (id: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return documentsClient.delete(replaceParams(ENDPOINTS.DOCUMENT_BY_ID, { id }));
+    return documentsClient.post(replaceParams(ENDPOINTS.DOCUMENT_DELETE, { id }));
   },
 
   /**

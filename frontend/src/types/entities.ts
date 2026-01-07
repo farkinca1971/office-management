@@ -396,6 +396,7 @@ export interface UpdateDocumentRequest {
   // Old/new pattern for inline editing
   title_old: string;
   title_new: string;
+  title_code: string; // Translation code for the title
   document_type_id_old?: number;
   document_type_id_new?: number;
   document_date_old?: string;

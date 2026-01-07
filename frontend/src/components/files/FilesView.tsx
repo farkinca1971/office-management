@@ -23,6 +23,7 @@ interface FilesViewProps {
   onFileSelect?: (file: FileEntity) => void;
   selectedFileId?: number;
   onEdit?: (file: FileEntity) => void;
+  onUpdate?: (id: number, data: any) => Promise<void>;
   onDelete?: (file: FileEntity) => void;
   statuses?: LookupItem[];
 }
@@ -35,6 +36,7 @@ export const FilesView: React.FC<FilesViewProps> = ({
   onFileSelect,
   selectedFileId,
   onEdit,
+  onUpdate,
   onDelete,
   statuses = [],
 }) => {
@@ -68,6 +70,7 @@ export const FilesView: React.FC<FilesViewProps> = ({
         onFileSelect={onFileSelect}
         selectedFileId={selectedFileId}
         onEdit={onEdit}
+        onUpdate={onUpdate}
         onDelete={onDelete}
         statuses={statuses}
       />

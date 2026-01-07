@@ -10,7 +10,7 @@ import { DocumentsTable } from './DocumentsTable';
 import { DocumentCard } from './DocumentCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Card } from '@/components/ui/Card';
-import type { Document } from '@/types/entities';
+import type { Document, UpdateDocumentRequest } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 import type { ViewMode } from '@/hooks/useViewMode';
 import { useTranslation } from '@/lib/i18n';
@@ -23,6 +23,7 @@ interface DocumentsViewProps {
   onDocumentSelect?: (document: Document) => void;
   selectedDocumentId?: number;
   onEdit?: (document: Document) => void;
+  onUpdate?: (id: number, data: UpdateDocumentRequest) => Promise<void>;
   onDelete?: (document: Document) => void;
   documentTypes?: LookupItem[];
   statuses?: LookupItem[];
@@ -36,6 +37,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
   onDocumentSelect,
   selectedDocumentId,
   onEdit,
+  onUpdate,
   onDelete,
   documentTypes = [],
   statuses = [],
@@ -70,6 +72,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
         onDocumentSelect={onDocumentSelect}
         selectedDocumentId={selectedDocumentId}
         onEdit={onEdit}
+        onUpdate={onUpdate}
         onDelete={onDelete}
         documentTypes={documentTypes}
         statuses={statuses}

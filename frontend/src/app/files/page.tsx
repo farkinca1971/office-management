@@ -236,6 +236,7 @@ export default function FilesPage() {
           onFileSelect={handleFileSelect}
           selectedFileId={selectedFile?.id}
           onEdit={handleEdit}
+          onUpdate={handleUpdate}
           onDelete={handleDelete}
           statuses={statuses}
         />

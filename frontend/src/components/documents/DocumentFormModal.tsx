@@ -13,14 +13,11 @@ import type { LookupItem } from '@/types/common';
 
 export interface DocumentFormData {
   title: string;
-  description?: string;
   document_type_id?: number;
+  object_status_id?: number;
   document_date?: string;
   document_number?: string;
   expiry_date?: string;
-  issuer?: string;
-  reference_number?: string;
-  external_reference?: string;
 }
 
 interface DocumentFormModalProps {
@@ -28,6 +25,7 @@ interface DocumentFormModalProps {
   onClose: () => void;
   onSubmit: (data: DocumentFormData) => Promise<void>;
   documentTypes: LookupItem[];
+  statuses: LookupItem[];
   isSubmitting?: boolean;
   initialData?: DocumentFormData;
 }
@@ -37,20 +35,18 @@ export const DocumentFormModal: React.FC<DocumentFormModalProps> = ({
   onClose,
   onSubmit,
   documentTypes,
+  statuses,
   isSubmitting = false,
   initialData,
 }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<DocumentFormData>({
     title: '',
-    description: '',
     document_type_id: undefined,
+    object_status_id: undefined,
     document_date: '',
     document_number: '',
     expiry_date: '',
-    issuer: '',
-    reference_number: '',
-    external_reference: '',
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -60,14 +56,11 @@ export const DocumentFormModal: React.FC<DocumentFormModalProps> = ({
     } else {
       setFormData({
         title: '',
-        description: '',
         document_type_id: undefined,
+        object_status_id: undefined,
         document_date: '',
         document_number: '',
         expiry_date: '',
-        issuer: '',
-        reference_number: '',
-        external_reference: '',
       });
     }
     setError(null);
@@ -79,6 +72,11 @@ export const DocumentFormModal: React.FC<DocumentFormModalProps> = ({
 
     if (!formData.title.trim()) {
       setError(t('documents.titleRequired'));
+      return;
+    }
+
+    if (!formData.object_status_id) {
+      setError(t('forms.statusRequired'));
       return;
     }
 
@@ -138,20 +136,6 @@ export const DocumentFormModal: React.FC<DocumentFormModalProps> = ({
                 />
               </div>
 
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('documents.description')}
-                </label>
-                <textarea
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder={t('documents.descriptionPlaceholder')}
-                  rows={3}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
-                />
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Document Type */}
                 <div>
@@ -166,6 +150,24 @@ export const DocumentFormModal: React.FC<DocumentFormModalProps> = ({
                     <option value="">{t('forms.select')}</option>
                     {documentTypes.map(type => (
                       <option key={type.id} value={type.id}>{type.name || type.code}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Object Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('forms.status')} *
+                  </label>
+                  <select
+                    value={formData.object_status_id?.toString() || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, object_status_id: parseInt(e.target.value) || undefined }))}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                    required
+                  >
+                    <option value="">{t('forms.selectStatus')}</option>
+                    {statuses.map(status => (
+                      <option key={status.id} value={status.id}>{status.name || status.code}</option>
                     ))}
                   </select>
                 </div>
@@ -206,45 +208,6 @@ export const DocumentFormModal: React.FC<DocumentFormModalProps> = ({
                     onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
                   />
                 </div>
-
-                {/* Issuer */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('documents.issuer')}
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.issuer || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, issuer: e.target.value }))}
-                    placeholder={t('documents.issuerPlaceholder')}
-                  />
-                </div>
-
-                {/* Reference Number */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('documents.referenceNumber')}
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.reference_number || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, reference_number: e.target.value }))}
-                    placeholder={t('documents.referenceNumberPlaceholder')}
-                  />
-                </div>
-              </div>
-
-              {/* External Reference */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('documents.externalReference')}
-                </label>
-                <Input
-                  type="text"
-                  value={formData.external_reference || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, external_reference: e.target.value }))}
-                  placeholder={t('documents.externalReferencePlaceholder')}
-                />
               </div>
             </div>
 

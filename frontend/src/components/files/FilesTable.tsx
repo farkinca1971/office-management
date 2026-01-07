@@ -73,6 +73,7 @@ export const FilesTable: React.FC<FilesTableProps> = ({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditFormData | null>(null);
   const [originalData, setOriginalData] = useState<EditFormData | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Start editing a row
   const handleStartEdit = (file: FileEntity) => {
@@ -99,7 +100,12 @@ export const FilesTable: React.FC<FilesTableProps> = ({
 
   // Save changes
   const handleSaveEdit = async () => {
-    if (editingId && editForm && originalData && onUpdate) {
+    if (!editingId || !editForm || !originalData || !onUpdate || isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
       const updatePayload: UpdateFileRequest = {
         filename_old: originalData.filename,
         filename_new: editForm.filename,
@@ -117,10 +123,19 @@ export const FilesTable: React.FC<FilesTableProps> = ({
         storage_key_new: editForm.storage_key,
       };
       await onUpdate(editingId, updatePayload);
+      // Success - clear editing state
+      setEditingId(null);
+      setEditForm(null);
+      setOriginalData(null);
+    } catch (err: any) {
+      console.error('Failed to save file changes:', err);
+      // Show error to user
+      const errorMessage = err?.error?.message || err?.message || t('files.updateFailed') || 'Failed to update file';
+      alert(errorMessage);
+      // Keep editing state so user can retry
+    } finally {
+      setIsSaving(false);
     }
-    setEditingId(null);
-    setEditForm(null);
-    setOriginalData(null);
   };
 
   // Helper function
@@ -423,8 +438,9 @@ export const FilesTable: React.FC<FilesTableProps> = ({
                                 e.stopPropagation();
                                 handleSaveEdit();
                               }}
-                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
-                              title="Save"
+                              disabled={isSaving}
+                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={isSaving ? t('common.saving') || 'Saving...' : t('common.save') || 'Save'}
                             >
                               <Save className="h-4 w-4" />
                             </button>

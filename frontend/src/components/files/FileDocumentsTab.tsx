@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LinkFileToDocumentModal } from './LinkFileToDocumentModal';
 import { filesApi, lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useTranslation } from '@/lib/i18n';
@@ -39,14 +40,19 @@ export default function FileDocumentsTab({ fileId, onDataChange }: FileDocuments
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
+      // Convert language code to language ID (en=1, de=2, hu=3)
+      const languageMap: Record<string, number> = { en: 1, de: 2, hu: 3 };
+      const languageId = languageMap[language] || 1;
+
       const [docsResponse, typesResponse] = await Promise.all([
-        filesApi.getDocuments(fileId),
+        filesApi.getDocuments(fileId, language, languageId),
         lookupApi.getDocumentTypes(language),
       ]);
 
@@ -202,16 +208,28 @@ export default function FileDocumentsTab({ fileId, onDataChange }: FileDocuments
       <div className="border-t pt-4">
         <Button
           variant="primary"
-          onClick={() => {
-            // TODO: Open link document modal
-            console.log('Open link document modal');
-          }}
+          onClick={() => setIsLinkModalOpen(true)}
           className="flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
           {t('files.linkToDocument')}
         </Button>
       </div>
+
+      {/* Link File to Document Modal */}
+      <LinkFileToDocumentModal
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+        fileId={fileId}
+        onSuccess={async () => {
+          await loadData();
+          if (onDataChange) {
+            await onDataChange();
+          }
+          setSuccessMessage(t('files.linkSuccess') || 'File linked to document successfully');
+          setTimeout(() => setSuccessMessage(null), 3000);
+        }}
+      />
     </div>
   );
 }

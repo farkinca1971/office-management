@@ -17,7 +17,8 @@
  *            'address_types' (or 'address-types'), 'address_area_types' (or 'address-area-types'),
  *            'contact_types' (or 'contact-types'), 'identification_types' (or 'identification-types'),
  *            'transaction_types' (or 'transaction-types'), 'currencies', 'audit_actions' (or 'audit-actions'),
- *            'object_relation_types' (or 'object-relation-types'), 'document_types' (or 'document-types'), 'translations'
+ *            'object_relation_types' (or 'object-relation-types'), 'document_types' (or 'document-types'),
+ *            'note_types' (or 'note-types'), 'translations'
  *   Note: Hyphens are automatically converted to underscores (e.g., "object-types" -> "object_types")
  *
  * - object_type_id: Filter for object_statuses, identification_types, and audit_actions (optional)
@@ -86,6 +87,7 @@ const validLookupTypes = [
   'audit_actions',
   'object_relation_types',
   'document_types',
+  'note_types',
   'translations'
 ];
 
@@ -400,6 +402,21 @@ FROM document_types dt
 ${dtJoin.join}
 WHERE dt.is_active = 1
 ORDER BY dt.code;
+    `;
+    break;
+
+  case 'note_types':
+    const ntJoin = buildTranslationJoin('nt');
+    sqlQuery = `
+SELECT
+    nt.id,
+    nt.code,
+    nt.is_active,
+    t.text as name
+FROM note_types nt
+${ntJoin.join}
+WHERE nt.is_active = 1
+ORDER BY nt.code;
     `;
     break;
 
