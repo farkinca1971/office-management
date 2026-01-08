@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { AddFileToDocumentModal } from './AddFileToDocumentModal';
 import { documentsApi } from '@/lib/api';
 import { useTranslation } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils';
@@ -35,6 +36,7 @@ export default function DocumentFilesTab({ documentId, onDataChange }: DocumentF
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -223,16 +225,28 @@ export default function DocumentFilesTab({ documentId, onDataChange }: DocumentF
       <div className="border-t pt-4">
         <Button
           variant="primary"
-          onClick={() => {
-            // TODO: Open file upload/link modal
-            console.log('Open file upload modal');
-          }}
+          onClick={() => setIsAddFileModalOpen(true)}
           className="flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
           {t('files.addFile')}
         </Button>
       </div>
+
+      {/* Add File to Document Modal */}
+      <AddFileToDocumentModal
+        isOpen={isAddFileModalOpen}
+        onClose={() => setIsAddFileModalOpen(false)}
+        documentId={documentId}
+        onSuccess={async () => {
+          await loadData();
+          if (onDataChange) {
+            await onDataChange();
+          }
+          setSuccessMessage(t('files.addFileSuccess') || 'File added to document successfully');
+          setTimeout(() => setSuccessMessage(null), 3000);
+        }}
+      />
     </div>
   );
 }

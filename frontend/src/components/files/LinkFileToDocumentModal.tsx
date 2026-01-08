@@ -10,6 +10,7 @@ import { X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useTranslation } from '@/lib/i18n';
+import { filesApi } from '@/lib/api/files';
 import { documentsApi } from '@/lib/api/documents';
 import { formatDate } from '@/lib/utils';
 import type { Document } from '@/types/entities';
@@ -47,7 +48,7 @@ export const LinkFileToDocumentModal: React.FC<LinkFileToDocumentModalProps> = (
     setLoading(true);
     setError(null);
     try {
-      let response: any = await documentsApi.getAll({ is_active: 1 });
+      let response: any = await filesApi.getAvailableDocuments(fileId, { is_active: 1 });
 
       // IMPORTANT: n8n sometimes wraps the response in an array
       if (Array.isArray(response) && response.length > 0) {
@@ -61,7 +62,7 @@ export const LinkFileToDocumentModal: React.FC<LinkFileToDocumentModalProps> = (
         setDocuments([]);
       }
     } catch (err: any) {
-      console.error('Failed to fetch documents:', err);
+      console.error('Failed to fetch available documents:', err);
       setError(err?.error?.message || t('files.fetchDocumentsFailed'));
     } finally {
       setLoading(false);

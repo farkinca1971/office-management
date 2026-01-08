@@ -76,9 +76,11 @@ export const ENDPOINTS = {
   // Files (secondary webhook: 244d0b91-6c2c-482b-8119-59ac282fba4f)
   FILES: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files',
   FILE_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/70a9a92c-360e-43bf-9235-3725f4cea7ed/api/v1/files/:id',
+  FILE_DELETE: 'https://n8n.wolfitlab.duckdns.org/webhook/6054a8bf-9bcc-44c9-8e22-e78704ac2e58/api/v1/files/:id/delete',
   FILE_VERSIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/70a9a92c-360e-43bf-9235-3725f4cea7ed/api/v1/files/:id/versions',
   FILE_DOCUMENTS: 'https://n8n.wolfitlab.duckdns.org/webhook/f124ecad-b97e-4bb0-818d-cb065a52b229/v1/files/:id/documents',
   FILE_DOCUMENT_COUNT: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/:id/documents/count',
+  FILE_AVAILABLE_DOCUMENTS: 'https://n8n.wolfitlab.duckdns.org/webhook/5361050c-122d-49a0-93f3-053a0e932f58/api/v1/files/:id/documents/available',
   FILES_UNATTACHED: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/unattached',
   FILES_UPLOAD: 'https://n8n.wolfitlab.duckdns.org/webhook/244d0b91-6c2c-482b-8119-59ac282fba4f/api/v1/files/upload',
   
@@ -87,7 +89,9 @@ export const ENDPOINTS = {
   DOCUMENT_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/documents/:id',
   DOCUMENT_DELETE: 'https://n8n.wolfitlab.duckdns.org/webhook/6054a8bf-9bcc-44c9-8e22-e78704ac2e58/api/v1/documents/:id/delete',
   DOCUMENT_FILES: 'https://n8n.wolfitlab.duckdns.org/webhook/b21d5b1d-ded1-4acf-a46d-3a1810581ed2/api/v1/documents/:id/files',
+  DOCUMENT_FILES_FROM_OTHER_DOCUMENTS: 'https://n8n.wolfitlab.duckdns.org/webhook/6bc6018b-3e0c-456c-8c69-5f9e8b1d2fd7/api/v1/documents/:id/files/from-other-documents',
   DOCUMENT_FILE_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/08659efd-89f5-440f-96de-10512fda25f0/api/v1/documents/:id/files/:file_id',
+  DOCUMENT_FILE_UNLINK: 'https://n8n.wolfitlab.duckdns.org/webhook/c69ae62b-b258-4613-a1a6-f28adbd24561/api/v1/documents/:document_id/files/:file_id/unlink',
   DOCUMENT_RELATIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/08659efd-89f5-440f-96de-10512fda25f0/api/v1/documents/:id/relations',
   DOCUMENT_RELATION_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/08659efd-89f5-440f-96de-10512fda25f0/api/v1/documents/:id/relations/:relation_id',
 } as const;

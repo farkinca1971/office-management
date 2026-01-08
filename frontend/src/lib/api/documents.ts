@@ -214,6 +214,14 @@ export const documentsApi = {
   },
 
   /**
+   * Get files linked to other documents but not to the current document
+   * These are files that can be linked to the current document
+   */
+  getFilesFromOtherDocuments: async (documentId: number): Promise<ApiResponse<FileEntity[]>> => {
+    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_FILES_FROM_OTHER_DOCUMENTS, { id: documentId }));
+  },
+
+  /**
    * Link an existing file to a document
    */
   linkFile: async (documentId: number, fileId: number): Promise<ApiResponse<{ success: boolean }>> => {
@@ -223,9 +231,10 @@ export const documentsApi = {
   /**
    * Unlink a file from a document
    * Note: This will fail if the file has no other parent documents
+   * Uses POST method to avoid CORS preflight issues
    */
   unlinkFile: async (documentId: number, fileId: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return documentsClient.delete(replaceParams(ENDPOINTS.DOCUMENT_FILE_BY_ID, { id: documentId, file_id: fileId }));
+    return documentsClient.post(replaceParams(ENDPOINTS.DOCUMENT_FILE_UNLINK, { document_id: documentId, file_id: fileId }));
   },
 
   /**

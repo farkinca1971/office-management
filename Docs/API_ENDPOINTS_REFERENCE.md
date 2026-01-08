@@ -4076,6 +4076,140 @@ WHERE object_from_id = {{ $json.params.document_id }}
 
 ---
 
+## Unlink File from Document (POST)
+
+**POST** `/documents/:document_id/files/:file_id/unlink`
+
+Unlinks a file from a document using POST method. **CRITICAL**: This will fail if the file has no other parent documents.
+
+**Path Parameters**:
+- `document_id`: Document ID
+- `file_id`: File ID
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `Content-Type: application/json`
+
+**Request Body** (optional):
+```json
+{
+  "language_code": "hu",
+  "language_id": 3
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "message": "File unlinked from document successfully"
+  }
+}
+```
+
+**Error Response** (if file has only one parent):
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UNLINK_CONSTRAINT_VIOLATION",
+    "message": "Cannot unlink file - file must have at least one parent document"
+  }
+}
+```
+
+**n8n Webhook URL**: `https://n8n.wolfitlab.duckdns.org/webhook/c69ae62b-b258-4613-a1a6-f28adbd24561/api/v1/documents/:document_id/files/:file_id/unlink`
+
+**SQL Implementation** (with constraint check):
+```sql
+-- Check if file has other parent documents
+SET @parent_count = (
+  SELECT COUNT(*)
+  FROM object_relations
+  WHERE object_to_id = {{ $json.params.file_id }}
+    AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+    AND is_active = 1
+);
+
+-- Fail if this is the only parent
+IF @parent_count <= 1 THEN
+  SIGNAL SQLSTATE '45000' 
+  SET MESSAGE_TEXT = 'Cannot unlink file - file must have at least one parent document';
+END IF;
+
+-- Delete the relation
+DELETE FROM object_relations
+WHERE object_from_id = {{ $json.params.document_id }}
+  AND object_to_id = {{ $json.params.file_id }}
+  AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file');
+```
+
+---
+
+## Get Files from Other Documents
+
+**GET** `/documents/:id/files/from-other-documents`
+
+Returns all files that are linked to other documents but not to the current document. These files can be linked to the current document.
+
+**Path Parameters**:
+- `id`: Document ID (the current document)
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 5,
+      "filename": "contract_signed.pdf",
+      "original_filename": "Contract Agreement 2024 - Signed.pdf",
+      "file_path": "/storage/documents/2024/contract_signed.pdf",
+      "mime_type": "application/pdf",
+      "file_size": 245678,
+      "upload_date": "2024-01-15T14:30:00Z",
+      "checksum": "a3d5f6e7b8c9d0e1f2a3b4c5d6e7f8a9",
+      "storage_type": "local",
+      "bucket_name": null,
+      "storage_key": null,
+      "object_type_id": 11,
+      "object_status_id": 1,
+      "is_active": true
+    }
+  ]
+}
+```
+
+**SQL Implementation**:
+```sql
+SELECT DISTINCT 
+    f.*, 
+    o.object_type_id, 
+    o.object_status_id
+FROM files f
+INNER JOIN objects o ON o.id = f.id
+INNER JOIN object_relations r ON r.object_to_id = f.id
+WHERE r.object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+  AND r.is_active = 1
+  AND o.is_active = 1
+  AND f.id NOT IN (
+    SELECT object_to_id 
+    FROM object_relations 
+    WHERE object_from_id = {{ $json.params.id }}
+      AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+      AND is_active = 1
+  )
+ORDER BY f.created_at DESC;
+```
+
+---
+
 ## Get Document Relations
 
 **GET** `/documents/:id/relations`
@@ -4460,7 +4594,9 @@ WHERE f.id = {{ $json.params.id }};
 
 ## Delete File
 
-**DELETE** `/files/:id`
+**POST** `/files/:id/delete`
+
+**Full Endpoint URL**: `https://n8n.wolfitlab.duckdns.org/webhook-test/6054a8bf-9bcc-44c9-8e22-e78704ac2e58/api/v1/files/:id/delete`
 
 Soft deletes a file. **CRITICAL**: This will fail if the file has only one parent document.
 
@@ -4592,6 +4728,115 @@ FROM object_relations
 WHERE object_to_id = {{ $json.params.id }}
   AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
   AND is_active = 1;
+```
+
+---
+
+## Get Documents Without File
+
+**GET** `/files/:id/documents/available`
+
+Returns all documents that do NOT have the specified file connected. These documents can be linked to the file.
+
+**Path Parameters**:
+- `id`: File ID (the file to check)
+
+**Headers**:
+- `Authorization: Bearer {token}` (required)
+- `X-Language-ID: {language_id}`
+
+**Query Parameters** (optional):
+- `document_type_id` (optional): Filter by document type ID
+- `object_status_id` (optional): Filter by object status ID
+- `is_active` (optional): Filter by active status (0 or 1)
+- `date_from` (optional): Filter documents from this date (YYYY-MM-DD)
+- `date_to` (optional): Filter documents until this date (YYYY-MM-DD)
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Contract Agreement 2024",
+      "title_code": "document_title_1",
+      "document_type_id": 1,
+      "document_date": "2024-01-15",
+      "document_number": "DOC-2024-001",
+      "expiry_date": "2025-01-14",
+      "object_type_id": 10,
+      "object_status_id": 1,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "created_by": 1
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 45,
+    "total_pages": 3
+  }
+}
+```
+
+**SQL Implementation**:
+```sql
+-- Count total
+SELECT COUNT(*) as total
+FROM documents d
+INNER JOIN objects o ON o.id = d.id
+WHERE o.is_active = 1
+  AND d.is_active = 1
+  AND ({{ $json.query.document_type_id }} IS NULL OR d.document_type_id = {{ $json.query.document_type_id }})
+  AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+  AND ({{ $json.query.date_from }} IS NULL OR d.document_date >= {{ $json.query.date_from }})
+  AND ({{ $json.query.date_to }} IS NULL OR d.document_date <= {{ $json.query.date_to }})
+  AND d.id NOT IN (
+    SELECT object_from_id
+    FROM object_relations
+    WHERE object_to_id = {{ $json.params.id }}
+      AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+      AND is_active = 1
+  );
+
+-- Get paginated results
+SELECT
+  d.id,
+  d.title_code,
+  t.text as title,
+  d.document_type_id,
+  d.document_date,
+  d.document_number,
+  d.expiry_date,
+  o.object_type_id,
+  o.object_status_id,
+  d.is_active,
+  d.created_at,
+  d.updated_at,
+  d.created_by
+FROM documents d
+INNER JOIN objects o ON o.id = d.id
+LEFT JOIN translations t ON t.code = d.title_code AND t.language_id = {{ $headers['x-language-id'] }}
+WHERE o.is_active = 1
+  AND d.is_active = 1
+  AND ({{ $json.query.document_type_id }} IS NULL OR d.document_type_id = {{ $json.query.document_type_id }})
+  AND ({{ $json.query.object_status_id }} IS NULL OR o.object_status_id = {{ $json.query.object_status_id }})
+  AND ({{ $json.query.date_from }} IS NULL OR d.document_date >= {{ $json.query.date_from }})
+  AND ({{ $json.query.date_to }} IS NULL OR d.document_date <= {{ $json.query.date_to }})
+  AND d.id NOT IN (
+    SELECT object_from_id
+    FROM object_relations
+    WHERE object_to_id = {{ $json.params.id }}
+      AND object_relation_type_id = (SELECT id FROM object_relation_types WHERE code = 'document_file')
+      AND is_active = 1
+  )
+ORDER BY d.created_at DESC
+LIMIT {{ $json.query.per_page || 20 }} OFFSET {{ ($json.query.page - 1) * ($json.query.per_page || 20) }};
 ```
 
 ---

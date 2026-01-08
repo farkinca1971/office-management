@@ -184,9 +184,45 @@ export const filesApi = {
    * Soft delete a file
    * Note: This will fail if the file has only one parent document.
    * Files must maintain at least one parent document relationship.
+   * Uses POST method to the dedicated delete endpoint on a separate webhook.
    */
   delete: async (id: number): Promise<ApiResponse<{ success: boolean }>> => {
-    return filesClient.delete(replaceParams(ENDPOINTS.FILE_BY_ID, { id }));
+    // FILE_DELETE uses a different webhook URL, so we need to make a direct call
+    const deleteUrl = replaceParams(ENDPOINTS.FILE_DELETE, { id });
+    
+    // Get authentication token and language_id
+    let token: string | null = null;
+    let currentLanguageId: number = 1; // Default to English
+    
+    if (typeof window !== 'undefined') {
+      token = localStorage.getItem('auth_token');
+      try {
+        const storedLanguage = localStorage.getItem('language-storage');
+        if (storedLanguage) {
+          const languageData = JSON.parse(storedLanguage);
+          const languageMap: Record<string, number> = { en: 1, de: 2, hu: 3 };
+          currentLanguageId = languageMap[languageData.state?.language || 'en'] || 1;
+        }
+      } catch (error) {
+        console.error('Error reading language from localStorage:', error);
+      }
+    }
+    
+    // Make POST request to delete endpoint
+    const response = await axios.post(
+      deleteUrl,
+      { language_id: currentLanguageId },
+      {
+        headers: {
+          ...getWebhookHeaders(),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'X-Language-ID': currentLanguageId.toString(),
+        },
+        timeout: 30000,
+      }
+    );
+    
+    return response.data;
   },
 
   /**
@@ -211,6 +247,30 @@ export const filesApi = {
    */
   getDocumentCount: async (fileId: number): Promise<ApiResponse<{ count: number }>> => {
     return filesClient.get(replaceParams(ENDPOINTS.FILE_DOCUMENT_COUNT, { id: fileId }), { headers: {} });
+  },
+
+  /**
+   * Get all documents that do NOT have the specified file connected
+   * These documents can be linked to the file
+   * @param fileId - The file ID
+   * @param params - Optional query parameters for filtering
+   */
+  getAvailableDocuments: async (
+    fileId: number,
+    params?: {
+      document_type_id?: number;
+      object_status_id?: number;
+      is_active?: number;
+      date_from?: string;
+      date_to?: string;
+      page?: number;
+      per_page?: number;
+    }
+  ): Promise<ApiResponse<Document[]>> => {
+    return filesClient.get(replaceParams(ENDPOINTS.FILE_AVAILABLE_DOCUMENTS, { id: fileId }), {
+      params: params || {},
+      headers: {},
+    });
   },
 
   /**
