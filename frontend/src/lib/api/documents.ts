@@ -9,6 +9,7 @@ import axios, { AxiosInstance } from 'axios';
 import { getWebhookHeaders } from './config';
 import { ENDPOINTS, replaceParams } from './endpoints';
 import { getLanguageId } from '@/lib/utils';
+import apiClient from './client';
 import type {
   Document,
   CreateDocumentRequest,
@@ -176,9 +177,23 @@ export const documentsApi = {
   /**
    * Get single document by ID
    * Language code is automatically added from user preferences via interceptor
+   * Uses relative path to ensure documentsClient baseURL and interceptors are used
    */
   getById: async (id: number, params?: { language_code?: string; language_id?: number }): Promise<DocumentResponse> => {
-    return documentsClient.get(replaceParams(ENDPOINTS.DOCUMENT_BY_ID, { id }), {
+    // Use relative path to ensure documentsClient baseURL is used
+    return documentsClient.get(`/documents/${id}`, {
+      params: params || {},
+    });
+  },
+
+  /**
+   * Get documents by object ID (for persons, companies, etc.)
+   * Uses the dedicated endpoint: GET /api/v1/documents/:object_id
+   * Returns all documents related to the specified object
+   */
+  getByObjectId: async (objectId: number, params?: { language_code?: string; language_id?: number }): Promise<DocumentListResponse> => {
+    // Use the main apiClient since this endpoint uses webhook 70a9a92c-360e-43bf-9235-3725f4cea7ed
+    return apiClient.get(replaceParams(ENDPOINTS.DOCUMENTS_BY_OBJECT_ID, { id: objectId }), {
       params: params || {},
     });
   },

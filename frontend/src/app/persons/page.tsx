@@ -8,9 +8,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
-import { Plus, FileText, Phone, MapPin, Briefcase, CreditCard, Network, StickyNote } from 'lucide-react';
+import { Plus, FileText, Phone, MapPin, Briefcase, CreditCard, Network, StickyNote, Files } from 'lucide-react';
 import { PersonsView } from '@/components/persons/PersonsView';
 import { Tabs } from '@/components/ui/Tabs';
+import DocumentsTab from '@/components/documents/DocumentsTab';
 import ContactsTab from '@/components/contacts/ContactsTab';
 import AddressesTab from '@/components/addresses/AddressesTab';
 import IdentificationsTab from '@/components/identifications/IdentificationsTab';
@@ -41,16 +42,18 @@ export default function PersonsPage() {
   const [salutations, setSalutations] = useState<LookupItem[]>([]);
   const [sexes, setSexes] = useState<LookupItem[]>([]);
   const [statuses, setStatuses] = useState<LookupItem[]>([]);
+  const [objectRelationTypes, setObjectRelationTypes] = useState<LookupItem[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
 
   // Load lookup data
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        let [salutationsRes, sexesRes, statusesRes] = await Promise.all([
+        let [salutationsRes, sexesRes, statusesRes, relationTypesRes] = await Promise.all([
           lookupApi.getSalutations(language),
           lookupApi.getSexes(language),
           lookupApi.getObjectStatuses(undefined, language),
+          lookupApi.getObjectRelationTypes(language),
         ]);
 
         // IMPORTANT: n8n sometimes wraps the response in an array
@@ -64,15 +67,20 @@ export default function PersonsPage() {
         if (Array.isArray(statusesRes) && statusesRes.length > 0 && !statusesRes[0]?.id) {
           statusesRes = statusesRes[0];
         }
+        if (Array.isArray(relationTypesRes) && relationTypesRes.length > 0) {
+          relationTypesRes = relationTypesRes[0];
+        }
 
         // Response structure: { success: true, data: LookupItem[], pagination?: {...} }
         const salutationsList = Array.isArray(salutationsRes?.data) ? salutationsRes.data : [];
         const sexesList = Array.isArray(sexesRes?.data) ? sexesRes.data : [];
         const statusesList = Array.isArray(statusesRes?.data) ? statusesRes.data : [];
+        const relationTypesList = Array.isArray(relationTypesRes?.data) ? relationTypesRes.data : [];
 
         setSalutations(salutationsList);
         setSexes(sexesList);
         setStatuses(statusesList);
+        setObjectRelationTypes(relationTypesList);
       } catch (err) {
         console.error('Failed to load lookup data:', err);
       } finally {
@@ -126,7 +134,37 @@ export default function PersonsPage() {
     console.log('Delete person:', person);
   };
 
+  // Find the object relation type ID for 'obj_rel_type_person_doc'
+  const personDocRelationType = objectRelationTypes.find(
+    (rt) => rt.code === 'obj_rel_type_person_doc'
+  );
+  const personDocRelationTypeId = personDocRelationType?.id;
+  
+  // Log warning if relation type is not found (after lookups have loaded)
+  useEffect(() => {
+    if (!loadingLookups && objectRelationTypes.length > 0 && !personDocRelationType) {
+      console.warn('[PersonsPage] Object relation type "obj_rel_type_person_doc" not found in loaded relation types');
+    }
+  }, [loadingLookups, objectRelationTypes, personDocRelationType]);
+
   const tabs = [
+    {
+      id: 'documents',
+      label: t('documents.title') || t('files.documents'),
+      icon: <Files className="h-5 w-5" />,
+      content: selectedPerson ? (
+        <DocumentsTab 
+          objectId={selectedPerson.id} 
+          objectRelationTypeId={personDocRelationTypeId}
+        />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <Files className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('persons.selectPersonToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedPerson,
+    },
     {
       id: 'contacts',
       label: t('persons.contacts'),
@@ -273,7 +311,7 @@ export default function PersonsPage() {
             </p>
           </div>
         ) : (
-          <Tabs tabs={tabs} defaultTab="contacts" />
+          <Tabs tabs={tabs} defaultTab="documents" />
         )}
       </div>
     </div>

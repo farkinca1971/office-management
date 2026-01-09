@@ -458,6 +458,11 @@ export const hu = {
     noRelations: 'Nincsenek kapcsolódó objektumok',
     objectId: 'Objektum azonosító',
     viewDocument: 'Dokumentum megtekintése',
+    selectDocument: 'Dokumentum kiválasztása',
+    searchDocuments: 'Dokumentumok keresése...',
+    selectDocumentRequired: 'Kérjük, válasszon egy dokumentumot',
+    relationTypeRequired: 'A kapcsolat típusa kötelező',
+    relationCreateFailed: 'A kapcsolat létrehozása sikertelen',
   },
 
   // Files

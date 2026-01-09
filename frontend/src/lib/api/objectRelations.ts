@@ -2,12 +2,16 @@
  * Object Relations API - CRUD operations for object relationships
  */
 
+import axios, { AxiosInstance } from 'axios';
 import apiClient from './client';
 import { ENDPOINTS, replaceParams } from './endpoints';
+import { getWebhookHeaders } from './config';
+import { getLanguageId } from '@/lib/utils';
 import type {
   ObjectRelation,
   CreateObjectRelationRequest,
   UpdateObjectRelationRequest,
+  Document,
 } from '@/types/entities';
 import type { ApiListResponse, ApiResponse, SearchParams } from '@/types/common';
 
@@ -17,6 +21,95 @@ export interface ObjectRelationListParams extends SearchParams {
   object_relation_type_id?: number;
   is_active?: boolean;
 }
+
+/**
+ * Dedicated Axios client for Object Relations endpoint that returns documents
+ * Uses webhook: b0fc82f1-0fd7-4068-83a2-6051579b85c1
+ */
+const objectRelationsDocumentsClient: AxiosInstance = axios.create({
+  baseURL: 'https://n8n.wolfitlab.duckdns.org/webhook/b0fc82f1-0fd7-4068-83a2-6051579b85c1/api/v1',
+  headers: {
+    ...getWebhookHeaders(),
+  },
+  timeout: 30000,
+});
+
+/**
+ * Request Interceptor: Add authentication token
+ * Note: Custom headers (object_from_id, object_relation_type_id, language_id) 
+ * are set in the getDocumentsByObjectId method via the request config
+ */
+objectRelationsDocumentsClient.interceptors.request.use(
+  (config) => {
+    // Add JWT token from localStorage
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth_token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    // Ensure headers object exists
+    if (!config.headers) {
+      config.headers = {};
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Response Interceptor: Unwrap data and handle errors
+ */
+objectRelationsDocumentsClient.interceptors.response.use(
+  (response) => {
+    return response.data;
+  },
+  (error) => {
+    if (error.response) {
+      const errorData = error.response.data;
+
+      // Handle 401 Unauthorized
+      if (error.response.status === 401) {
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname;
+          const publicPaths = ['/login', '/signup'];
+
+          if (!publicPaths.includes(currentPath)) {
+            localStorage.removeItem('auth_token');
+            window.location.href = '/login';
+          }
+        }
+      }
+
+      return Promise.reject({
+        success: false,
+        error: {
+          code: errorData?.error?.code || 'UNKNOWN_ERROR',
+          message: errorData?.error?.message || error.message || 'An error occurred',
+          details: errorData?.error?.details,
+        },
+      });
+    } else if (error.request) {
+      return Promise.reject({
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: 'Network error. Please check your connection.',
+        },
+      });
+    } else {
+      return Promise.reject({
+        success: false,
+        error: {
+          code: 'REQUEST_ERROR',
+          message: error.message || 'An error occurred while making the request',
+        },
+      });
+    }
+  }
+);
 
 export const objectRelationApi = {
   /**
@@ -59,6 +152,66 @@ export const objectRelationApi = {
    */
   delete: async (id: number): Promise<{ success: true }> => {
     return apiClient.delete(replaceParams(ENDPOINTS.OBJECT_RELATION_BY_ID, { id }));
+  },
+
+  /**
+   * Get documents for an object using the relations endpoint
+   * This endpoint returns documents data directly from object relations
+   * 
+   * @param objectId - The object ID (person or company ID)
+   * @param objectRelationTypeId - The object relation type ID (e.g., person_doc or company_doc)
+   * @param languageId - The language ID (optional, will be derived from language store if not provided)
+   * @returns Documents data array
+   * 
+   * Query parameters sent:
+   * - object_from_id: The object ID
+   * - object_relation_type_id: The relation type ID
+   * - language_id: The language ID
+   */
+  getDocumentsByObjectId: async (
+    objectId: number,
+    objectRelationTypeId: number,
+    languageId?: number
+  ): Promise<ApiListResponse<Document>> => {
+    // Get language_id from language store if not provided
+    let currentLanguageId = languageId;
+    if (!currentLanguageId && typeof window !== 'undefined') {
+      try {
+        const storedLanguage = localStorage.getItem('language-storage');
+        if (storedLanguage) {
+          const languageData = JSON.parse(storedLanguage);
+          const languageCode = languageData.state?.language || 'en';
+          currentLanguageId = getLanguageId(languageCode);
+        } else {
+          currentLanguageId = 1; // Default to English
+        }
+      } catch (error) {
+        console.error('Error reading language from localStorage:', error);
+        currentLanguageId = 1; // Default to English
+      }
+    }
+
+    // Build the endpoint path with the object ID
+    // Use relative path since baseURL is already set in the axios client
+    const endpointPath = `/objects/${objectId}/relations`;
+
+    // Validate required parameters
+    if (!objectId || !objectRelationTypeId) {
+      throw new Error('objectId and objectRelationTypeId are required');
+    }
+
+    // Prepare query parameters - these will be sent in the URL query string
+    // Required params: object_from_id, object_relation_type_id, language_id
+    const queryParams = {
+      'object_from_id': objectId,
+      'object_relation_type_id': objectRelationTypeId,
+      'language_id': currentLanguageId,
+    };
+
+    // Make the request with query parameters
+    return objectRelationsDocumentsClient.get(endpointPath, {
+      params: queryParams,
+    });
   },
 };
 

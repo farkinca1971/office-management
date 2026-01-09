@@ -469,6 +469,11 @@ export const de = {
     noRelations: 'Keine verwandten Objekte',
     objectId: 'Objekt-ID',
     viewDocument: 'Dokument anzeigen',
+    selectDocument: 'Dokument auswählen',
+    searchDocuments: 'Dokumente suchen...',
+    selectDocumentRequired: 'Bitte wählen Sie ein Dokument aus',
+    relationTypeRequired: 'Beziehungstyp ist erforderlich',
+    relationCreateFailed: 'Beziehung konnte nicht erstellt werden',
   },
 
   // Files

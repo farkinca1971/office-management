@@ -67,14 +67,16 @@ export default function ObjectRelationTypesPage() {
     language_id?: number; 
     parent_object_type_id?: number;
     child_object_type_id?: number;
+    mirrored_type_id?: number | null;
   }) => {
-    const createPayload = {
+    const createPayload: any = {
       code: item.code,
       is_active: item.is_active !== undefined ? item.is_active : true,
       text: item.text,
       language_id: item.language_id,
       parent_object_type_id: item.parent_object_type_id !== undefined ? item.parent_object_type_id : undefined,
       child_object_type_id: item.child_object_type_id !== undefined ? item.child_object_type_id : undefined,
+      mirrored_type_id: item.mirrored_type_id !== undefined ? item.mirrored_type_id : null,
     };
     const response = await lookupApi.createObjectRelationType(createPayload);
     if (!response.success) {
@@ -100,6 +102,8 @@ export default function ObjectRelationTypesPage() {
     new_child_object_type_id?: number;
     old_text?: string; 
     new_text?: string;
+    old_mirrored_type_id?: number | null;
+    new_mirrored_type_id?: number | null;
   }) => {
     // Request body with old/new value pairs
     const updatePayload: any = {
@@ -118,6 +122,10 @@ export default function ObjectRelationTypesPage() {
     updatePayload.new_parent_object_type_id = item.new_parent_object_type_id !== undefined ? item.new_parent_object_type_id : null;
     updatePayload.old_child_object_type_id = item.old_child_object_type_id !== undefined ? item.old_child_object_type_id : null;
     updatePayload.new_child_object_type_id = item.new_child_object_type_id !== undefined ? item.new_child_object_type_id : null;
+    
+    // Add mirrored_type_id fields
+    updatePayload.old_mirrored_type_id = item.old_mirrored_type_id !== undefined ? item.old_mirrored_type_id : null;
+    updatePayload.new_mirrored_type_id = item.new_mirrored_type_id !== undefined ? item.new_mirrored_type_id : null;
     
     const response = await lookupApi.updateObjectRelationType(id, updatePayload);
     if (!response.success) {

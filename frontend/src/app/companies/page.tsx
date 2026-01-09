@@ -8,9 +8,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
-import { Plus, FileText, Phone, MapPin, CreditCard, StickyNote } from 'lucide-react';
+import { Plus, FileText, Phone, MapPin, CreditCard, StickyNote, Files } from 'lucide-react';
 import { CompaniesView } from '@/components/companies/CompaniesView';
 import { Tabs } from '@/components/ui/Tabs';
+import DocumentsTab from '@/components/documents/DocumentsTab';
 import ContactsTab from '@/components/contacts/ContactsTab';
 import AddressesTab from '@/components/addresses/AddressesTab';
 import IdentificationsTab from '@/components/identifications/IdentificationsTab';
@@ -39,15 +40,28 @@ export default function CompaniesPage() {
 
   // Lookup data for companies view
   const [statuses, setStatuses] = useState<LookupItem[]>([]);
+  const [objectRelationTypes, setObjectRelationTypes] = useState<LookupItem[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
 
   // Load lookup data
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const statusesRes = await lookupApi.getObjectStatuses(undefined, language);
+        const [statusesRes, relationTypesRes] = await Promise.all([
+          lookupApi.getObjectStatuses(undefined, language),
+          lookupApi.getObjectRelationTypes(language)
+        ]);
+        
         const statusesList = statusesRes?.data || statusesRes || [];
         setStatuses(Array.isArray(statusesList) ? statusesList : []);
+        
+        // Handle n8n array wrapper for relation types
+        let relationTypesData = relationTypesRes;
+        if (Array.isArray(relationTypesRes) && relationTypesRes.length > 0) {
+          relationTypesData = relationTypesRes[0];
+        }
+        const relationTypesList = relationTypesData?.data || relationTypesData || [];
+        setObjectRelationTypes(Array.isArray(relationTypesList) ? relationTypesList : []);
       } catch (err) {
         console.error('Failed to load lookup data:', err);
       } finally {
@@ -99,7 +113,37 @@ export default function CompaniesPage() {
     console.log('Delete company:', company);
   };
 
+  // Find the object relation type ID for 'obj_rel_type_company_doc'
+  const companyDocRelationType = objectRelationTypes.find(
+    (rt) => rt.code === 'obj_rel_type_company_doc'
+  );
+  const companyDocRelationTypeId = companyDocRelationType?.id;
+  
+  // Log warning if relation type is not found (after lookups have loaded)
+  useEffect(() => {
+    if (!loadingLookups && objectRelationTypes.length > 0 && !companyDocRelationType) {
+      console.warn('[CompaniesPage] Object relation type "obj_rel_type_company_doc" not found in loaded relation types');
+    }
+  }, [loadingLookups, objectRelationTypes, companyDocRelationType]);
+
   const tabs = [
+    {
+      id: 'documents',
+      label: t('documents.title') || t('files.documents'),
+      icon: <Files className="h-5 w-5" />,
+      content: selectedCompany ? (
+        <DocumentsTab 
+          objectId={selectedCompany.id} 
+          objectRelationTypeId={companyDocRelationTypeId}
+        />
+      ) : (
+        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+          <Files className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('companies.selectCompanyToViewDetails')}</p>
+        </div>
+      ),
+      disabled: !selectedCompany,
+    },
     {
       id: 'contacts',
       label: t('companies.contacts'),
@@ -220,7 +264,7 @@ export default function CompaniesPage() {
             </p>
           </div>
         ) : (
-          <Tabs tabs={tabs} defaultTab="contacts" />
+          <Tabs tabs={tabs} defaultTab="documents" />
         )}
       </div>
     </div>

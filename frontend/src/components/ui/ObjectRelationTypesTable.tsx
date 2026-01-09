@@ -11,6 +11,7 @@ import { Card } from './Card';
 import { Input } from './Input';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Alert } from './Alert';
+import { SearchableSelect } from './SearchableSelect';
 import { Plus, Save, X, Trash2, Edit2, ArrowUp, ArrowDown, ArrowUpDown, Filter, XCircle } from 'lucide-react';
 import type { LookupItem } from '@/types/common';
 import { lookupApi } from '@/lib/api';
@@ -39,6 +40,7 @@ export interface ObjectRelationTypesTableProps {
     language_id?: number; 
     parent_object_type_id?: number;
     child_object_type_id?: number;
+    mirrored_type_id?: number | null;
   }) => Promise<void>;
   onUpdate: (id: number, data: { 
     code?: string; 
@@ -58,6 +60,8 @@ export interface ObjectRelationTypesTableProps {
     new_child_object_type_id?: number;
     old_text?: string; 
     new_text?: string;
+    old_mirrored_type_id?: number | null;
+    new_mirrored_type_id?: number | null;
   }) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   objectTypes?: LookupItem[];
@@ -71,7 +75,7 @@ export interface ObjectRelationTypesTableProps {
   };
 }
 
-type SortField = 'code' | 'name' | 'is_active';
+type SortField = 'id' | 'code' | 'name' | 'is_active';
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortState {
@@ -110,12 +114,14 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
     name: string; 
     parent_object_type_id?: number;
     child_object_type_id?: number;
+    mirrored_type_id?: number | null;
   }>({ 
     code: '', 
     is_active: true, 
     name: '',
     parent_object_type_id: undefined,
     child_object_type_id: undefined,
+    mirrored_type_id: null,
   });
   const [originalValues, setOriginalValues] = useState<{ 
     code: string; 
@@ -123,12 +129,14 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
     name: string; 
     parent_object_type_id?: number;
     child_object_type_id?: number;
+    mirrored_type_id?: number | null;
   }>({ 
     code: '', 
     is_active: true, 
     name: '',
     parent_object_type_id: undefined,
     child_object_type_id: undefined,
+    mirrored_type_id: null,
   });
   const [updateAllLanguages, setUpdateAllLanguages] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -138,12 +146,14 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
     name: string; 
     parent_object_type_id?: number;
     child_object_type_id?: number;
+    mirrored_type_id?: number | null;
   }>({ 
     code: '', 
     is_active: true, 
     name: '',
     parent_object_type_id: undefined,
     child_object_type_id: undefined,
+    mirrored_type_id: null,
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -166,6 +176,31 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
     }
     const objectType = objectTypes.find(ot => ot.id === objectTypeId);
     return objectType?.name || objectType?.code || undefined;
+  };
+
+  // Get available mirrored type options (active object relation types, excluding current item when editing)
+  const getMirroredTypeOptions = (): Array<{ value: number | null; label: string }> => {
+    const options: Array<{ value: number | null; label: string }> = [
+      { value: null, label: 'None' }
+    ];
+    
+    // Filter active object relation types
+    const activeTypes = data.filter(item => item.is_active);
+    
+    // When editing, exclude the current item being edited
+    const availableTypes = editingId 
+      ? activeTypes.filter(item => item.id !== editingId)
+      : activeTypes;
+    
+    // Add options
+    availableTypes.forEach(item => {
+      options.push({
+        value: item.id,
+        label: `${item.code}${item.name ? ` - ${item.name}` : ''}`
+      });
+    });
+    
+    return options;
   };
 
   // Filter and sort data
@@ -306,6 +341,7 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
       name: item.name || '',
       parent_object_type_id: relationItem.parent_object_type_id,
       child_object_type_id: relationItem.child_object_type_id,
+      mirrored_type_id: relationItem.mirrored_type_id !== undefined ? relationItem.mirrored_type_id : null,
     };
     setEditingData(currentData);
     setOriginalValues({ ...currentData });
@@ -314,11 +350,11 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
 
   const handleCancel = () => {
     setEditingId(null);
-    setEditingData({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined });
-    setOriginalValues({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined });
+    setEditingData({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined, mirrored_type_id: null });
+    setOriginalValues({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined, mirrored_type_id: null });
     setUpdateAllLanguages(false);
     setShowNewForm(false);
-    setNewItem({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined });
+    setNewItem({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined, mirrored_type_id: null });
   };
 
   const handleSave = async () => {
@@ -392,15 +428,17 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
           old_child_object_type_id: originalValues.child_object_type_id !== undefined ? originalValues.child_object_type_id : undefined,
           new_child_object_type_id: editingData.child_object_type_id !== undefined ? editingData.child_object_type_id : undefined,
           old_text: originalValues.name || '',
-          new_text: editingData.name || ''
+          new_text: editingData.name || '',
+          old_mirrored_type_id: originalValues.mirrored_type_id !== undefined ? originalValues.mirrored_type_id : null,
+          new_mirrored_type_id: editingData.mirrored_type_id !== undefined ? editingData.mirrored_type_id : null,
         });
 
         // Reload data after successful update
         await onLoad();
         
         setEditingId(null);
-        setEditingData({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined });
-        setOriginalValues({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined });
+        setEditingData({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined, mirrored_type_id: null });
+        setOriginalValues({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined, mirrored_type_id: null });
         setUpdateAllLanguages(false);
       } catch (err) {
         console.error('Failed to update:', err);
@@ -439,13 +477,14 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
         language_id: currentLanguageId,
         parent_object_type_id: newItem.parent_object_type_id !== undefined ? newItem.parent_object_type_id : undefined,
         child_object_type_id: newItem.child_object_type_id !== undefined ? newItem.child_object_type_id : undefined,
+        mirrored_type_id: newItem.mirrored_type_id !== undefined ? newItem.mirrored_type_id : null,
       });
 
       // Reload data after successful create
       await onLoad();
       
       setShowNewForm(false);
-      setNewItem({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined });
+      setNewItem({ code: '', is_active: true, name: '', parent_object_type_id: undefined, child_object_type_id: undefined, mirrored_type_id: null });
     } catch (err: any) {
       console.error('Failed to create:', err);
       throw err;
@@ -566,6 +605,15 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
                 onChange={(e) => setNewItem({ ...newItem, child_object_type_id: e.target.value ? parseInt(e.target.value) : undefined })}
                 options={objectTypes.map(ot => ({ value: ot.id, label: ot.name || ot.code }))}
                 placeholder="Select child object type (optional)"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <SearchableSelect
+                label="Mirrored Type"
+                value={newItem.mirrored_type_id !== undefined ? newItem.mirrored_type_id : null}
+                onChange={(value) => setNewItem({ ...newItem, mirrored_type_id: typeof value === 'number' ? value : (value === null ? null : undefined) })}
+                options={getMirroredTypeOptions()}
+                placeholder="Select mirrored type (optional)"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -800,13 +848,23 @@ export const ObjectRelationTypesTable: React.FC<ObjectRelationTypesTableProps> =
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {relationItem.mirrored_type_code ? (
-                              <span className="font-medium">{relationItem.mirrored_type_code}</span>
-                            ) : (
-                              <span className="italic text-gray-400 dark:text-gray-500">—</span>
-                            )}
-                          </span>
+                          {editingId === item.id ? (
+                            <SearchableSelect
+                              value={editingData.mirrored_type_id !== undefined ? editingData.mirrored_type_id : null}
+                              onChange={(value) => setEditingData({ ...editingData, mirrored_type_id: typeof value === 'number' ? value : (value === null ? null : undefined) })}
+                              options={getMirroredTypeOptions()}
+                              placeholder="Select mirrored type"
+                              className="w-full min-w-[200px]"
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              {relationItem.mirrored_type_code ? (
+                                <span className="font-medium">{relationItem.mirrored_type_code}</span>
+                              ) : (
+                                <span className="italic text-gray-400 dark:text-gray-500">—</span>
+                              )}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {editingId === item.id ? (

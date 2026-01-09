@@ -29,9 +29,9 @@ export const ENDPOINTS = {
   TRANSACTION_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/transactions/:id',
   
   // Object Relations
-  OBJECT_RELATIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-relations',
+  OBJECT_RELATIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/b0fc82f1-0fd7-4068-83a2-6051579b85c1/api/v1/object-relations',
   OBJECT_RELATION_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-relations/:id',
-  OBJECT_RELATIONS_BY_OBJECT_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/objects/:id/relations',
+  OBJECT_RELATIONS_BY_OBJECT_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/b0fc82f1-0fd7-4068-83a2-6051579b85c1/api/v1/objects/:id/relations',
   
   // Object Audits
   OBJECT_AUDITS: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-audits',
@@ -86,7 +86,8 @@ export const ENDPOINTS = {
   
   // Documents (documents webhook: 08659efd-89f5-440f-96de-10512fda25f0)
   DOCUMENTS: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/documents',
-  DOCUMENT_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/documents/:id',
+  DOCUMENT_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/70a9a92c-360e-43bf-9235-3725f4cea7ed/api/v1/documents/:id',
+  DOCUMENTS_BY_OBJECT_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/70a9a92c-360e-43bf-9235-3725f4cea7ed/api/v1/documents/:id',
   DOCUMENT_DELETE: 'https://n8n.wolfitlab.duckdns.org/webhook/6054a8bf-9bcc-44c9-8e22-e78704ac2e58/api/v1/documents/:id/delete',
   DOCUMENT_FILES: 'https://n8n.wolfitlab.duckdns.org/webhook/b21d5b1d-ded1-4acf-a46d-3a1810581ed2/api/v1/documents/:id/files',
   DOCUMENT_FILES_FROM_OTHER_DOCUMENTS: 'https://n8n.wolfitlab.duckdns.org/webhook/6bc6018b-3e0c-456c-8c69-5f9e8b1d2fd7/api/v1/documents/:id/files/from-other-documents',

@@ -469,6 +469,11 @@ export const en = {
     noRelations: 'No related objects',
     objectId: 'Object ID',
     viewDocument: 'View Document',
+    selectDocument: 'Select Document',
+    searchDocuments: 'Search documents...',
+    selectDocumentRequired: 'Please select a document',
+    relationTypeRequired: 'Relation type is required',
+    relationCreateFailed: 'Failed to create relation',
   },
 
   // Files
