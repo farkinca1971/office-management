@@ -12,6 +12,12 @@ import type {
   CreateObjectRelationRequest,
   UpdateObjectRelationRequest,
   Document,
+  OrphanedRelation,
+  DuplicateRelationGroup,
+  InvalidRelation,
+  MissingMirrorRelation,
+  ObjectSearchRequest,
+  ObjectSearchResult,
 } from '@/types/entities';
 import type { ApiListResponse, ApiResponse, SearchParams } from '@/types/common';
 
@@ -152,6 +158,101 @@ export const objectRelationApi = {
    */
   delete: async (id: number): Promise<{ success: true }> => {
     return apiClient.delete(replaceParams(ENDPOINTS.OBJECT_RELATION_BY_ID, { id }));
+  },
+
+  /**
+   * Update an existing object relation (note field only)
+   * Uses POST method as per project requirements
+   */
+  updateNote: async (id: number, noteOld: string, noteNew: string): Promise<ApiResponse<ObjectRelation>> => {
+    return apiClient.post(replaceParams(ENDPOINTS.OBJECT_RELATION_UPDATE, { id }), {
+      note_old: noteOld,
+      note_new: noteNew,
+    });
+  },
+
+  /**
+   * Delete (soft delete) an object relation
+   * Uses POST method as per project requirements
+   */
+  deleteRelation: async (id: number): Promise<{ success: true }> => {
+    return apiClient.post(replaceParams(ENDPOINTS.OBJECT_RELATION_DELETE, { id }), {
+      id,
+    });
+  },
+
+  /**
+   * Bulk delete multiple relations
+   */
+  bulkDelete: async (relationIds: number[]): Promise<{ success: true; deleted_count: number }> => {
+    return apiClient.post(ENDPOINTS.RELATIONS_BULK_DELETE, {
+      relation_ids: relationIds,
+    });
+  },
+
+  /**
+   * Bulk reassign target object for multiple relations
+   */
+  bulkReassign: async (
+    relationIds: number[],
+    oldObjectToId: number,
+    newObjectToId: number
+  ): Promise<{ success: true; updated_count: number }> => {
+    return apiClient.post(ENDPOINTS.RELATIONS_BULK_REASSIGN, {
+      relation_ids: relationIds,
+      old_object_to_id: oldObjectToId,
+      new_object_to_id: newObjectToId,
+    });
+  },
+
+  /**
+   * Bulk update relation type for multiple relations
+   */
+  bulkUpdateType: async (
+    relationIds: number[],
+    oldRelationTypeId: number,
+    newRelationTypeId: number
+  ): Promise<{ success: true; updated_count: number }> => {
+    return apiClient.post(ENDPOINTS.RELATIONS_BULK_UPDATE_TYPE, {
+      relation_ids: relationIds,
+      old_relation_type_id: oldRelationTypeId,
+      new_relation_type_id: newRelationTypeId,
+    });
+  },
+
+  /**
+   * Get orphaned relations (pointing to inactive objects)
+   */
+  getOrphanedRelations: async (): Promise<ApiListResponse<OrphanedRelation>> => {
+    return apiClient.post(ENDPOINTS.RELATIONS_DATA_QUALITY_ORPHANED, {});
+  },
+
+  /**
+   * Get duplicate relations
+   */
+  getDuplicateRelations: async (): Promise<ApiListResponse<DuplicateRelationGroup>> => {
+    return apiClient.post(ENDPOINTS.RELATIONS_DATA_QUALITY_DUPLICATES, {});
+  },
+
+  /**
+   * Get invalid relations (violating type constraints)
+   */
+  getInvalidRelations: async (): Promise<ApiListResponse<InvalidRelation>> => {
+    return apiClient.post(ENDPOINTS.RELATIONS_DATA_QUALITY_INVALID, {});
+  },
+
+  /**
+   * Get relations missing their mirror counterparts
+   */
+  getMissingMirrors: async (): Promise<ApiListResponse<MissingMirrorRelation>> => {
+    return apiClient.post(ENDPOINTS.RELATIONS_DATA_QUALITY_MISSING_MIRRORS, {});
+  },
+
+  /**
+   * Universal object search with filtering
+   */
+  searchObjects: async (searchRequest: ObjectSearchRequest): Promise<ApiListResponse<ObjectSearchResult>> => {
+    return apiClient.post(ENDPOINTS.OBJECTS_SEARCH, searchRequest);
   },
 
   /**
