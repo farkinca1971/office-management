@@ -295,6 +295,65 @@ export interface CreateObjectRelationRequest {
 
 export interface UpdateObjectRelationRequest extends Partial<CreateObjectRelationRequest> {}
 
+// Bulk operations
+export interface BulkDeleteRelationsRequest {
+  relation_ids: number[];
+}
+
+export interface BulkReassignRelationsRequest {
+  relation_ids: number[];
+  old_object_to_id: number;
+  new_object_to_id: number;
+}
+
+export interface BulkUpdateRelationTypeRequest {
+  relation_ids: number[];
+  old_relation_type_id: number;
+  new_relation_type_id: number;
+}
+
+// Object search
+export interface ObjectSearchRequest {
+  query?: string;
+  object_type_ids?: number[];
+  object_status_ids?: number[];
+  page?: number;
+  per_page?: number;
+}
+
+export interface ObjectSearchResult {
+  id: number;
+  object_type_id: number;
+  object_status_id: number;
+  object_type_name: string;
+  display_name: string;  // Computed display name
+  created_at: string;
+}
+
+// Data quality issues
+export interface OrphanedRelation extends ObjectRelation {
+  inactive_object_type: 'from' | 'to';
+}
+
+export interface DuplicateRelationGroup {
+  object_from_id: number;
+  object_to_id: number;
+  object_relation_type_id: number;
+  relation_ids: number[];
+  count: number;
+}
+
+export interface InvalidRelation extends ObjectRelation {
+  reason: string;
+  expected_parent_object_type_id: number;
+  expected_child_object_type_id: number;
+}
+
+export interface MissingMirrorRelation extends ObjectRelation {
+  expected_relation_type_id: number;
+  expected_relation_type_code: string;
+}
+
 // Audit Action
 export interface AuditAction extends BaseEntity {
   code: string;

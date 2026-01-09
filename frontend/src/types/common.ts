@@ -43,6 +43,13 @@ export interface SearchParams extends PaginationParams {
   order?: 'asc' | 'desc';
 }
 
+export interface ObjectRelationSearchParams extends SearchParams {
+  object_from_id?: number;
+  object_to_id?: number;
+  object_relation_type_id?: number;
+  is_active?: boolean;
+}
+
 // Common Entity Fields
 export interface BaseEntity {
   id: number;
