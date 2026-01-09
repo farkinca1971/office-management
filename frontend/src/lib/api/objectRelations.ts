@@ -48,9 +48,9 @@ objectRelationsDocumentsClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
-    // Ensure headers object exists
+    // Ensure headers object exists (TypeScript fix: use any type for empty object)
     if (!config.headers) {
-      config.headers = {};
+      config.headers = {} as any;
     }
     return config;
   },

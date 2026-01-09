@@ -64,7 +64,7 @@ export default function DocumentsTab({ objectId, onDataChange, objectRelationTyp
       );
 
       // Handle n8n array wrapper
-      let documentsData = documentsResponse;
+      let documentsData: any = documentsResponse;
       if (Array.isArray(documentsResponse) && documentsResponse.length > 0) {
         documentsData = documentsResponse[0];
       }
@@ -77,11 +77,11 @@ export default function DocumentsTab({ objectId, onDataChange, objectRelationTyp
       let documents: Document[] = [];
       if (Array.isArray(documentsData)) {
         documents = documentsData;
-      } else if (documentsData && typeof documentsData === 'object') {
+      } else if (documentsData?.success && documentsData.data) {
         // Check if it has a data property
         if (Array.isArray(documentsData.data)) {
           documents = documentsData.data;
-        } else if (documentsData.data && Array.isArray(documentsData.data.data)) {
+        } else if (documentsData.data.data && Array.isArray(documentsData.data.data)) {
           // Handle nested data structure
           documents = documentsData.data.data;
         }

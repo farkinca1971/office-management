@@ -160,7 +160,7 @@ export default function DocumentsPage() {
         // Reload the selected document to get latest data
         try {
           const updatedDoc = await documentsApi.getById(id);
-          if (updatedDoc?.data) {
+          if (updatedDoc.success && updatedDoc.data) {
             setSelectedDocument(updatedDoc.data);
           }
         } catch (err) {

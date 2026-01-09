@@ -47,7 +47,7 @@ export default function DocumentRelationsTab({ documentId, onDataChange }: Docum
         lookupApi.getObjectRelationTypes(language),
       ]);
 
-      const relationsData = relationsResponse?.data;
+      const relationsData = (relationsResponse.success && relationsResponse.data) ? relationsResponse.data : [];
       const typesData = typesResponse?.data;
 
       let relationsArray: ObjectRelation[] = [];

@@ -376,6 +376,8 @@ export interface Document extends BaseEntity {
   document_date?: string; // ISO date string (YYYY-MM-DD)
   document_number?: string;
   expiry_date?: string; // ISO date string (YYYY-MM-DD)
+  description?: string; // Optional description field
+  issuer?: string; // Optional issuer field
   object_type_id?: number;
   object_status_id?: number;
   is_active: boolean;

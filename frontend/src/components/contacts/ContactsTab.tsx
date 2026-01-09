@@ -210,11 +210,13 @@ export default function ContactsTab({ objectId, onDataChange }: ContactsTabProps
       console.log('[ContactsTab] Response type:', typeof response);
       console.log('[ContactsTab] Response stringified:', JSON.stringify(response));
       console.log('[ContactsTab] Response.success:', response?.success);
-      console.log('[ContactsTab] Response.data:', response?.data);
-      console.log('[ContactsTab] Response.id:', response?.id);
+      if (response.success) {
+        console.log('[ContactsTab] Response.data:', response.data);
+        console.log('[ContactsTab] Response.id:', response.data?.id);
+      }
 
       // Check if response indicates success or has expected data
-      if (!response || (typeof response === 'object' && !response.success && !response.id && !response.data)) {
+      if (!response || !response.success || !response.data) {
         console.error('[ContactsTab] Server did not confirm contact creation');
         setError(t('contacts.createFailed') || 'Failed to create contact - server did not confirm');
         return;
