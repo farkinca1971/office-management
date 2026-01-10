@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import { Plus, FileText, Phone, MapPin, Briefcase, CreditCard, Network, StickyNote, Files } from 'lucide-react';
@@ -31,6 +32,7 @@ import type { LookupItem } from '@/types/common';
 export default function PersonsPage() {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
+  const searchParams = useSearchParams();
 
   // View mode management
   const { viewMode, toggleViewMode } = useViewMode('persons-view-mode');
@@ -137,6 +139,20 @@ export default function PersonsPage() {
     loadPersons();
   }, [t]);
 
+  // Auto-select person from URL query param (e.g., /persons?id=123)
+  useEffect(() => {
+    const idParam = searchParams.get('id');
+    if (idParam && persons.length > 0 && !isLoadingPersons) {
+      const personId = parseInt(idParam, 10);
+      if (!isNaN(personId)) {
+        const person = persons.find(p => p.id === personId);
+        if (person && (!selectedPerson || selectedPerson.id !== personId)) {
+          setSelectedPerson(person);
+        }
+      }
+    }
+  }, [searchParams, persons, isLoadingPersons, selectedPerson]);
+
   // Load relations for selected object
   const loadRelations = async (objectId: number) => {
     setIsLoadingRelations(true);
@@ -162,9 +178,15 @@ export default function PersonsPage() {
 
   const handlePersonSelect = (person: Person) => {
     setSelectedPerson(person);
-    // Load relations when person is selected
-    if (person?.id) {
-      loadRelations(person.id);
+  };
+
+  // Handle tab change - reload data when switching to specific tabs
+  const handleTabChange = (tabId: string) => {
+    if (!selectedPerson) return;
+
+    // Reload relations when Relations tab is clicked
+    if (tabId === 'relations') {
+      loadRelations(selectedPerson.id);
     }
   };
 
@@ -420,7 +442,7 @@ export default function PersonsPage() {
             </p>
           </div>
         ) : (
-          <Tabs tabs={tabs} defaultTab="documents" />
+          <Tabs tabs={tabs} defaultTab="documents" onChange={handleTabChange} />
         )}
       </div>
 

@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import { Plus, FileText, Phone, MapPin, CreditCard, StickyNote, Files, Network } from 'lucide-react';
@@ -31,6 +32,7 @@ import type { LookupItem } from '@/types/common';
 export default function CompaniesPage() {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
+  const searchParams = useSearchParams();
 
   // View mode management
   const { viewMode, toggleViewMode } = useViewMode('companies-view-mode');
@@ -121,6 +123,20 @@ export default function CompaniesPage() {
     loadCompanies();
   }, [t]);
 
+  // Auto-select company from URL query param (e.g., /companies?id=123)
+  useEffect(() => {
+    const idParam = searchParams.get('id');
+    if (idParam && companies.length > 0 && !isLoadingCompanies) {
+      const companyId = parseInt(idParam, 10);
+      if (!isNaN(companyId)) {
+        const company = companies.find(c => c.id === companyId);
+        if (company && (!selectedCompany || selectedCompany.id !== companyId)) {
+          setSelectedCompany(company);
+        }
+      }
+    }
+  }, [searchParams, companies, isLoadingCompanies, selectedCompany]);
+
   // Load relations for selected object
   const loadRelations = async (objectId: number) => {
     setIsLoadingRelations(true);
@@ -146,9 +162,15 @@ export default function CompaniesPage() {
 
   const handleCompanySelect = (company: Company) => {
     setSelectedCompany(company);
-    // Load relations when company is selected
-    if (company?.id) {
-      loadRelations(company.id);
+  };
+
+  // Handle tab change - reload data when switching to specific tabs
+  const handleTabChange = (tabId: string) => {
+    if (!selectedCompany) return;
+
+    // Reload relations when Relations tab is clicked
+    if (tabId === 'relations') {
+      loadRelations(selectedCompany.id);
     }
   };
 
@@ -390,7 +412,7 @@ export default function CompaniesPage() {
             </p>
           </div>
         ) : (
-          <Tabs tabs={tabs} defaultTab="documents" />
+          <Tabs tabs={tabs} defaultTab="documents" onChange={handleTabChange} />
         )}
       </div>
 
