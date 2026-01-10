@@ -115,6 +115,9 @@ INSERT INTO translations (code, language_id, text) VALUES
 ('RESTORE_FILE', (SELECT id FROM languages WHERE code = 'en'), 'Restore File'),
 ('RESTORE_FILE', (SELECT id FROM languages WHERE code = 'de'), 'Datei wiederherstellen'),
 ('RESTORE_FILE', (SELECT id FROM languages WHERE code = 'hu'), 'Fájl visszaállítása'),
+('DOWNLOAD_FILE', (SELECT id FROM languages WHERE code = 'en'), 'Download File'),
+('DOWNLOAD_FILE', (SELECT id FROM languages WHERE code = 'de'), 'Datei herunterladen'),
+('DOWNLOAD_FILE', (SELECT id FROM languages WHERE code = 'hu'), 'Fájl letöltése'),
 
 -- Employee actions
 ('CREATE_EMPLOYEE', (SELECT id FROM languages WHERE code = 'en'), 'Create Employee'),
@@ -249,6 +252,7 @@ INSERT INTO audit_actions (code, is_active, object_type_id) VALUES
 ('DELETE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
 ('VERSION_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
 ('RESTORE_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
+('DOWNLOAD_FILE', TRUE, (SELECT id FROM object_types WHERE code = 'file')),
 
 -- Employee actions (object_type: employee)
 ('CREATE_EMPLOYEE', TRUE, (SELECT id FROM object_types WHERE code = 'employee')),
@@ -280,7 +284,7 @@ INSERT INTO audit_actions (code, is_active, object_type_id) VALUES
 -- Run these queries to verify the data was inserted correctly
 
 -- Check audit_actions count
--- Expected: 40 records (5 person + 5 company + 7 user + 5 document + 5 file + 5 employee + 14 user_create_*)
+-- Expected: 47 records (5 person + 5 company + 7 user + 5 document + 6 file + 5 employee + 14 user_create_*)
 SELECT COUNT(*) as total_audit_actions FROM audit_actions;
 
 -- Check audit_actions by object_type

@@ -119,5 +119,43 @@ export const auditApi = {
   create: async (data: CreateObjectAuditRequest): Promise<ObjectAuditResponse> => {
     return auditClient.post(ENDPOINTS.OBJECT_AUDITS, data);
   },
+
+  /**
+   * Log a file download action
+   * Creates an audit record for file download tracking
+   *
+   * @param objectId - The ID of the object (file) being downloaded
+   * @param languageId - The current language ID
+   * @param fileInfo - Optional additional file information for the audit record
+   */
+  logFileDownload: async (
+    objectId: number,
+    languageId: number,
+    fileInfo?: {
+      filename?: string;
+      file_path?: string;
+      mime_type?: string;
+      file_size?: number;
+    }
+  ): Promise<ObjectAuditResponse> => {
+    const auditData: CreateObjectAuditRequest = {
+      object_id: objectId,
+      audit_action_id: 0, // Will be resolved by backend using action code
+      new_values: {
+        action: 'FILE_DOWNLOAD',
+        language_id: languageId,
+        ...fileInfo,
+        downloaded_at: new Date().toISOString(),
+      },
+      notes: `File downloaded: ${fileInfo?.filename || 'unknown'}`,
+    };
+
+    // Pass the action code in the request for backend resolution
+    return auditClient.post(ENDPOINTS.OBJECT_AUDITS, {
+      ...auditData,
+      action_code: 'DOWNLOAD_FILE',
+      language_id: languageId,
+    });
+  },
 };
 

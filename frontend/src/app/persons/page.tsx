@@ -349,6 +349,7 @@ export default function PersonsPage() {
           currentObjectId={selectedPerson.id}
           onUpdate={handleUpdateRelation}
           onDelete={handleDeleteRelation}
+          onAddNew={() => setIsAddRelationModalOpen(true)}
           isLoading={isLoadingRelations}
           error={relationsError}
           filterActive={filterActive}

@@ -28,7 +28,8 @@ import {
   Building2,
   FileText,
   Users,
-  Briefcase
+  Briefcase,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -53,6 +54,7 @@ interface ObjectRelationsTableProps {
   currentObjectId: number;
   onUpdate: (id: number, data: RelationUpdatePayload) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onAddNew?: () => void;
   isLoading?: boolean;
   error?: string | null;
   filterActive: boolean | '';
@@ -112,6 +114,7 @@ export default function ObjectRelationsTable({
   currentObjectId,
   onUpdate,
   onDelete,
+  onAddNew,
   isLoading = false,
   error = null,
   filterActive,
@@ -308,6 +311,20 @@ export default function ObjectRelationsTable({
 
   return (
     <div className="space-y-4">
+      {/* Header with New Relation Button */}
+      {onAddNew && (
+        <div className="flex justify-end">
+          <Button
+            variant="primary"
+            onClick={onAddNew}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            {t('relations.addNew')}
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

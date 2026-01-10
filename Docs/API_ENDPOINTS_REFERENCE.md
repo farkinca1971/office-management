@@ -3457,6 +3457,135 @@ WHERE oa.id = @audit_id;
 
 ---
 
+### 63a. Log File Download (Specialized Audit)
+
+**Endpoint**: `POST /api/v1/object-audits`
+
+**Description**: Specialized endpoint for logging file download actions. Creates an audit record with file download information for tracking and compliance purposes. This uses the same endpoint as Create Object Audit but with a specific payload structure for file downloads.
+
+**Request Body**:
+```json
+{
+  "object_id": 15,
+  "audit_action_id": 0,
+  "action_code": "DOWNLOAD_FILE",
+  "language_id": 1,
+  "new_values": {
+    "action": "FILE_DOWNLOAD",
+    "language_id": 1,
+    "filename": "report_2024.pdf",
+    "file_path": "https://storage.example.com/files/report_2024.pdf",
+    "mime_type": "application/pdf",
+    "file_size": 1048576,
+    "downloaded_at": "2024-01-15T10:30:00Z"
+  },
+  "notes": "File downloaded: report_2024.pdf"
+}
+```
+
+**Request Parameters**:
+- `object_id` (required): The ID of the file object being downloaded
+- `audit_action_id` (optional): Set to 0 when using `action_code` for resolution
+- `action_code` (required): Should be `DOWNLOAD_FILE` for file download actions
+- `language_id` (required): Current user's language ID
+- `new_values` (required): Object containing download details:
+  - `action`: Always `FILE_DOWNLOAD`
+  - `language_id`: Language ID for the download context
+  - `filename`: Name of the file being downloaded
+  - `file_path`: URL or path to the file
+  - `mime_type`: MIME type of the file
+  - `file_size`: Size of the file in bytes
+  - `downloaded_at`: ISO 8601 timestamp of the download
+- `notes` (optional): Human-readable description of the action
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 101,
+    "object_id": 15,
+    "audit_action_id": 25,
+    "created_by": null,
+    "created_at": "2024-01-15T10:30:00Z",
+    "old_values": null,
+    "new_values": {
+      "action": "FILE_DOWNLOAD",
+      "language_id": 1,
+      "filename": "report_2024.pdf",
+      "file_path": "https://storage.example.com/files/report_2024.pdf",
+      "mime_type": "application/pdf",
+      "file_size": 1048576,
+      "downloaded_at": "2024-01-15T10:30:00Z"
+    },
+    "ip_address": null,
+    "user_agent": null,
+    "notes": "File downloaded: report_2024.pdf"
+  }
+}
+```
+
+**MySQL Query**:
+```sql
+-- Resolve audit_action_id from action_code if provided
+SET @audit_action_id = COALESCE(
+    {{ $json.body.audit_action_id }},
+    (SELECT id FROM audit_actions WHERE code = {{ $json.body.action_code }})
+);
+
+-- If action_code provided but not found, create default or use fallback
+SET @audit_action_id = IFNULL(
+    @audit_action_id,
+    (SELECT id FROM audit_actions WHERE code = 'SYSTEM_ACTION' LIMIT 1)
+);
+
+INSERT INTO object_audits (
+    object_id,
+    audit_action_id,
+    created_by,
+    old_values,
+    new_values,
+    ip_address,
+    user_agent,
+    notes,
+    created_at
+) VALUES (
+    {{ $json.body.object_id }},
+    @audit_action_id,
+    {{ $json.body.created_by }},
+    {{ $json.body.old_values }},
+    {{ $json.body.new_values }},
+    {{ $json.body.ip_address }},
+    {{ $json.body.user_agent }},
+    {{ $json.body.notes }},
+    NOW()
+);
+
+SET @audit_id = LAST_INSERT_ID();
+
+SELECT
+    oa.id,
+    oa.object_id,
+    oa.audit_action_id,
+    oa.created_by,
+    oa.created_at,
+    oa.old_values,
+    oa.new_values,
+    oa.ip_address,
+    oa.user_agent,
+    oa.notes
+FROM object_audits oa
+WHERE oa.id = @audit_id;
+```
+
+**Notes**:
+- This endpoint should be called BEFORE triggering the actual file download
+- The frontend should still proceed with the download even if the audit call fails (graceful degradation)
+- The `DOWNLOAD_FILE` audit action must exist in the `audit_actions` table (see seed data below)
+- Consider adding IP address and user agent from request headers for enhanced tracking
+
+---
+
 ## Authentication Endpoints
 
 ### 64. Signup / Register
