@@ -129,18 +129,20 @@ export default function DocumentsPage() {
     loadDocuments();
   }, [t]);
 
-  // Auto-select document from URL parameter
+  // Auto-select document from URL parameter (supports both ?id= and ?documentId=)
   useEffect(() => {
-    const documentIdParam = searchParams.get('documentId');
-    if (documentIdParam && documents.length > 0) {
-      const documentId = parseInt(documentIdParam, 10);
-      const document = documents.find(d => d.id === documentId);
-      // Only set if not already selected or if it's a different document
-      if (document && (!selectedDocument || selectedDocument.id !== documentId)) {
-        setSelectedDocument(document);
+    const idParam = searchParams.get('id') || searchParams.get('documentId');
+    if (idParam && documents.length > 0 && !isLoadingDocuments) {
+      const documentId = parseInt(idParam, 10);
+      if (!isNaN(documentId)) {
+        const document = documents.find(d => d.id === documentId);
+        // Only set if not already selected or if it's a different document
+        if (document && (!selectedDocument || selectedDocument.id !== documentId)) {
+          setSelectedDocument(document);
+        }
       }
     }
-  }, [searchParams, documents]);
+  }, [searchParams, documents, isLoadingDocuments, selectedDocument]);
 
   const handleDocumentSelect = (document: Document) => {
     setSelectedDocument(document);
