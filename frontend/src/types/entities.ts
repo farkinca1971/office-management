@@ -284,6 +284,11 @@ export interface ObjectRelation extends BaseEntity {
   note?: string;
   is_active: boolean;
   created_by?: number;
+  // Extended fields from API response (joined data)
+  object_from_name?: string;
+  object_to_name?: string;
+  object_from_type_id?: number;
+  object_to_type_id?: number;
 }
 
 export interface CreateObjectRelationRequest {
