@@ -114,6 +114,9 @@ export default function AddRelationModal({
         object_type_ids: allowedTargetObjectTypeIds,
         page: 1,
         per_page: 50,
+        // Include relation context for backend processing
+        current_object_id: currentObjectId,
+        relation_type_id: selectedRelationTypeId || undefined,
       });
 
       if (response.success && response.data) {
@@ -131,7 +134,7 @@ export default function AddRelationModal({
     } finally {
       setIsLoadingObjects(false);
     }
-  }, [allowedTargetObjectTypeIds, existingRelationIds]);
+  }, [allowedTargetObjectTypeIds, existingRelationIds, currentObjectId, selectedRelationTypeId]);
 
   // Load objects when relation type is selected
   useEffect(() => {

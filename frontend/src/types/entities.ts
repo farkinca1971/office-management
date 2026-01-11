@@ -324,6 +324,10 @@ export interface ObjectSearchRequest {
   object_status_ids?: number[];
   page?: number;
   per_page?: number;
+  // Additional context fields for relation-based searches
+  current_object_id?: number;        // ID of the object in the datagrid above
+  relation_type_id?: number;          // Selected relation type ID
+  language_id?: number;               // Language ID (usually auto-added by interceptor)
 }
 
 export interface ObjectSearchResult {

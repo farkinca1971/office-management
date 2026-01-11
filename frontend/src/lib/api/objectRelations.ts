@@ -421,6 +421,21 @@ export const objectRelationApi = {
       cleanRequest.object_status_ids = searchRequest.object_status_ids;
     }
 
+    // Add relation context fields if provided
+    if (searchRequest.current_object_id) {
+      cleanRequest.current_object_id = searchRequest.current_object_id;
+    }
+
+    if (searchRequest.relation_type_id) {
+      cleanRequest.relation_type_id = searchRequest.relation_type_id;
+    }
+
+    // Note: language_id is automatically added by the interceptor,
+    // but we can explicitly include it if provided
+    if (searchRequest.language_id) {
+      cleanRequest.language_id = searchRequest.language_id;
+    }
+
     return objectRelationsClient.post(ENDPOINTS.OBJECTS_SEARCH, cleanRequest);
   },
 
