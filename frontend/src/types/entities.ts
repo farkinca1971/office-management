@@ -340,27 +340,62 @@ export interface ObjectSearchResult {
 }
 
 // Data quality issues
-export interface OrphanedRelation extends ObjectRelation {
-  inactive_object_type: 'from' | 'to';
+export interface OrphanedRelation {
+  id: number;
+  object_from_id: number;
+  object_to_id: number;
+  object_relation_type_id: number;
+  relation_type_name?: string;
+  from_object_type_name?: string;
+  to_object_type_name?: string;
+  from_is_active: boolean;
+  to_is_active: boolean;
+  note?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DuplicateRelationGroup {
   object_from_id: number;
   object_to_id: number;
   object_relation_type_id: number;
+  relation_type_name?: string;
+  from_object_type_name?: string;
+  to_object_type_name?: string;
+  duplicate_count: number;
   relation_ids: number[];
-  count: number;
 }
 
-export interface InvalidRelation extends ObjectRelation {
-  reason: string;
-  expected_parent_object_type_id: number;
-  expected_child_object_type_id: number;
+export interface InvalidRelation {
+  id: number;
+  object_from_id: number;
+  object_to_id: number;
+  object_relation_type_id: number;
+  relation_type_name?: string;
+  from_object_type_name?: string;
+  to_object_type_name?: string;
+  actual_from_type_id: number;
+  actual_to_type_id: number;
+  expected_from_type_id: number;
+  expected_to_type_id: number;
+  expected_from_type?: string;
+  expected_to_type?: string;
+  note?: string;
+  created_at?: string;
 }
 
-export interface MissingMirrorRelation extends ObjectRelation {
-  expected_relation_type_id: number;
-  expected_relation_type_code: string;
+export interface MissingMirrorRelation {
+  id: number;
+  object_from_id: number;
+  object_to_id: number;
+  object_relation_type_id: number;
+  relation_type_name?: string;
+  from_object_type_name?: string;
+  to_object_type_name?: string;
+  mirrored_type_id: number;
+  expected_mirror_type_name?: string;
+  note?: string;
+  created_at?: string;
 }
 
 // Audit Action
