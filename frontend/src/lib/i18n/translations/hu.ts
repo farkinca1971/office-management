@@ -42,6 +42,7 @@ export const hu = {
     employees: 'Alkalmazottak',
     documents: 'Dokumentumok',
     files: 'Fájlok',
+    relationsManager: 'Kapcsolatkezelő',
     masterData: 'Törzsadatok',
     languages: 'Nyelvek',
     objectTypes: 'Objektumtípusok',

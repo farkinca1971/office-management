@@ -43,6 +43,7 @@ export const de = {
     employees: 'Mitarbeiter',
     documents: 'Dokumente',
     files: 'Dateien',
+    relationsManager: 'Beziehungsmanager',
     masterData: 'Stammdaten',
     languages: 'Sprachen',
     objectTypes: 'Objekttypen',

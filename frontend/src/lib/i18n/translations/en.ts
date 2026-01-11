@@ -43,6 +43,7 @@ export const en = {
     employees: 'Employees',
     documents: 'Documents',
     files: 'Files',
+    relationsManager: 'Relations Manager',
     masterData: 'Master Data',
     languages: 'Languages',
     objectTypes: 'Object Types',
