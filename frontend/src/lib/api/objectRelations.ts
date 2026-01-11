@@ -402,7 +402,26 @@ export const objectRelationApi = {
    * Language ID is automatically added to request body
    */
   searchObjects: async (searchRequest: ObjectSearchRequest): Promise<ApiListResponse<ObjectSearchResult>> => {
-    return objectRelationsClient.post(ENDPOINTS.OBJECTS_SEARCH, searchRequest);
+    // Clean up undefined values - remove them entirely instead of sending "undefined" string
+    const cleanRequest: any = {
+      page: searchRequest.page || 1,
+      per_page: searchRequest.per_page || 20,
+    };
+
+    // Only add optional fields if they have actual values
+    if (searchRequest.query && searchRequest.query.trim() !== '') {
+      cleanRequest.query = searchRequest.query.trim();
+    }
+
+    if (searchRequest.object_type_ids && searchRequest.object_type_ids.length > 0) {
+      cleanRequest.object_type_ids = searchRequest.object_type_ids;
+    }
+
+    if (searchRequest.object_status_ids && searchRequest.object_status_ids.length > 0) {
+      cleanRequest.object_status_ids = searchRequest.object_status_ids;
+    }
+
+    return objectRelationsClient.post(ENDPOINTS.OBJECTS_SEARCH, cleanRequest);
   },
 
   /**

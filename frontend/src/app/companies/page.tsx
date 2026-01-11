@@ -20,6 +20,9 @@ import NotesTab from '@/components/notes/NotesTab';
 import AuditsTab from '@/components/audits/AuditsTab';
 import ObjectRelationsTable from '@/components/relations/ObjectRelationsTable';
 import AddRelationModal from '@/components/relations/AddRelationModal';
+import QuickActionButton from '@/components/relations/QuickActionButton';
+import CreateRelatedEntityModal from '@/components/relations/CreateRelatedEntityModal';
+import type { QuickActionType } from '@/components/relations/QuickActionButton';
 import { companyApi } from '@/lib/api/companies';
 import { lookupApi } from '@/lib/api/lookups';
 import { objectRelationApi } from '@/lib/api/objectRelations';
@@ -55,6 +58,12 @@ export default function CompaniesPage() {
   const [relationsError, setRelationsError] = useState<string | null>(null);
   const [isAddRelationModalOpen, setIsAddRelationModalOpen] = useState(false);
   const [filterActive, setFilterActive] = useState<boolean | ''>('');
+
+  // Quick actions state
+  const [isCreateEntityModalOpen, setIsCreateEntityModalOpen] = useState(false);
+  const [quickActionType, setQuickActionType] = useState<QuickActionType | null>(null);
+  const [quickActionRelationTypeId, setQuickActionRelationTypeId] = useState<number | null>(null);
+  const [quickActionTargetObjectTypeId, setQuickActionTargetObjectTypeId] = useState<number | null>(null);
 
   // Load lookup data
   useEffect(() => {
@@ -236,6 +245,27 @@ export default function CompaniesPage() {
     }
   };
 
+  // Quick action handler
+  const handleQuickAction = (
+    actionType: QuickActionType,
+    relationTypeId: number,
+    targetObjectTypeId: number
+  ) => {
+    setQuickActionType(actionType);
+    setQuickActionRelationTypeId(relationTypeId);
+    setQuickActionTargetObjectTypeId(targetObjectTypeId);
+    setIsCreateEntityModalOpen(true);
+  };
+
+  // Handle entity creation success
+  const handleEntityCreated = async (newEntityId: number) => {
+    // Reload relations to show the new relation
+    if (selectedCompany) {
+      await loadRelations(selectedCompany.id);
+    }
+    setIsCreateEntityModalOpen(false);
+  };
+
   // Find the object relation type ID for 'obj_rel_type_company_doc'
   const companyDocRelationType = objectRelationTypes.find(
     (rt) => rt.code === 'obj_rel_type_company_doc'
@@ -321,6 +351,7 @@ export default function CompaniesPage() {
           currentObjectId={selectedCompany.id}
           onUpdate={handleUpdateRelation}
           onDelete={handleDeleteRelation}
+          onAddNew={() => setIsAddRelationModalOpen(true)}
           isLoading={isLoadingRelations}
           error={relationsError}
           filterActive={filterActive}
@@ -424,6 +455,22 @@ export default function CompaniesPage() {
           onSubmit={handleCreateRelation}
           currentObjectId={selectedCompany.id}
           currentObjectTypeId={selectedCompany.object_type_id}
+          existingRelationIds={relations.map(r =>
+            r.object_from_id === selectedCompany.id ? r.object_to_id : r.object_from_id
+          )}
+        />
+      )}
+
+      {/* Create Related Entity Modal */}
+      {selectedCompany && quickActionType && quickActionRelationTypeId && quickActionTargetObjectTypeId && (
+        <CreateRelatedEntityModal
+          isOpen={isCreateEntityModalOpen}
+          onClose={() => setIsCreateEntityModalOpen(false)}
+          actionType={quickActionType}
+          currentObjectId={selectedCompany.id}
+          relationTypeId={quickActionRelationTypeId}
+          targetObjectTypeId={quickActionTargetObjectTypeId}
+          onSuccess={handleEntityCreated}
         />
       )}
     </div>

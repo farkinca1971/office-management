@@ -311,20 +311,6 @@ export default function ObjectRelationsTable({
 
   return (
     <div className="space-y-4">
-      {/* Header with New Relation Button */}
-      {onAddNew && (
-        <div className="flex justify-end">
-          <Button
-            variant="primary"
-            onClick={onAddNew}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            {t('relations.addNew')}
-          </Button>
-        </div>
-      )}
-
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -590,9 +576,21 @@ export default function ObjectRelationsTable({
         </table>
       </div>
 
-      {/* Summary */}
-      <div className="text-sm text-gray-500 dark:text-gray-400">
-        {t('relations.showing')} {filteredAndSortedRelations.length} {t('relations.of')} {relations.length} {t('relations.relations').toLowerCase()}
+      {/* Summary and Add Button */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          {t('relations.showing')} {filteredAndSortedRelations.length} {t('relations.of')} {relations.length} {t('relations.relations').toLowerCase()}
+        </div>
+        {onAddNew && (
+          <Button
+            variant="primary"
+            onClick={onAddNew}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            {t('relations.addNew')}
+          </Button>
+        )}
       </div>
     </div>
   );

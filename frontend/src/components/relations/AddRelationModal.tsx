@@ -11,13 +11,13 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import AdvancedObjectSearchModal from '@/components/search/AdvancedObjectSearchModal';
+import { objectRelationApi } from '@/lib/api/objectRelations';
 import { lookupApi } from '@/lib/api';
 import { useLanguageStore } from '@/store/languageStore';
 import { useTranslation } from '@/lib/i18n';
@@ -34,6 +34,7 @@ interface AddRelationModalProps {
   }) => Promise<void>;
   currentObjectId: number;
   currentObjectTypeId: number;
+  existingRelationIds?: number[]; // IDs of objects already related to current object
 }
 
 export default function AddRelationModal({
@@ -42,6 +43,7 @@ export default function AddRelationModal({
   onSubmit,
   currentObjectId,
   currentObjectTypeId,
+  existingRelationIds = [],
 }: AddRelationModalProps) {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
@@ -50,9 +52,13 @@ export default function AddRelationModal({
   const [selectedRelationTypeId, setSelectedRelationTypeId] = useState<number | null>(null);
   const [selectedObject, setSelectedObject] = useState<ObjectSearchResult | null>(null);
   const [note, setNote] = useState('');
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Object search state
+  const [availableObjects, setAvailableObjects] = useState<ObjectSearchResult[]>([]);
+  const [isLoadingObjects, setIsLoadingObjects] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Load relation types filtered by current object type
   useEffect(() => {
@@ -94,6 +100,69 @@ export default function AddRelationModal({
     return childTypeId ? [childTypeId] : undefined;
   }, [selectedRelationType]);
 
+  // Load available objects when relation type changes
+  const loadAvailableObjects = useCallback(async (query: string = '') => {
+    if (!allowedTargetObjectTypeIds || allowedTargetObjectTypeIds.length === 0) {
+      setAvailableObjects([]);
+      return;
+    }
+
+    try {
+      setIsLoadingObjects(true);
+      const response = await objectRelationApi.searchObjects({
+        query: query.trim() || undefined,
+        object_type_ids: allowedTargetObjectTypeIds,
+        page: 1,
+        per_page: 50,
+      });
+
+      if (response.success && response.data) {
+        // Filter out objects that already have a relation with the current object
+        const filteredObjects = response.data.filter(
+          obj => !existingRelationIds.includes(obj.id)
+        );
+        setAvailableObjects(filteredObjects);
+      } else {
+        setAvailableObjects([]);
+      }
+    } catch (err) {
+      console.error('Failed to load objects:', err);
+      setAvailableObjects([]);
+    } finally {
+      setIsLoadingObjects(false);
+    }
+  }, [allowedTargetObjectTypeIds, existingRelationIds]);
+
+  // Load objects when relation type is selected
+  useEffect(() => {
+    if (selectedRelationTypeId && allowedTargetObjectTypeIds) {
+      loadAvailableObjects('');
+    } else {
+      setAvailableObjects([]);
+      setSearchQuery('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRelationTypeId, allowedTargetObjectTypeIds]);
+
+  // Debounce search query
+  useEffect(() => {
+    if (!selectedRelationTypeId || !allowedTargetObjectTypeIds) return;
+
+    if (searchQuery === '') {
+      // If search is cleared, reload immediately
+      loadAvailableObjects('');
+      return;
+    }
+
+    // Debounce search input
+    const timeoutId = setTimeout(() => {
+      loadAvailableObjects(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
   // Handle submit
   const handleSubmit = async () => {
     if (!selectedRelationTypeId) {
@@ -129,14 +198,15 @@ export default function AddRelationModal({
     setSelectedObject(null);
     setNote('');
     setError(null);
+    setSearchQuery('');
+    setAvailableObjects([]);
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
@@ -181,34 +251,67 @@ export default function AddRelationModal({
               )}
             </div>
 
-            {/* Target Object Select */}
+            {/* Target Object Searchable Select */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('relations.targetObject')} <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-2">
-                <div className="flex-1">
+              {!selectedRelationTypeId ? (
+                <div>
                   <input
                     type="text"
-                    readOnly
-                    value={selectedObject ? selectedObject.display_name : ''}
-                    placeholder={t('relations.selectTargetObject')}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    disabled
+                    placeholder={t('relations.selectRelationTypeFirst')}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                   />
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {t('relations.selectRelationTypeFirst')}
+                  </p>
                 </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => setIsSearchModalOpen(true)}
-                  disabled={!selectedRelationTypeId}
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  {t('common.search')}
-                </Button>
-              </div>
-              {!selectedRelationTypeId && (
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {t('relations.selectRelationTypeFirst')}
-                </p>
+              ) : (
+                <div className="space-y-2">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={t('relations.searchPlaceholder')}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-gray-100"
+                    />
+                  </div>
+                  {/* Objects Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedObject?.id || ''}
+                      onChange={(e) => {
+                        const objectId = Number(e.target.value);
+                        const object = availableObjects.find(obj => obj.id === objectId);
+                        setSelectedObject(object || null);
+                      }}
+                      disabled={isLoadingObjects}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                    >
+                      <option value="">{isLoadingObjects ? t('common.loading') : t('common.select')}</option>
+                      {availableObjects.map((obj) => (
+                        <option key={obj.id} value={obj.id}>
+                          {obj.display_name}
+                        </option>
+                      ))}
+                    </select>
+                    {isLoadingObjects && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <LoadingSpinner size="sm" />
+                      </div>
+                    )}
+                  </div>
+                  {availableObjects.length === 0 && !isLoadingObjects && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {searchQuery ? t('common.noResultsFound') : t('relations.noObjectsAvailable')}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -241,16 +344,6 @@ export default function AddRelationModal({
             </Button>
           </div>
         </div>
-      </div>
-
-      {/* Advanced Search Modal */}
-      <AdvancedObjectSearchModal
-        isOpen={isSearchModalOpen}
-        onClose={() => setIsSearchModalOpen(false)}
-        onSelect={setSelectedObject}
-        allowedObjectTypeIds={allowedTargetObjectTypeIds}
-        title={t('relations.selectTargetObject')}
-      />
-    </>
+    </div>
   );
 }

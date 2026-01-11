@@ -20,6 +20,9 @@ import NotesTab from '@/components/notes/NotesTab';
 import AuditsTab from '@/components/audits/AuditsTab';
 import ObjectRelationsTable from '@/components/relations/ObjectRelationsTable';
 import AddRelationModal from '@/components/relations/AddRelationModal';
+import QuickActionButton from '@/components/relations/QuickActionButton';
+import CreateRelatedEntityModal from '@/components/relations/CreateRelatedEntityModal';
+import type { QuickActionType } from '@/components/relations/QuickActionButton';
 import { personApi } from '@/lib/api/persons';
 import { lookupApi } from '@/lib/api/lookups';
 import { objectRelationApi } from '@/lib/api/objectRelations';
@@ -57,6 +60,12 @@ export default function PersonsPage() {
   const [relationsError, setRelationsError] = useState<string | null>(null);
   const [isAddRelationModalOpen, setIsAddRelationModalOpen] = useState(false);
   const [filterActive, setFilterActive] = useState<boolean | ''>('');
+
+  // Quick actions state
+  const [isCreateEntityModalOpen, setIsCreateEntityModalOpen] = useState(false);
+  const [quickActionType, setQuickActionType] = useState<QuickActionType | null>(null);
+  const [quickActionRelationTypeId, setQuickActionRelationTypeId] = useState<number | null>(null);
+  const [quickActionTargetObjectTypeId, setQuickActionTargetObjectTypeId] = useState<number | null>(null);
 
   // Load lookup data
   useEffect(() => {
@@ -252,12 +261,33 @@ export default function PersonsPage() {
     }
   };
 
+  // Quick action handler
+  const handleQuickAction = (
+    actionType: QuickActionType,
+    relationTypeId: number,
+    targetObjectTypeId: number
+  ) => {
+    setQuickActionType(actionType);
+    setQuickActionRelationTypeId(relationTypeId);
+    setQuickActionTargetObjectTypeId(targetObjectTypeId);
+    setIsCreateEntityModalOpen(true);
+  };
+
+  // Handle entity creation success
+  const handleEntityCreated = async (newEntityId: number) => {
+    // Reload relations to show the new relation
+    if (selectedPerson) {
+      await loadRelations(selectedPerson.id);
+    }
+    setIsCreateEntityModalOpen(false);
+  };
+
   // Find the object relation type ID for 'obj_rel_type_person_doc'
   const personDocRelationType = objectRelationTypes.find(
     (rt) => rt.code === 'obj_rel_type_person_doc'
   );
   const personDocRelationTypeId = personDocRelationType?.id;
-  
+
   // Log warning if relation type is not found (after lookups have loaded)
   useEffect(() => {
     if (!loadingLookups && objectRelationTypes.length > 0 && !personDocRelationType) {
@@ -455,6 +485,22 @@ export default function PersonsPage() {
           onSubmit={handleCreateRelation}
           currentObjectId={selectedPerson.id}
           currentObjectTypeId={selectedPerson.object_type_id}
+          existingRelationIds={relations.map(r =>
+            r.object_from_id === selectedPerson.id ? r.object_to_id : r.object_from_id
+          )}
+        />
+      )}
+
+      {/* Create Related Entity Modal */}
+      {selectedPerson && quickActionType && quickActionRelationTypeId && quickActionTargetObjectTypeId && (
+        <CreateRelatedEntityModal
+          isOpen={isCreateEntityModalOpen}
+          onClose={() => setIsCreateEntityModalOpen(false)}
+          actionType={quickActionType}
+          currentObjectId={selectedPerson.id}
+          relationTypeId={quickActionRelationTypeId}
+          targetObjectTypeId={quickActionTargetObjectTypeId}
+          onSuccess={handleEntityCreated}
         />
       )}
     </div>

@@ -47,7 +47,7 @@ export const ENDPOINTS = {
   RELATIONS_BULK_UPDATE_TYPE: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/relations/bulk/update-type',
 
   // Object search
-  OBJECTS_SEARCH: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/objects/search',
+  OBJECTS_SEARCH: 'https://n8n.wolfitlab.duckdns.org/webhook/b0fc82f1-0fd7-4068-83a2-6051579b85c1/api/v1/objects/search',
   
   // Object Audits
   OBJECT_AUDITS: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-audits',

@@ -380,6 +380,7 @@ export default function DocumentsPage() {
           currentObjectId={selectedDocument.id}
           onUpdate={handleUpdateRelation}
           onDelete={handleDeleteRelation}
+          onAddNew={() => setIsAddRelationModalOpen(true)}
           isLoading={isLoadingRelations}
           error={relationsError}
           filterActive={filterActive}
@@ -500,6 +501,9 @@ export default function DocumentsPage() {
           onSubmit={handleCreateRelation}
           currentObjectId={selectedDocument.id}
           currentObjectTypeId={selectedDocument.object_type_id}
+          existingRelationIds={relations.map(r =>
+            r.object_from_id === selectedDocument.id ? r.object_to_id : r.object_from_id
+          )}
         />
       )}
 
