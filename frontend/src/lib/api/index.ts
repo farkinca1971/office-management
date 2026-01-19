@@ -21,4 +21,5 @@ export * from './audits';
 export * from './notes';
 export * from './documents';
 export * from './files';
+export * from './preferences';
 

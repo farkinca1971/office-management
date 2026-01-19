@@ -64,8 +64,19 @@ Uses **Zustand** with persist middleware:
 - **languageStore.ts**: Current language preference (persisted to localStorage)
 - **lookupStore.ts**: Cache for reference data (populated from /lookups endpoints)
 - **themeStore.ts**: Theme preference (light/dark mode)
+- **preferencesStore.ts**: User preferences system (UI settings, API config, default values)
 
 All stores use persist middleware, so state survives page reloads.
+
+#### User Preferences System (NEW)
+A comprehensive, extensible system for managing user settings:
+- **Multi-language support** via translations table
+- **Type-safe preferences** with validation rules
+- **Hybrid storage** (structured tables + JSON for dynamic settings)
+- **Complete audit trail** for all preference changes
+- **Settings UI** at `/settings` route
+
+See [Docs/PREFERENCES_SYSTEM_README.md](Docs/PREFERENCES_SYSTEM_README.md) for complete documentation.
 
 ### Master Data Structure (`src/app/master-data/`)
 Reference data (lookups) are organized by type:
@@ -91,6 +102,7 @@ Uses Next.js 14 App Router. Main routes:
 - `/invoices` - Invoice management
 - `/transactions` - Transaction management
 - `/master-data/*` - Reference data management UI
+- `/settings` - User preferences management (NEW)
 
 ### Layout & Components
 - **MainLayout** (`src/components/layout/MainLayout.tsx`): Root wrapper with Header and Sidebar

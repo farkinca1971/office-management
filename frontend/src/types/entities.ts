@@ -489,3 +489,137 @@ export interface DocumentFileRelation extends ObjectRelation {
   file_id: number; // Alias for object_to_id
 }
 
+// ============================================
+// USER PREFERENCES SYSTEM
+// ============================================
+
+// Preference Category
+export interface PreferenceCategory extends BaseEntity {
+  id: number;
+  code: string;
+  description_code: string;
+  description?: string; // Translated text from description_code
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Preference Definition
+export interface PreferenceDefinition extends BaseEntity {
+  id: number;
+  category_id: number;
+  key_name: string;
+  display_name_code: string;
+  description_code: string;
+  display_name?: string; // Translated text from display_name_code
+  description?: string; // Translated text from description_code
+  data_type: 'string' | 'number' | 'boolean' | 'json' | 'date' | 'datetime';
+  default_value?: string;
+  validation_rules?: Record<string, any>;
+  is_user_editable: boolean;
+  scope: 'user' | 'system' | 'both';
+  group_name?: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  category?: PreferenceCategory;
+}
+
+// User Preference
+export interface UserPreference extends BaseEntity {
+  id: number;
+  user_id: number;
+  preference_definition_id: number;
+  value: string;
+  value_json?: Record<string, any>;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: number;
+  // Joined fields
+  definition?: PreferenceDefinition;
+}
+
+// User Preferences Extended (JSON blob)
+export interface UserPreferencesExtended extends BaseEntity {
+  id: number;
+  user_id: number;
+  namespace: string;
+  preferences: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+// Preference Audit
+export interface PreferenceAudit extends BaseEntity {
+  id: number;
+  user_id: number;
+  preference_definition_id?: number;
+  old_value?: string;
+  new_value?: string;
+  changed_by: number;
+  changed_at: string;
+  ip_address?: string;
+  user_agent?: string;
+  // Joined fields
+  definition?: PreferenceDefinition;
+  changed_by_username?: string;
+}
+
+// Request types
+export interface CreateUserPreferenceRequest {
+  preference_definition_id: number;
+  value: string;
+  value_json?: Record<string, any>;
+}
+
+export interface UpdateUserPreferenceRequest {
+  value: string;
+  value_json?: Record<string, any>;
+}
+
+export interface BulkUpdatePreferencesRequest {
+  preferences: Array<{
+    key_name: string;
+    value: any;
+  }>;
+}
+
+export interface CreatePreferenceCategoryRequest {
+  code: string;
+  description_code: string;
+}
+
+export interface UpdatePreferenceCategoryRequest {
+  description_code?: string;
+  is_active?: boolean;
+}
+
+export interface CreatePreferenceDefinitionRequest {
+  category_id: number;
+  key_name: string;
+  display_name_code: string;
+  description_code: string;
+  data_type: 'string' | 'number' | 'boolean' | 'json' | 'date' | 'datetime';
+  default_value?: string;
+  validation_rules?: Record<string, any>;
+  is_user_editable?: boolean;
+  scope?: 'user' | 'system' | 'both';
+  group_name?: string;
+  sort_order?: number;
+}
+
+export interface UpdatePreferenceDefinitionRequest {
+  display_name_code?: string;
+  description_code?: string;
+  default_value?: string;
+  validation_rules?: Record<string, any>;
+  is_user_editable?: boolean;
+  scope?: 'user' | 'system' | 'both';
+  group_name?: string;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
