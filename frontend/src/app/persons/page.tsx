@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { ViewToggle } from '@/components/ui/ViewToggle';
 import { Plus, FileText, Phone, MapPin, Briefcase, CreditCard, Network, StickyNote, Files } from 'lucide-react';
@@ -17,17 +18,24 @@ import AddressesTab from '@/components/addresses/AddressesTab';
 import IdentificationsTab from '@/components/identifications/IdentificationsTab';
 import NotesTab from '@/components/notes/NotesTab';
 import AuditsTab from '@/components/audits/AuditsTab';
+import ObjectRelationsTable from '@/components/relations/ObjectRelationsTable';
+import AddRelationModal from '@/components/relations/AddRelationModal';
+import QuickActionButton from '@/components/relations/QuickActionButton';
+import CreateRelatedEntityModal from '@/components/relations/CreateRelatedEntityModal';
+import type { QuickActionType } from '@/components/relations/QuickActionButton';
 import { personApi } from '@/lib/api/persons';
 import { lookupApi } from '@/lib/api/lookups';
+import { objectRelationApi } from '@/lib/api/objectRelations';
 import { useTranslation } from '@/lib/i18n';
 import { useLanguageStore } from '@/store/languageStore';
 import { useViewMode } from '@/hooks/useViewMode';
-import type { Person } from '@/types/entities';
+import type { Person, ObjectRelation, CreateObjectRelationRequest, UpdateObjectRelationRequest } from '@/types/entities';
 import type { LookupItem } from '@/types/common';
 
 export default function PersonsPage() {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
+  const searchParams = useSearchParams();
 
   // View mode management
   const { viewMode, toggleViewMode } = useViewMode('persons-view-mode');
@@ -43,17 +51,32 @@ export default function PersonsPage() {
   const [sexes, setSexes] = useState<LookupItem[]>([]);
   const [statuses, setStatuses] = useState<LookupItem[]>([]);
   const [objectRelationTypes, setObjectRelationTypes] = useState<LookupItem[]>([]);
+  const [objectTypes, setObjectTypes] = useState<LookupItem[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
+
+  // Relations state
+  const [relations, setRelations] = useState<ObjectRelation[]>([]);
+  const [isLoadingRelations, setIsLoadingRelations] = useState(false);
+  const [relationsError, setRelationsError] = useState<string | null>(null);
+  const [isAddRelationModalOpen, setIsAddRelationModalOpen] = useState(false);
+  const [filterActive, setFilterActive] = useState<boolean | ''>('');
+
+  // Quick actions state
+  const [isCreateEntityModalOpen, setIsCreateEntityModalOpen] = useState(false);
+  const [quickActionType, setQuickActionType] = useState<QuickActionType | null>(null);
+  const [quickActionRelationTypeId, setQuickActionRelationTypeId] = useState<number | null>(null);
+  const [quickActionTargetObjectTypeId, setQuickActionTargetObjectTypeId] = useState<number | null>(null);
 
   // Load lookup data
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        let [salutationsRes, sexesRes, statusesRes, relationTypesRes] = await Promise.all([
+        let [salutationsRes, sexesRes, statusesRes, relationTypesRes, objectTypesRes] = await Promise.all([
           lookupApi.getSalutations(language),
           lookupApi.getSexes(language),
           lookupApi.getObjectStatuses(undefined, language),
           lookupApi.getObjectRelationTypes(language),
+          lookupApi.getObjectTypes(language),
         ]);
 
         // IMPORTANT: n8n sometimes wraps the response in an array
@@ -70,17 +93,22 @@ export default function PersonsPage() {
         if (Array.isArray(relationTypesRes) && relationTypesRes.length > 0) {
           relationTypesRes = relationTypesRes[0];
         }
+        if (Array.isArray(objectTypesRes) && objectTypesRes.length > 0) {
+          objectTypesRes = objectTypesRes[0];
+        }
 
         // Response structure: { success: true, data: LookupItem[], pagination?: {...} }
         const salutationsList = Array.isArray(salutationsRes?.data) ? salutationsRes.data : [];
         const sexesList = Array.isArray(sexesRes?.data) ? sexesRes.data : [];
         const statusesList = Array.isArray(statusesRes?.data) ? statusesRes.data : [];
         const relationTypesList = Array.isArray(relationTypesRes?.data) ? relationTypesRes.data : [];
+        const objectTypesList = Array.isArray(objectTypesRes?.data) ? objectTypesRes.data : [];
 
         setSalutations(salutationsList);
         setSexes(sexesList);
         setStatuses(statusesList);
         setObjectRelationTypes(relationTypesList);
+        setObjectTypes(objectTypesList);
       } catch (err) {
         console.error('Failed to load lookup data:', err);
       } finally {
@@ -120,8 +148,55 @@ export default function PersonsPage() {
     loadPersons();
   }, [t]);
 
+  // Auto-select person from URL query param (e.g., /persons?id=123)
+  useEffect(() => {
+    const idParam = searchParams.get('id');
+    if (idParam && persons.length > 0 && !isLoadingPersons) {
+      const personId = parseInt(idParam, 10);
+      if (!isNaN(personId)) {
+        const person = persons.find(p => p.id === personId);
+        if (person && (!selectedPerson || selectedPerson.id !== personId)) {
+          setSelectedPerson(person);
+        }
+      }
+    }
+  }, [searchParams, persons, isLoadingPersons, selectedPerson]);
+
+  // Load relations for selected object
+  const loadRelations = async (objectId: number) => {
+    setIsLoadingRelations(true);
+    setRelationsError(null);
+
+    try {
+      let response = await objectRelationApi.getByObjectId(objectId);
+
+      // Handle n8n array wrapping
+      if (Array.isArray(response) && response.length > 0) {
+        response = response[0];
+      }
+
+      const relationsData = Array.isArray(response?.data) ? response.data : [];
+      setRelations(relationsData);
+    } catch (err: any) {
+      console.error('Failed to load relations:', err);
+      setRelationsError(err?.error?.message || err?.message || 'Failed to load relations');
+    } finally {
+      setIsLoadingRelations(false);
+    }
+  };
+
   const handlePersonSelect = (person: Person) => {
     setSelectedPerson(person);
+  };
+
+  // Handle tab change - reload data when switching to specific tabs
+  const handleTabChange = (tabId: string) => {
+    if (!selectedPerson) return;
+
+    // Reload relations when Relations tab is clicked
+    if (tabId === 'relations') {
+      loadRelations(selectedPerson.id);
+    }
   };
 
   const handleEdit = (person: Person) => {
@@ -134,12 +209,85 @@ export default function PersonsPage() {
     console.log('Delete person:', person);
   };
 
+  // Relations CRUD handlers
+  const handleCreateRelation = async (data: {
+    object_relation_type_id: number;
+    object_to_id: number;
+    note?: string;
+  }) => {
+    if (!selectedPerson) return;
+
+    try {
+      // Add object_from_id from selected person
+      const createData: CreateObjectRelationRequest = {
+        object_from_id: selectedPerson.id,
+        object_relation_type_id: data.object_relation_type_id,
+        object_to_id: data.object_to_id,
+        note: data.note,
+      };
+      await objectRelationApi.create(createData);
+      await loadRelations(selectedPerson.id);
+      setIsAddRelationModalOpen(false);
+    } catch (err: any) {
+      console.error('Failed to create relation:', err);
+      throw err;
+    }
+  };
+
+  const handleUpdateRelation = async (id: number, data: { note_old?: string; note_new?: string }) => {
+    if (!selectedPerson) return;
+
+    try {
+      // Use updateNote API method for note updates
+      if (data.note_old !== undefined && data.note_new !== undefined) {
+        await objectRelationApi.updateNote(id, data.note_old, data.note_new);
+      }
+      await loadRelations(selectedPerson.id);
+    } catch (err: any) {
+      console.error('Failed to update relation:', err);
+      throw err;
+    }
+  };
+
+  const handleDeleteRelation = async (id: number) => {
+    if (!selectedPerson) return;
+
+    try {
+      await objectRelationApi.delete(id);
+      await loadRelations(selectedPerson.id);
+    } catch (err: any) {
+      console.error('Failed to delete relation:', err);
+      throw err;
+    }
+  };
+
+  // Quick action handler
+  const handleQuickAction = (
+    actionType: QuickActionType,
+    relationTypeId: number,
+    targetObjectTypeId: number
+  ) => {
+    setQuickActionType(actionType);
+    setQuickActionRelationTypeId(relationTypeId);
+    setQuickActionTargetObjectTypeId(targetObjectTypeId);
+    setIsCreateEntityModalOpen(true);
+  };
+
+  // Handle entity creation success
+  const handleEntityCreated = async (newEntityId: number) => {
+    // Reload relations to show the new relation
+    if (selectedPerson) {
+      await loadRelations(selectedPerson.id);
+    }
+    setIsCreateEntityModalOpen(false);
+  };
+
   // Find the object relation type ID for 'obj_rel_type_person_doc'
   const personDocRelationType = objectRelationTypes.find(
     (rt) => rt.code === 'obj_rel_type_person_doc'
   );
   const personDocRelationTypeId = personDocRelationType?.id;
-  
+
   // Log warning if relation type is not found (after lookups have loaded)
   useEffect(() => {
     if (!loadingLookups && objectRelationTypes.length > 0 && !personDocRelationType) {
@@ -220,13 +368,27 @@ export default function PersonsPage() {
       disabled: !selectedPerson,
     },
     {
-      id: 'relationships',
-      label: t('persons.relationships'),
+      id: 'relations',
+      label: t('persons.relations') || 'Relations',
       icon: <Network className="h-5 w-5" />,
-      content: (
+      content: selectedPerson ? (
+        <ObjectRelationsTable
+          relations={relations}
+          relationTypes={objectRelationTypes}
+          objectTypes={objectTypes}
+          currentObjectId={selectedPerson.id}
+          onUpdate={handleUpdateRelation}
+          onDelete={handleDeleteRelation}
+          onAddNew={() => setIsAddRelationModalOpen(true)}
+          isLoading={isLoadingRelations}
+          error={relationsError}
+          filterActive={filterActive}
+          onFilterActiveChange={setFilterActive}
+        />
+      ) : (
         <div className="p-8 text-center text-gray-500 dark:text-gray-400">
           <Network className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>{t('persons.relationships')} - {t('persons.comingSoon')}</p>
+          <p>{t('persons.selectPersonToViewDetails')}</p>
         </div>
       ),
       disabled: !selectedPerson,
@@ -311,9 +473,36 @@ export default function PersonsPage() {
             </p>
           </div>
         ) : (
-          <Tabs tabs={tabs} defaultTab="documents" />
+          <Tabs tabs={tabs} defaultTab="documents" onChange={handleTabChange} />
         )}
       </div>
+
+      {/* Add Relation Modal */}
+      {selectedPerson && selectedPerson.object_type_id && (
+        <AddRelationModal
+          isOpen={isAddRelationModalOpen}
+          onClose={() => setIsAddRelationModalOpen(false)}
+          onSubmit={handleCreateRelation}
+          currentObjectId={selectedPerson.id}
+          currentObjectTypeId={selectedPerson.object_type_id}
+          existingRelationIds={relations.map(r =>
+            r.object_from_id === selectedPerson.id ? r.object_to_id : r.object_from_id
+          )}
+        />
+      )}
+
+      {/* Create Related Entity Modal */}
+      {selectedPerson && quickActionType && quickActionRelationTypeId && quickActionTargetObjectTypeId && (
+        <CreateRelatedEntityModal
+          isOpen={isCreateEntityModalOpen}
+          onClose={() => setIsCreateEntityModalOpen(false)}
+          actionType={quickActionType}
+          currentObjectId={selectedPerson.id}
+          relationTypeId={quickActionRelationTypeId}
+          targetObjectTypeId={quickActionTargetObjectTypeId}
+          onSuccess={handleEntityCreated}
+        />
+      )}
     </div>
   );
 }

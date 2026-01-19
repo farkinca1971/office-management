@@ -56,7 +56,7 @@ export default function FileDocumentsTab({ fileId, onDataChange }: FileDocuments
         lookupApi.getDocumentTypes(language),
       ]);
 
-      const docsData = docsResponse?.data;
+      const docsData = (docsResponse.success && docsResponse.data) ? docsResponse.data : [];
       const typesData = typesResponse?.data;
 
       let docsArray: Document[] = [];
@@ -201,7 +201,7 @@ export default function FileDocumentsTab({ fileId, onDataChange }: FileDocuments
 
       {/* Info about parent count */}
       <div className="text-sm text-gray-500 dark:text-gray-400">
-        {t('files.parentDocumentCount', { count: documents.length })}
+        {t('files.parentDocumentCount')}: {documents.length}
       </div>
 
       {/* Link to Document Button */}

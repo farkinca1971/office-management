@@ -62,7 +62,7 @@ export default function FileVersionsTab({ fileId, onDataChange }: FileVersionsTa
       }
       
       // Extract data - handle both direct response and wrapped response
-      const versionsData = actualResponse?.data;
+      const versionsData = (actualResponse.success && actualResponse.data) ? actualResponse.data : [];
       
       let versionsArray: FileVersion[] = [];
       if (Array.isArray(versionsData)) {

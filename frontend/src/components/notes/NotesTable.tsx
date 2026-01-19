@@ -32,6 +32,7 @@ export interface NotesTableProps {
   error?: string | null;
   noteTypes?: LookupItem[];
   users?: User[];
+  onTogglePin?: (noteId: number, isPinned: boolean) => Promise<void>;
   onUpdate?: (noteId: number, data: NoteUpdatePayload) => Promise<void>;
   onDelete?: (noteId: number) => void;
   filterActive: boolean | '';

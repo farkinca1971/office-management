@@ -2835,12 +2835,448 @@ SELECT * FROM object_relations WHERE id = {{ $json.params.id }};
 **MySQL Query**:
 ```sql
 UPDATE object_relations
-SET 
+SET
     is_active = 0,
     updated_at = NOW()
 WHERE id = {{ $json.params.id }};
 
 SELECT 1 as success;
+```
+
+---
+
+### 60. Update Object Relation Note (POST Method)
+
+**Endpoint**: `POST /api/v1/object-relations/{id}`
+
+**Description**: Update the note field of an existing object relation. Uses POST method as per project convention, following the old/new value pattern.
+
+**Request Body**:
+```json
+{
+  "note_old": "Previous note text",
+  "note_new": "Updated note text"
+}
+```
+
+**MySQL Query**:
+```sql
+-- Verify old value matches (optional security check)
+SELECT id FROM object_relations
+WHERE id = {{ $json.params.id }}
+  AND note = {{ $json.body.note_old }};
+
+-- Update note field
+UPDATE object_relations
+SET
+    note = {{ $json.body.note_new }},
+    updated_at = NOW()
+WHERE id = {{ $json.params.id }}
+  AND note = {{ $json.body.note_old }};
+
+-- Return updated record
+SELECT * FROM object_relations WHERE id = {{ $json.params.id }};
+```
+
+---
+
+### 61. Delete Object Relation (POST Method)
+
+**Endpoint**: `POST /api/v1/object-relations/{id}/delete`
+
+**Description**: Soft delete an object relation. Uses POST method as per project convention.
+
+**Request Body**:
+```json
+{
+  "id": 123
+}
+```
+
+**MySQL Query**:
+```sql
+UPDATE object_relations
+SET
+    is_active = 0,
+    updated_at = NOW()
+WHERE id = {{ $json.body.id }};
+
+SELECT 1 as success;
+```
+
+---
+
+### 62. Universal Object Search
+
+**Endpoint**: `POST /api/v1/objects/search`
+
+**Description**: Search across all object types with filtering and pagination. Returns objects with computed display names for UI presentation.
+
+**Supported Entity Types**: persons, companies, users, invoices, transactions, documents, files
+
+**Request Body**:
+```json
+{
+  "query": "search text",
+  "object_type_ids": [1, 2],
+  "object_status_ids": [1],
+  "page": 1,
+  "per_page": 20
+}
+```
+
+**MySQL Query** (UPDATED 2026-01-11 - Now searches ALL entity types):
+```sql
+-- Count total matching objects
+SELECT COUNT(*) as total
+FROM objects o
+WHERE
+    o.is_active = 1
+    AND ({{ $json.body.object_type_ids }} IS NULL OR o.object_type_id IN ({{ $json.body.object_type_ids }}))
+    AND ({{ $json.body.object_status_ids }} IS NULL OR o.object_status_id IN ({{ $json.body.object_status_ids }}))
+    AND (
+        {{ $json.body.query }} IS NULL OR
+        o.id IN (
+            SELECT p.id FROM persons p
+            WHERE CONCAT_WS(' ', p.first_name, p.last_name, p.email) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT c.id FROM companies c
+            WHERE c.company_name LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT u.id FROM users u
+            WHERE CONCAT_WS(' ', u.username, u.email, u.first_name, u.last_name) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT i.id FROM invoices i
+            WHERE CONCAT_WS(' ', i.invoice_number, i.description) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT t.id FROM transactions t
+            WHERE CONCAT_WS(' ', t.transaction_number, t.description) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT d.id FROM documents d
+            WHERE CONCAT_WS(' ', d.title, d.description, d.document_number) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT f.id FROM files f
+            WHERE CONCAT_WS(' ', f.file_name, f.original_name, f.description) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+        )
+    );
+
+-- Get paginated results with display names
+SELECT
+    o.id,
+    o.object_type_id,
+    o.object_status_id,
+    ot.text as object_type_name,
+    CASE o.object_type_id
+        WHEN 1 THEN (
+            SELECT CONCAT_WS(' ', p.first_name, p.last_name)
+            FROM persons p
+            WHERE p.id = o.id
+        )
+        WHEN 2 THEN (
+            SELECT c.company_name
+            FROM companies c
+            WHERE c.id = o.id
+        )
+        WHEN 3 THEN (
+            SELECT u.username
+            FROM users u
+            WHERE u.id = o.id
+        )
+        WHEN 4 THEN (
+            SELECT CONCAT('Invoice #', i.invoice_number)
+            FROM invoices i
+            WHERE i.id = o.id
+        )
+        WHEN 5 THEN (
+            SELECT CONCAT('Transaction #', t.transaction_number)
+            FROM transactions t
+            WHERE t.id = o.id
+        )
+        WHEN (SELECT id FROM object_types WHERE code = 'document' LIMIT 1) THEN (
+            SELECT d.title
+            FROM documents d
+            WHERE d.id = o.id
+        )
+        WHEN (SELECT id FROM object_types WHERE code = 'file' LIMIT 1) THEN (
+            SELECT f.file_name
+            FROM files f
+            WHERE f.id = o.id
+        )
+        ELSE CONCAT('Object #', o.id)
+    END as display_name,
+    o.created_at
+FROM objects o
+LEFT JOIN object_types ot_lookup ON o.object_type_id = ot_lookup.id
+LEFT JOIN translations ot ON ot.code = ot_lookup.code AND ot.language_id = COALESCE({{ $headers['x-language-id'] }}, {{ $json.body.language_id }}, 1)
+WHERE
+    o.is_active = 1
+    AND ({{ $json.body.object_type_ids }} IS NULL OR o.object_type_id IN ({{ $json.body.object_type_ids }}))
+    AND ({{ $json.body.object_status_ids }} IS NULL OR o.object_status_id IN ({{ $json.body.object_status_ids }}))
+    AND (
+        {{ $json.body.query }} IS NULL OR
+        o.id IN (
+            SELECT p.id FROM persons p
+            WHERE CONCAT_WS(' ', p.first_name, p.last_name, p.email) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT c.id FROM companies c
+            WHERE c.company_name LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT u.id FROM users u
+            WHERE CONCAT_WS(' ', u.username, u.email, u.first_name, u.last_name) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT i.id FROM invoices i
+            WHERE CONCAT_WS(' ', i.invoice_number, i.description) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT t.id FROM transactions t
+            WHERE CONCAT_WS(' ', t.transaction_number, t.description) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT d.id FROM documents d
+            WHERE CONCAT_WS(' ', d.title, d.description, d.document_number) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+            UNION
+            SELECT f.id FROM files f
+            WHERE CONCAT_WS(' ', f.file_name, f.original_name, f.description) LIKE CONCAT('%', {{ $json.body.query }}, '%')
+        )
+    )
+ORDER BY o.created_at DESC
+LIMIT {{ $json.body.per_page }}
+OFFSET {{ ($json.body.page - 1) * $json.body.per_page }};
+```
+
+**IMPORTANT NOTES**:
+1. **Extendable Pattern**: To add new entity types, add UNION clauses to the search subquery and WHEN clauses to the display_name CASE statement
+2. **Only Active Objects**: Filters out soft-deleted objects with `o.is_active = 1`
+3. **Language Support**: Uses `COALESCE({{ $headers['x-language-id'] }}, {{ $json.body.language_id }}, 1)` to get language from header or body
+4. **Object Type IDs**: Document and File types use dynamic lookup - adjust WHEN clause numbers if you know the exact IDs
+5. **Column Names**: Verify these column names exist in your database:
+   - invoices: invoice_number, description
+   - transactions: transaction_number, description
+   - documents: title, description, document_number
+   - files: file_name, original_name, description
+6. **Performance**: Consider adding indexes on searchable text fields for better performance
+
+**See Also**: [IMPROVED_OBJECTS_SEARCH_QUERY.md](./IMPROVED_OBJECTS_SEARCH_QUERY.md) for detailed implementation guide
+
+---
+
+### 63. Bulk Delete Relations
+
+**Endpoint**: `POST /api/v1/relations/bulk/delete`
+
+**Description**: Delete multiple object relations in a single operation.
+
+**Request Body**:
+```json
+{
+  "relation_ids": [1, 2, 3, 4, 5]
+}
+```
+
+**MySQL Query**:
+```sql
+-- Soft delete multiple relations
+UPDATE object_relations
+SET
+    is_active = 0,
+    updated_at = NOW()
+WHERE id IN ({{ $json.body.relation_ids }});
+
+-- Return count of deleted relations
+SELECT ROW_COUNT() as deleted_count, 1 as success;
+```
+
+---
+
+### 64. Bulk Reassign Relations
+
+**Endpoint**: `POST /api/v1/relations/bulk/reassign`
+
+**Description**: Reassign the target object (object_to_id) for multiple relations from one object to another.
+
+**Request Body**:
+```json
+{
+  "relation_ids": [1, 2, 3],
+  "old_object_to_id": 100,
+  "new_object_to_id": 200
+}
+```
+
+**MySQL Query**:
+```sql
+-- Update target object for multiple relations
+UPDATE object_relations
+SET
+    object_to_id = {{ $json.body.new_object_to_id }},
+    updated_at = NOW()
+WHERE id IN ({{ $json.body.relation_ids }})
+  AND object_to_id = {{ $json.body.old_object_to_id }};
+
+-- Return count of updated relations
+SELECT ROW_COUNT() as updated_count, 1 as success;
+```
+
+---
+
+### 65. Bulk Update Relation Type
+
+**Endpoint**: `POST /api/v1/relations/bulk/update-type`
+
+**Description**: Update the relation type for multiple relations at once.
+
+**Request Body**:
+```json
+{
+  "relation_ids": [1, 2, 3],
+  "old_relation_type_id": 5,
+  "new_relation_type_id": 8
+}
+```
+
+**MySQL Query**:
+```sql
+-- Update relation type for multiple relations
+UPDATE object_relations
+SET
+    object_relation_type_id = {{ $json.body.new_relation_type_id }},
+    updated_at = NOW()
+WHERE id IN ({{ $json.body.relation_ids }})
+  AND object_relation_type_id = {{ $json.body.old_relation_type_id }};
+
+-- Return count of updated relations
+SELECT ROW_COUNT() as updated_count, 1 as success;
+```
+
+---
+
+### 66. Data Quality: Get Orphaned Relations
+
+**Endpoint**: `POST /api/v1/relations/data-quality/orphaned`
+
+**Description**: Find relations pointing to inactive or deleted objects (objects where is_active = false).
+
+**Request Body**:
+```json
+{}
+```
+
+**MySQL Query**:
+```sql
+SELECT
+    r.*,
+    CASE
+        WHEN o_from.is_active = 0 THEN 'from'
+        WHEN o_to.is_active = 0 THEN 'to'
+    END as inactive_object_type
+FROM object_relations r
+LEFT JOIN objects o_from ON r.object_from_id = o_from.id
+LEFT JOIN objects o_to ON r.object_to_id = o_to.id
+LEFT JOIN persons p_from ON o_from.id = p_from.id AND o_from.object_type_id = 1
+LEFT JOIN persons p_to ON o_to.id = p_to.id AND o_to.object_type_id = 1
+LEFT JOIN companies c_from ON o_from.id = c_from.id AND o_from.object_type_id = 2
+LEFT JOIN companies c_to ON o_to.id = c_to.id AND o_to.object_type_id = 2
+WHERE r.is_active = 1
+  AND (
+      (p_from.is_active = 0) OR
+      (p_to.is_active = 0) OR
+      (c_from.is_active = 0) OR
+      (c_to.is_active = 0)
+  )
+ORDER BY r.created_at DESC;
+```
+
+---
+
+### 67. Data Quality: Get Duplicate Relations
+
+**Endpoint**: `POST /api/v1/relations/data-quality/duplicates`
+
+**Description**: Find duplicate relations (same object_from_id, object_to_id, and object_relation_type_id).
+
+**Request Body**:
+```json
+{}
+```
+
+**MySQL Query**:
+```sql
+SELECT
+    object_from_id,
+    object_to_id,
+    object_relation_type_id,
+    GROUP_CONCAT(id) as relation_ids,
+    COUNT(*) as count
+FROM object_relations
+WHERE is_active = 1
+GROUP BY object_from_id, object_to_id, object_relation_type_id
+HAVING COUNT(*) > 1
+ORDER BY count DESC;
+```
+
+---
+
+### 68. Data Quality: Get Invalid Relations
+
+**Endpoint**: `POST /api/v1/relations/data-quality/invalid`
+
+**Description**: Find relations that violate object_relation_types constraints (wrong parent or child object types).
+
+**Request Body**:
+```json
+{}
+```
+
+**MySQL Query**:
+```sql
+SELECT
+    r.*,
+    'Invalid parent or child object type' as reason,
+    ort.parent_object_type_id as expected_parent_object_type_id,
+    ort.child_object_type_id as expected_child_object_type_id,
+    o_from.object_type_id as actual_parent_object_type_id,
+    o_to.object_type_id as actual_child_object_type_id
+FROM object_relations r
+INNER JOIN object_relation_types ort ON r.object_relation_type_id = ort.id
+INNER JOIN objects o_from ON r.object_from_id = o_from.id
+INNER JOIN objects o_to ON r.object_to_id = o_to.id
+WHERE r.is_active = 1
+  AND (
+      o_from.object_type_id != ort.parent_object_type_id OR
+      o_to.object_type_id != ort.child_object_type_id
+  )
+ORDER BY r.created_at DESC;
+```
+
+---
+
+### 69. Data Quality: Get Missing Mirror Relations
+
+**Endpoint**: `POST /api/v1/relations/data-quality/missing-mirrors`
+
+**Description**: Find relations that are missing their mirror/inverse counterpart (when mirrored_type_id is set in object_relation_types).
+
+**Request Body**:
+```json
+{}
+```
+
+**MySQL Query**:
+```sql
+SELECT
+    r.*,
+    ort.mirrored_type_id as expected_relation_type_id,
+    ort_mirror.code as expected_relation_type_code
+FROM object_relations r
+INNER JOIN object_relation_types ort ON r.object_relation_type_id = ort.id
+LEFT JOIN object_relation_types ort_mirror ON ort.mirrored_type_id = ort_mirror.id
+LEFT JOIN object_relations r_mirror ON
+    r_mirror.object_from_id = r.object_to_id AND
+    r_mirror.object_to_id = r.object_from_id AND
+    r_mirror.object_relation_type_id = ort.mirrored_type_id AND
+    r_mirror.is_active = 1
+WHERE r.is_active = 1
+  AND ort.mirrored_type_id IS NOT NULL
+  AND r_mirror.id IS NULL
+ORDER BY r.created_at DESC;
 ```
 
 ---
@@ -3103,6 +3539,135 @@ SELECT
 FROM object_audits oa
 WHERE oa.id = @audit_id;
 ```
+
+---
+
+### 63a. Log File Download (Specialized Audit)
+
+**Endpoint**: `POST /api/v1/object-audits`
+
+**Description**: Specialized endpoint for logging file download actions. Creates an audit record with file download information for tracking and compliance purposes. This uses the same endpoint as Create Object Audit but with a specific payload structure for file downloads.
+
+**Request Body**:
+```json
+{
+  "object_id": 15,
+  "audit_action_id": 0,
+  "action_code": "DOWNLOAD_FILE",
+  "language_id": 1,
+  "new_values": {
+    "action": "FILE_DOWNLOAD",
+    "language_id": 1,
+    "filename": "report_2024.pdf",
+    "file_path": "https://storage.example.com/files/report_2024.pdf",
+    "mime_type": "application/pdf",
+    "file_size": 1048576,
+    "downloaded_at": "2024-01-15T10:30:00Z"
+  },
+  "notes": "File downloaded: report_2024.pdf"
+}
+```
+
+**Request Parameters**:
+- `object_id` (required): The ID of the file object being downloaded
+- `audit_action_id` (optional): Set to 0 when using `action_code` for resolution
+- `action_code` (required): Should be `DOWNLOAD_FILE` for file download actions
+- `language_id` (required): Current user's language ID
+- `new_values` (required): Object containing download details:
+  - `action`: Always `FILE_DOWNLOAD`
+  - `language_id`: Language ID for the download context
+  - `filename`: Name of the file being downloaded
+  - `file_path`: URL or path to the file
+  - `mime_type`: MIME type of the file
+  - `file_size`: Size of the file in bytes
+  - `downloaded_at`: ISO 8601 timestamp of the download
+- `notes` (optional): Human-readable description of the action
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 101,
+    "object_id": 15,
+    "audit_action_id": 25,
+    "created_by": null,
+    "created_at": "2024-01-15T10:30:00Z",
+    "old_values": null,
+    "new_values": {
+      "action": "FILE_DOWNLOAD",
+      "language_id": 1,
+      "filename": "report_2024.pdf",
+      "file_path": "https://storage.example.com/files/report_2024.pdf",
+      "mime_type": "application/pdf",
+      "file_size": 1048576,
+      "downloaded_at": "2024-01-15T10:30:00Z"
+    },
+    "ip_address": null,
+    "user_agent": null,
+    "notes": "File downloaded: report_2024.pdf"
+  }
+}
+```
+
+**MySQL Query**:
+```sql
+-- Resolve audit_action_id from action_code if provided
+SET @audit_action_id = COALESCE(
+    {{ $json.body.audit_action_id }},
+    (SELECT id FROM audit_actions WHERE code = {{ $json.body.action_code }})
+);
+
+-- If action_code provided but not found, create default or use fallback
+SET @audit_action_id = IFNULL(
+    @audit_action_id,
+    (SELECT id FROM audit_actions WHERE code = 'SYSTEM_ACTION' LIMIT 1)
+);
+
+INSERT INTO object_audits (
+    object_id,
+    audit_action_id,
+    created_by,
+    old_values,
+    new_values,
+    ip_address,
+    user_agent,
+    notes,
+    created_at
+) VALUES (
+    {{ $json.body.object_id }},
+    @audit_action_id,
+    {{ $json.body.created_by }},
+    {{ $json.body.old_values }},
+    {{ $json.body.new_values }},
+    {{ $json.body.ip_address }},
+    {{ $json.body.user_agent }},
+    {{ $json.body.notes }},
+    NOW()
+);
+
+SET @audit_id = LAST_INSERT_ID();
+
+SELECT
+    oa.id,
+    oa.object_id,
+    oa.audit_action_id,
+    oa.created_by,
+    oa.created_at,
+    oa.old_values,
+    oa.new_values,
+    oa.ip_address,
+    oa.user_agent,
+    oa.notes
+FROM object_audits oa
+WHERE oa.id = @audit_id;
+```
+
+**Notes**:
+- This endpoint should be called BEFORE triggering the actual file download
+- The frontend should still proceed with the download even if the audit call fails (graceful degradation)
+- The `DOWNLOAD_FILE` audit action must exist in the `audit_actions` table (see seed data below)
+- Consider adding IP address and user agent from request headers for enhanced tracking
 
 ---
 

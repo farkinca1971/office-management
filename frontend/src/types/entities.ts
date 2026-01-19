@@ -284,6 +284,11 @@ export interface ObjectRelation extends BaseEntity {
   note?: string;
   is_active: boolean;
   created_by?: number;
+  // Extended fields from API response (joined data)
+  object_from_name?: string;
+  object_to_name?: string;
+  object_from_type_id?: number;
+  object_to_type_id?: number;
 }
 
 export interface CreateObjectRelationRequest {
@@ -294,6 +299,104 @@ export interface CreateObjectRelationRequest {
 }
 
 export interface UpdateObjectRelationRequest extends Partial<CreateObjectRelationRequest> {}
+
+// Bulk operations
+export interface BulkDeleteRelationsRequest {
+  relation_ids: number[];
+}
+
+export interface BulkReassignRelationsRequest {
+  relation_ids: number[];
+  old_object_to_id: number;
+  new_object_to_id: number;
+}
+
+export interface BulkUpdateRelationTypeRequest {
+  relation_ids: number[];
+  old_relation_type_id: number;
+  new_relation_type_id: number;
+}
+
+// Object search
+export interface ObjectSearchRequest {
+  query?: string;
+  object_type_ids?: number[];
+  object_status_ids?: number[];
+  page?: number;
+  per_page?: number;
+  // Additional context fields for relation-based searches
+  current_object_id?: number;        // ID of the object in the datagrid above
+  relation_type_id?: number;          // Selected relation type ID
+  language_id?: number;               // Language ID (usually auto-added by interceptor)
+}
+
+export interface ObjectSearchResult {
+  id: number;
+  object_type_id: number;
+  object_status_id: number;
+  object_type_name: string;
+  display_name: string;  // Computed display name
+  created_at: string;
+}
+
+// Data quality issues
+export interface OrphanedRelation {
+  id: number;
+  object_from_id: number;
+  object_to_id: number;
+  object_relation_type_id: number;
+  relation_type_name?: string;
+  from_object_type_name?: string;
+  to_object_type_name?: string;
+  from_is_active: boolean;
+  to_is_active: boolean;
+  note?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DuplicateRelationGroup {
+  object_from_id: number;
+  object_to_id: number;
+  object_relation_type_id: number;
+  relation_type_name?: string;
+  from_object_type_name?: string;
+  to_object_type_name?: string;
+  duplicate_count: number;
+  relation_ids: number[];
+}
+
+export interface InvalidRelation {
+  id: number;
+  object_from_id: number;
+  object_to_id: number;
+  object_relation_type_id: number;
+  relation_type_name?: string;
+  from_object_type_name?: string;
+  to_object_type_name?: string;
+  actual_from_type_id: number;
+  actual_to_type_id: number;
+  expected_from_type_id: number;
+  expected_to_type_id: number;
+  expected_from_type?: string;
+  expected_to_type?: string;
+  note?: string;
+  created_at?: string;
+}
+
+export interface MissingMirrorRelation {
+  id: number;
+  object_from_id: number;
+  object_to_id: number;
+  object_relation_type_id: number;
+  relation_type_name?: string;
+  from_object_type_name?: string;
+  to_object_type_name?: string;
+  mirrored_type_id: number;
+  expected_mirror_type_name?: string;
+  note?: string;
+  created_at?: string;
+}
 
 // Audit Action
 export interface AuditAction extends BaseEntity {
@@ -376,6 +479,8 @@ export interface Document extends BaseEntity {
   document_date?: string; // ISO date string (YYYY-MM-DD)
   document_number?: string;
   expiry_date?: string; // ISO date string (YYYY-MM-DD)
+  description?: string; // Optional description field
+  issuer?: string; // Optional issuer field
   object_type_id?: number;
   object_status_id?: number;
   is_active: boolean;

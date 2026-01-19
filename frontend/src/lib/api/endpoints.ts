@@ -28,10 +28,26 @@ export const ENDPOINTS = {
   TRANSACTIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/transactions',
   TRANSACTION_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/transactions/:id',
   
-  // Object Relations
-  OBJECT_RELATIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/b0fc82f1-0fd7-4068-83a2-6051579b85c1/api/v1/object-relations',
+  // Object Relations (Main API Webhook: d35779a0-d5b1-438f-be5e-52f7b29be868)
+  OBJECT_RELATIONS: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-relations',
   OBJECT_RELATION_BY_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-relations/:id',
   OBJECT_RELATIONS_BY_OBJECT_ID: 'https://n8n.wolfitlab.duckdns.org/webhook/b0fc82f1-0fd7-4068-83a2-6051579b85c1/api/v1/objects/:id/relations',
+  OBJECT_RELATION_UPDATE: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-relations/:id',
+  OBJECT_RELATION_DELETE: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-relations/:id/delete',
+
+  // Data quality endpoints
+  RELATIONS_DATA_QUALITY_ORPHANED: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/relations/data-quality/orphaned',
+  RELATIONS_DATA_QUALITY_DUPLICATES: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/relations/data-quality/duplicates',
+  RELATIONS_DATA_QUALITY_INVALID: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/relations/data-quality/invalid',
+  RELATIONS_DATA_QUALITY_MISSING_MIRRORS: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/relations/data-quality/missing-mirrors',
+
+  // Bulk operations
+  RELATIONS_BULK_DELETE: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/relations/bulk/delete',
+  RELATIONS_BULK_REASSIGN: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/relations/bulk/reassign',
+  RELATIONS_BULK_UPDATE_TYPE: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/relations/bulk/update-type',
+
+  // Object search
+  OBJECTS_SEARCH: 'https://n8n.wolfitlab.duckdns.org/webhook/b0fc82f1-0fd7-4068-83a2-6051579b85c1/api/v1/objects/search',
   
   // Object Audits
   OBJECT_AUDITS: 'https://n8n.wolfitlab.duckdns.org/webhook/d35779a0-d5b1-438f-be5e-52f7b29be868/api/v1/object-audits',

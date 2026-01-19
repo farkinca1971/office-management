@@ -68,7 +68,7 @@ export default function AddDocumentRelationModal({
         documentsData = response[0];
       }
 
-      const documentsList = documentsData?.data || [];
+      const documentsList = (documentsData.success && documentsData.data) ? documentsData.data : [];
       setDocuments(Array.isArray(documentsList) ? documentsList : []);
     } catch (err: any) {
       console.error('[AddDocumentRelationModal] Error loading documents:', err);

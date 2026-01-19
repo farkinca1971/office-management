@@ -59,7 +59,7 @@ export interface LookupTableProps {
   objectCategoryRequired?: boolean; // Whether object category is required (default: false)
 }
 
-type SortField = 'code' | 'name' | 'is_active';
+type SortField = 'id' | 'code' | 'name' | 'is_active';
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortState {

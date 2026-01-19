@@ -19,9 +19,10 @@ import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AddFileToDocumentModal } from './AddFileToDocumentModal';
-import { documentsApi } from '@/lib/api';
+import { documentsApi, auditApi } from '@/lib/api';
 import { useTranslation } from '@/lib/i18n';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, getLanguageId } from '@/lib/utils';
+import { useLanguageStore } from '@/store/languageStore';
 import type { FileEntity } from '@/types/entities';
 
 interface DocumentFilesTabProps {
@@ -32,11 +33,13 @@ interface DocumentFilesTabProps {
 export default function DocumentFilesTab({ documentId, onDataChange }: DocumentFilesTabProps) {
   const { t } = useTranslation();
   const router = useRouter();
+  const { language } = useLanguageStore();
   const [files, setFiles] = useState<FileEntity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
+  const [downloadingFileId, setDownloadingFileId] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -90,6 +93,50 @@ export default function DocumentFilesTab({ documentId, onDataChange }: DocumentF
   const handleFileClick = (file: FileEntity) => {
     // Navigate to files page with the file ID as a query parameter
     router.push(`/files?fileId=${file.id}`);
+  };
+
+  const handleDownloadFile = async (file: FileEntity, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!file.file_path) {
+      setError(t('files.noFilePath') || 'No file path available for download');
+      return;
+    }
+
+    try {
+      setDownloadingFileId(file.id);
+      setError(null);
+
+      // Log the download action to audit trail before downloading
+      const languageId = getLanguageId(language);
+      await auditApi.logFileDownload(file.id, languageId, {
+        filename: file.filename,
+        file_path: file.file_path,
+        mime_type: file.mime_type,
+        file_size: file.file_size,
+      });
+
+      // Trigger the actual file download
+      const link = document.createElement('a');
+      link.href = file.file_path;
+      link.download = file.original_filename || file.filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setSuccessMessage(t('files.downloadStarted') || 'Download started');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      console.error('[DocumentFilesTab] Error logging file download:', err);
+      // Still allow download even if audit fails, but show a warning
+      if (file.file_path) {
+        window.open(file.file_path, '_blank');
+      }
+      setError(err?.error?.message || t('files.downloadAuditFailed') || 'Download audit logging failed');
+    } finally {
+      setDownloadingFileId(null);
+    }
   };
 
   const formatFileSize = (bytes?: number): string => {
@@ -190,16 +237,26 @@ export default function DocumentFilesTab({ documentId, onDataChange }: DocumentF
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         {file.file_path && (
-                          <a
-                            href={file.file_path}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
-                            title={t('files.openFile')}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
+                          <>
+                            <button
+                              onClick={(e) => handleDownloadFile(file, e)}
+                              disabled={downloadingFileId === file.id}
+                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 disabled:opacity-50"
+                              title={t('files.download')}
+                            >
+                              <Download className={`h-4 w-4 ${downloadingFileId === file.id ? 'animate-pulse' : ''}`} />
+                            </button>
+                            <a
+                              href={file.file_path}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
+                              title={t('files.openFile')}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </>
                         )}
                         <button
                           onClick={(e) => {

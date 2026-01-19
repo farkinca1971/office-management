@@ -23,6 +23,7 @@ import {
   ChevronRight,
   File,
   FolderOpen,
+  Link2,
 } from 'lucide-react';
 
 interface NavSubItem {
@@ -44,6 +45,7 @@ const navItems: NavItem[] = [
   { href: '/employees', labelKey: 'nav.employees', icon: <Briefcase className="h-5 w-5" /> },
   { href: '/documents', labelKey: 'nav.documents', icon: <FolderOpen className="h-5 w-5" /> },
   { href: '/files', labelKey: 'nav.files', icon: <File className="h-5 w-5" /> },
+  { href: '/relations', labelKey: 'nav.relationsManager', icon: <Link2 className="h-5 w-5" /> },
   {
     labelKey: 'nav.masterData',
     icon: <Database className="h-5 w-5" />,
